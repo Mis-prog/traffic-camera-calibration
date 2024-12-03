@@ -267,17 +267,17 @@ def main():
 
             else:
                 break
-        if not online:
-            my_file = open("count_on_lines" + datetime.now().__str__() + ".txt", "w+")
-            for i in range(len(traffic_lanes_path)):
-                my_file.write(f"lane {i} count cars: {lane_count[i][0]} trucks: {lane_count[i][1]} \n")
-            my_file.close()
-            break
+        # if not online:
+        #     # my_file = open("count_on_lines" + datetime.now().__str__() + ".txt", "w+")
+        #     # for i in range(len(traffic_lanes_path)):
+        #     #     my_file.write(f"lane {i} count cars: {lane_count[i][0]} trucks: {lane_count[i][1]} \n")
+        #     # my_file.close()
+        #     # break
 
-        if online:
-            del_file = local_file
-            local_files.pop(0)
-            local_files = download_files(local_files)
+        # if online:
+        #     del_file = local_file
+        #     local_files.pop(0)
+        #     local_files = download_files(local_files)
 
 
 

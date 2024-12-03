@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"83053fc000bead55","x":-720,"y":-121,"width":1260,"height":141,"color":"2","type":"group","label":"Возможное решение"},
+		{"id":"37e487a3d96910eb","x":-700,"y":-100,"width":290,"height":100,"type":"text","text":"Выделение особых точек\n- Детектор Хариса \n- FAST"},
+		{"id":"929dc5f8e13a06eb","x":-220,"y":-101,"width":299,"height":101,"type":"text","text":"Cопоставление особых точек\n- RANSAC"},
+		{"id":"55f7a77380594715","x":260,"y":-100,"width":260,"height":100,"type":"text","text":"DLT\n- Вычисление данных со снимков GPS"},
+		{"id":"95aa21296404d8fe","type":"text","text":"OpenCV: SolvePNP","x":-720,"y":-400,"width":250,"height":60}
+	],
+	"edges":[
+		{"id":"f35860c96dc853fa","fromNode":"37e487a3d96910eb","fromSide":"right","toNode":"929dc5f8e13a06eb","toSide":"left"},
+		{"id":"28a102efcb00de93","fromNode":"929dc5f8e13a06eb","fromSide":"right","toNode":"55f7a77380594715","toSide":"left"}
+	]
+}

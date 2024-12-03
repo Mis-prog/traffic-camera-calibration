@@ -187,7 +187,7 @@ def get_pandas(results):
     return result_df
 
 
-def insert_in_seq(elem, seq):  # вставить новую текущую скорость.Доработать на эффективность,если потребуется
+def insert_in_seq(elem, seq):  # вставить новую текущую скорость.Доработать на+++++++++ эффективность,если потребуется
     for i in range(len(seq) - 1):
         seq[i] = seq[i + 1]
     seq[len(seq) - 1] = elem
