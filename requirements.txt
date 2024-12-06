@@ -1,11 +1,5 @@
-numpy==2.1.2
-opencv-python==4.10.0.84 
-m3u8==6.0.0
-urllib3==2.2.3
-matplotlib==3.9.2
-imutils==0.5.4
-requests==2.23.2
-ultralytics===8.3.12
-onnxruntime==1.19.2
-onnx==1.17.0
-vidgear
+numpy
+pandas
+matplotlib
+opencv-python
+jupyter
