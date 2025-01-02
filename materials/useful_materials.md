@@ -26,4 +26,7 @@ https://api-2d3d-cad.com/homography/
 https://github.com/polygon-software/python-visual-odometry?tab=readme-ov-file
 -----------
 
-## 
+## Calibration a camera using a vanishing point
+
+Готовый проект на github 
+https://github.com/towardsautonomy/cam_intrinsic_calibration_single_image.git
