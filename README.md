@@ -12,5 +12,6 @@ https://basmanovdaniil.github.io/GimbalLock/
 
 ## Калибровка
 1. [Калибровка с помощью геометрических примитивов](./materials/main/calibration_camera_using_geometric.pdf)
+2. [Калибровка с помощью геометрических примитивов(дополнение)](./materials/main/calibration_camera_using_geometric_v2.pdf)
 
 ## Результаты
