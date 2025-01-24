@@ -11,7 +11,6 @@ https://veichta-geocalib.hf.space/
 https://basmanovdaniil.github.io/GimbalLock/
 
 ## Калибровка
-1. https://link.springer.com/chapter/10.1007/978-3-642-23687-7_67
+1. [Калибровка с помощью геометрических примитивов](#/materials/main/calibration_camera_using_geometric.pdf)
 
 ## Результаты
-1. https://colab.research.google.com/drive/1GzQaRQrIu9kNDNBWirm87aJUXh9ubnYr?usp=sharing
