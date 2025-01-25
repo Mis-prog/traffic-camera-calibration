@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
+from point import Point
 
 
 class Camera:
@@ -28,7 +29,7 @@ class Camera:
     rot = Rotation.from_euler('xyz', euler_angles, degrees=True)
     self.R = rot.as_matrix()
 
-  def update_R(self, p):
+  def set_init_R(self, p):
     self.R =  np.vstack(p).transpose()
   
   def get_R(self, angle_output = False):
@@ -38,44 +39,48 @@ class Camera:
   
   # вычисление столбца переноса
   def calc_T(self, h):
-    self.T = np.array([0, 0, h]).reshape(-1,1)
-    
+    self.T = np.array([0, 0, h])
+
   def get_T(self):
     return self.T
   
   # вычисление внутренней матрицы
-  def calc_A(self, f):
-    self.A = np.array([[f, 0, 0],
-                     [0, f, 0],
-                     [0, 0, 1]])
-    
-  # вычисление внутренней матрицы уточняющий способ 
-  def calc_A_v2(self, f):
-    self.A = np.array([[f, 0, 0],
+  def calc_A(self, f, using_tau = True):
+    if using_tau:
+        self.A = np.array([[f, 0, 0],
                      [0, f * self.tau, 0],
                      [0, 0, 1]])
-    
+    else:
+        self.A = np.array([[f, 0, 0],
+                     [0, f, 0],
+                     [0, 0, 1]])
+
   def get_A(self):
     return self.A
 
  # прямое преобразование
-  def direct_transform(self,point_real:Point, params = []):
+  def direct_transform(self, point_real: Point, params = []) -> Point:
     if len(params) > 0:
-      self.calc_A_v2(params[0])
+      self.calc_A(params[0])
       self.calc_R(params[1:3])
       self.calc_T(params[4])
     
-    T = self.T.reshape(-1, 1) 
-    RT = np.hstack([self.R, self.T])
-    AT = self.A @ RT
-    return AT @ point_real.get_real_full()
+    _RT = np.hstack([self.R, self.T])
+    _AT = self.A @ _RT
+    _new_point = _AT @ point_real.get_real_full()
+    point_real.set_image(_new_point)
+    return point_real
   
   # обратное преобразование
-  def back_transform(self,point_image:Point, params = []):
-    if params:
-      pass #todo 
+  def back_transform(self, point_image:Point, params = []) -> Point:
+    if len(params) > 0:
+      self.calc_A(params[0])
+      self.calc_R(params[1:3])
+      self.calc_T(params[4])
     
-    T = self.T.reshape(-1, 1) 
-    RT = np.hstack([self.R, self.T])
-    AT_inv = np.linalg.inv(self.A @ RT)
-    return AT_inv @ point_image.get_image_full()
+    _T = self.T.reshape(-1, 1) 
+    _RT = np.hstack([self.R, self.T])
+    _AT_inv = np.linalg.inv(self.A @ _RT)
+    _new_point = _AT_inv @ point_image.get_image_full()
+    point_image.set_real(_new_point)
+    return point_image

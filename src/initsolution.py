@@ -2,7 +2,7 @@ import numpy as np
 from camera import Camera
 
 # вычисление нормали к линии (вектора направления)
-def _normal_vector(self,x1, y1, x2, y2):
+def _normal_vector(x1, y1, x2, y2):
     dx = x2 - x1
     dy = y2 - y1
 
@@ -15,6 +15,7 @@ def _search_vanishing_point(lines):
     b = []
 
     for line in lines:
+        # print(line)
         (x1, y1), (x2, y2) = line
         n = _normal_vector(x1, y1, x2, y2)
         A.append(n)
@@ -27,7 +28,7 @@ def _search_vanishing_point(lines):
     return v
 
 # поиск точек схода для нескольких осей 
-def  search_vanishing_points(lines):
+def  _search_vanishing_points(lines):
     v = []
     for line in lines:
         _v = _search_vanishing_point(line)
@@ -35,16 +36,28 @@ def  search_vanishing_points(lines):
     return v
     
 # вычисление нормализованный точек схода    
-def calc_norm_vanishing_points(self, vx, vy, camera):
+def _calc_norm_vanishing_points(vx, vy, camera):
     px = np.linalg.inv(camera.get_A().transpose()) @ np.transpose(np.hstack([vx, 1]))
     py = np.linalg.inv(camera.get_A().transpose()) @ np.transpose(np.hstack([vy, 1]))
     pz = px * py
     return px, py, pz 
 
 # вычисление фокусного расстояния
-def calc_f(vx, vy, D = np.array([0, 0])):
-    return np.sqrt(-np.dot((vx - D), (vy - D)))
-
-def calc_f(vx, vy, camera:Camera):
-    M = np.array([[1, 0], [0, camera.tau**(-2)]])
-    return np.sqrt(- vx.T @ M @ vy)
+def _calc_f(vx, vy, camera=None):
+    if camera is None:  
+        return np.sqrt(-np.dot(vx, vy))
+    else: 
+        M = np.array([[1, 0], [0, camera.tau**(-2)]])
+        return np.sqrt(- vx.T @ M @ vy)
+    
+def calc_init_camera(path, lines) -> Camera:
+    camera = Camera()
+    camera.load_image(path)
+    v = _search_vanishing_points(lines)
+    f = _calc_f(v[0], v[1], camera)
+    camera.calc_A(f)
+    px, py, pz = _calc_norm_vanishing_points(v[0], v[1], camera)
+    
+    camera.set_init_R([px, py, pz])
+    camera.calc_T(1)
+    return camera

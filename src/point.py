@@ -1,30 +1,30 @@
-import numpy as np 
+import numpy as np
 
 class Point:
-    def __init__(self):
-        self.coord_image = []
-        self.coord_real = []
-        self.w = 1
-      
-    def set_w(self, w):
-        self.w = w
+    def __init__(self, coord_image, coord_real):
+        self.coord_image = np.array(coord_image)  
+        self.coord_real = np.array(coord_real)   
         
+    @classmethod    
+    def from_combined(self, coord):
+        coord_image = coord[0:3]
+        coord_real = coord[3:7]
+        return cls(coord_image, coord_real)
+    
+    def set_image(self, coord_image):
+        self.coord_image = np.array(coord_image)
+    
+    def set_real(self, coord_real):
+        self.coord_real = np.array(coord_real)
+
     def get_real(self):
-        if self.coord_real:
-            return np.array(self.coord_real) / self.w
-        return np.array([])
+        return np.array(self.coord_real[:-1]) / self.coord_real[-1]
     
     def get_real_full(self):
-        if self.coord_real:
-            return np.array(self.coord_real + [self.w])
-        return np.array([])
+        return np.array(self.coord_real)
 
     def get_image(self):
-        if self.coord_image:
-            return np.array(self.coord_image) / self.w
-        return np.array([])
+        return np.array(self.coord_image[:-1]) / self.coord_image[-1]
 
     def get_image_full(self):
-        if self.coord_image:
-            return np.array(self.coord_image + [self.w])
-        return np.array([])
+        return np.array(self.coord_image)
