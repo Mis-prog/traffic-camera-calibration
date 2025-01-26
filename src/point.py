@@ -6,10 +6,17 @@ class Point:
         self.coord_real = np.array(coord_real)   
         
     @classmethod    
-    def from_combined(self, coord):
+    def from_combined(cls, coord):
         coord_image = coord[0:3]
         coord_real = coord[3:7]
         return cls(coord_image, coord_real)
+    
+    @classmethod
+    def copy(cls, other):
+        return cls(
+            coord_image=np.copy(other.coord_image),
+            coord_real=np.copy(other.coord_real)
+        )
     
     def set_image(self, coord_image):
         self.coord_image = np.array(coord_image)
