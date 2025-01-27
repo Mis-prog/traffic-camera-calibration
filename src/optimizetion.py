@@ -39,6 +39,12 @@ class Optimizer:
     def optimize(self, lines):
         angles = self.camera.get_R(angle_output=True)
         x0 = [self.camera.get_f(), angles[0], angles[1], angles[2], 1]
-        # print(x0[1:4])
-        result = least_squares(self.residuals, x0, args=(lines,), method='lm')
+        bounds = (
+        (700, 1000),
+        (-np.pi, np.pi),
+        (-np.pi, np.pi),
+        (-np.pi, np.pi),
+        (10, 15)
+        )
+        result = least_squares(self.residuals, x0, args=(lines,), method='lm') 
         return self.camera, result
