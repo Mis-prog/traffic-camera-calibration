@@ -91,7 +91,6 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(params[4])
 
-        _T = self.T.reshape(-1, 1)
         _RT = np.hstack([self.R, self.T])
         _AT_inv = np.linalg.inv(self.A @ _RT)
         _new_point = _AT_inv @ point_image.get_image_full()
