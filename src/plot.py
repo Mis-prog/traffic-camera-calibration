@@ -45,4 +45,4 @@ class Plot:
             cv2.imwrite('../data/evalution_scene.png', scene)
 
     def draw_calibration_line(self, line):
-        pass
+        scene = self.camera.get_scene()
