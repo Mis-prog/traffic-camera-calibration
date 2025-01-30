@@ -25,42 +25,46 @@ class Plot:
     def _get_cv2_format(self, point: Point):
         return tuple(map(int, point.get_image()[:2]))
 
-    def draw_tranform_coord(self, points, save=False):
+    def draw_tranform_coord(self, lines, save=False, out_jupyter=False):
         scene = self.camera.get_scene()
 
-        prew_point = self.camera.direct_transform(points[0])
-        prew_point_plot = self._get_cv2_format(prew_point)
-        self._draw_point_with_label(scene, prew_point_plot, prew_point.get_real())
-        for point in points[1:]:
-            new_point = self.camera.direct_transform(point)
-            new_point_plot = self._get_cv2_format(new_point)
+        for start, end in lines:
+            start_trans = self.camera.direct_transform(start)
+            end_trans = self.camera.direct_transform(end)
 
-            self._draw_point_with_label(scene, new_point_plot, new_point.get_real())
-            cv2.line(scene, prew_point_plot,
-                     new_point_plot, (0, 255, 0), 2)
-            prew_point_plot = new_point_plot
+            start_plot = self._get_cv2_format(start_trans)
+            self._draw_point_with_label(scene, start_plot, start_trans.get_real())
+            end_plot = self._get_cv2_format(end_trans)
+            self._draw_point_with_label(scene, end_plot, end_trans.get_real())
 
-        if not save:
-            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        else:
-            cv2.imwrite('../data/evalution_scene.png', scene)
-
-    def draw_calibration_line(self, line,save=False):
-        scene = self.camera.get_scene()
-
-        for start, end in line:
-            start_plot = self._get_cv2_format(start)
-            end_plot = self._get_cv2_format(end)
-            self._draw_point_with_label(scene, start_plot,start.get_real())
-            self._draw_point_with_label(scene, end_plot,end.get_real())
             cv2.line(scene, start_plot,
                      end_plot, (0, 255, 0), 2)
 
-        if not save:
+        if not save and not out_jupyter:
             cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+        elif out_jupyter:
+            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+        else:
+            cv2.imwrite('../data/evalution_scene.png', scene)
+
+    def draw_calibration_line(self, lines, save=False, out_jupyter=False):
+        scene = self.camera.get_scene()
+
+        for start, end in lines:
+            start_plot = self._get_cv2_format(start)
+            end_plot = self._get_cv2_format(end)
+            self._draw_point_with_label(scene, start_plot, start.get_real())
+            self._draw_point_with_label(scene, end_plot, end.get_real())
+            cv2.line(scene, start_plot,
+                     end_plot, (0, 255, 0), 2)
+
+        if not save and not out_jupyter:
+            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        elif out_jupyter:
+            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
         else:
             cv2.imwrite('../data/calibration_line.png', scene)
