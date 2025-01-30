@@ -29,16 +29,16 @@ lines = [
      [557, 183, 1, 31.9, 20.7, 0, 1]]
 ]
 
-lines_point = []
+lines_from_Point = []
 for line in lines:
     start_point, end_point = line
     start_point = Point.from_combined(start_point)
     end_point = Point.from_combined(end_point)
-    lines_point.append([start_point, end_point])
+    lines_from_Point.append([start_point, end_point])
 
 optimize = Optimizer(camera)
 
-camera, info = optimize.optimize(lines_point)
+camera, info = optimize.optimize(lines_from_Point)
 
 points_evalution = []
 coords = [[8, 0, 0, 1], [8, 20, 0, 1], [28, 20, 0, 1], [28, 0, 0, 1], [8, 0, 0, 1]]
@@ -49,4 +49,6 @@ for value in coords:
 
 
 plot = Plot(camera)
-plot.draw_tranform_coord(points_evalution,save=True)
+# plot.draw_tranform_coord(points_evalution)
+
+plot.draw_calibration_line(lines_from_Point)
