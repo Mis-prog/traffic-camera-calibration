@@ -46,9 +46,9 @@ coords = [[8, 0, 0, 1], [8, 20, 0, 1], [28, 20, 0, 1], [28, 0, 0, 1], [8, 0, 0, 
 for value in coords:
     points_evalution.append(Point.from_only_real(value))
 
-
-
 plot = Plot(camera)
 # plot.draw_tranform_coord(points_evalution)
 
-plot.draw_calibration_line(lines_from_Point,save=True)
+# plot.draw_calibration_line(lines_from_Point,save=False)
+
+
