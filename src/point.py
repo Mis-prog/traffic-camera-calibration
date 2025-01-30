@@ -18,6 +18,13 @@ class Point:
             coord_image=np.copy(other.coord_image),
             coord_real=np.copy(other.coord_real)
         )
+    @classmethod
+    def from_only_real(cls, coord):
+        return cls([0, 0, 1], coord)
+
+    @classmethod
+    def from_only_image(cls, coord):
+        return cls(coord, [0, 0, 0, 1])
 
     def set_image(self, coord_image):
         self.coord_image = np.array(coord_image)

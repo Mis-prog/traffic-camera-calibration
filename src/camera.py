@@ -7,7 +7,7 @@ from point import Point
 class Camera:
     def __init__(self):
         self.size = None
-        self.image = None
+        self.scene = None
         self.tau = None
         self.f = None
 
@@ -15,15 +15,18 @@ class Camera:
         self.R = np.zeros((3, 3))
         self.T = np.zeros((3, 1)).reshape(-1, 1)
 
+    def get_scene(self):
+        return self.scene
+
     def get_f(self):
         return self.f
 
     def get_tau(self):
         return self.tau
 
-    def load_image(self, path):
-        self.image = cv2.imread(path)
-        height, width, channels = self.image.shape
+    def load_scene(self, path):
+        self.scene = cv2.imread(path)
+        height, width, channels = self.scene.shape
         self.size = [height, width]  # высота и ширина
         self.tau = height / width
 
@@ -75,7 +78,7 @@ class Camera:
         if len(params) > 0:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
-        self.calc_T(params[4])
+            self.calc_T(params[4])
 
         _RT = np.hstack([self.R, self.T[:, np.newaxis]])
         _AT = self.A @ _RT

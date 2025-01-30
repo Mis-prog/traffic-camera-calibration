@@ -58,7 +58,7 @@ def _calc_f(vx, vy, camera=None):
 
 def calc_init_camera(path, lines) -> Camera:
     camera = Camera()
-    camera.load_image(path)
+    camera.load_scene(path)
     v = _search_vanishing_points(lines)
     f = _calc_f(v[0], v[1], camera)
     camera.calc_A(f)

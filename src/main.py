@@ -2,6 +2,7 @@ from camera import Camera
 from optimizetion import Optimizer
 from initsolution import calc_init_camera
 from point import Point
+from plot import Plot
 
 # Линии схода относительно направлений
 Line_Y = [[[786, 689], [281, 515]], [[1061, 516], [213, 340]], [[1008, 421], [375, 311]], [[355, 264], [70, 238]],
@@ -11,6 +12,7 @@ Line_X = [[[300, 513], [555, 185]], [[835, 677], [927, 264]], [[674, 117], [740,
 
 camera = calc_init_camera('../data/scene_from_crossroads_not_dist.png', [Line_X, Line_Y])
 
+# Получение углов
 # camera.get_R(angle_output=True,output=True)
 
 # Калибровочные линии
@@ -37,5 +39,14 @@ for line in lines:
 optimize = Optimizer(camera)
 
 camera, info = optimize.optimize(lines_point)
-print(info)
 
+points_evalution = []
+coords = [[8, 0, 0, 1], [8, 20, 0, 1], [28, 20, 0, 1], [28, 0, 0, 1], [8, 0, 0, 1]]
+
+for value in coords:
+    points_evalution.append(Point.from_only_real(value))
+
+
+
+plot = Plot(camera)
+plot.draw_tranform_coord(points_evalution)
