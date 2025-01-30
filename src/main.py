@@ -49,4 +49,4 @@ for value in coords:
 
 
 plot = Plot(camera)
-plot.draw_tranform_coord(points_evalution)
+plot.draw_tranform_coord(points_evalution,save=True)

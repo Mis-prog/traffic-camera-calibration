@@ -22,13 +22,12 @@ class Plot:
         cv2.putText(img, text, (point[0] + 5, point[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-    def draw_tranform_coord(self, points):
+    def draw_tranform_coord(self, points, save=False):
         scene = self.camera.get_scene()
 
         prew_point = self.camera.direct_transform(points[0])
         prew_point_plot = tuple(map(int, prew_point.get_image()[:2]))
         self._draw_point_with_label(scene, prew_point_plot, prew_point.get_real())
-
         for point in points[1:]:
             new_point = self.camera.direct_transform(point)
             new_point_plot = tuple(map(int, new_point.get_image()[:2]))
@@ -36,7 +35,14 @@ class Plot:
             self._draw_point_with_label(scene, new_point_plot, new_point.get_real())
             cv2.line(scene, prew_point_plot,
                      new_point_plot, (0, 255, 0), 2)
-            prew_point = new_point
-        cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+            prew_point_plot = new_point_plot
+
+        if not save:
+            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        else:
+            cv2.imwrite('../data/evalution_scene.png', scene)
+
+    def draw_calibration_line(self, line):
+        pass
