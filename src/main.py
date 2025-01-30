@@ -51,4 +51,4 @@ for value in coords:
 plot = Plot(camera)
 # plot.draw_tranform_coord(points_evalution)
 
-plot.draw_calibration_line(lines_from_Point)
+plot.draw_calibration_line(lines_from_Point,save=True)

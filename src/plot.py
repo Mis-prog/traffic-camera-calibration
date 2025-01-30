@@ -47,11 +47,20 @@ class Plot:
         else:
             cv2.imwrite('../data/evalution_scene.png', scene)
 
-    def draw_calibration_line(self, line):
+    def draw_calibration_line(self, line,save=False):
         scene = self.camera.get_scene()
 
         for start, end in line:
             start_plot = self._get_cv2_format(start)
             end_plot = self._get_cv2_format(end)
+            self._draw_point_with_label(scene, start_plot,start.get_real())
+            self._draw_point_with_label(scene, end_plot,end.get_real())
             cv2.line(scene, start_plot,
                      end_plot, (0, 255, 0), 2)
+
+        if not save:
+            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        else:
+            cv2.imwrite('../data/calibration_line.png', scene)

@@ -23,7 +23,7 @@ Python 3.10
 2. Точки схода по Y
    ![Точки cхода](data/scene_from_crossroads_not_dist_lineY.png)
 3. Калибровочные линии 
-   ![Калибровочные линии](data/)
+   ![Калибровочные линии](data/calibration_line.png)
 ## Результаты
 1. Калибровка точка в точку с линейной функцией ошибки
    ![Калибровка](data/evalution_scene.png)
