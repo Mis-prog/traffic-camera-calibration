@@ -27,19 +27,23 @@ class Plot:
         return tuple(map(int, point.get_image()[:2]))
 
     def draw_tranform_coord(self, lines, save=False, out_jupyter=False, params=[]):
-        scene = self.camera.get_scene()
+        scene = self.camera.get_scene().copy()
 
+        overlay = scene.copy()
         for start, end in lines:
             start_trans = self.camera.direct_transform(start, params)
             end_trans = self.camera.direct_transform(end, params)
 
             start_plot = self._get_cv2_format(start_trans)
-            self._draw_point_with_label(scene, start_plot, start_trans.get_real())
+            self._draw_point_with_label(overlay, start_plot, start_trans.get_real())
             end_plot = self._get_cv2_format(end_trans)
-            self._draw_point_with_label(scene, end_plot, end_trans.get_real())
+            self._draw_point_with_label(overlay, end_plot, end_trans.get_real())
 
-            cv2.line(scene, start_plot,
+            cv2.line(overlay, start_plot,
                      end_plot, (0, 255, 0), 2)
+
+        alpha = 0.8
+        cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
 
         if not save and not out_jupyter:
             cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
