@@ -2,6 +2,7 @@ from camera import Camera
 from point import Point
 
 import cv2
+import matplotlib.pyplot as plt
 
 
 class Plot:
@@ -25,12 +26,12 @@ class Plot:
     def _get_cv2_format(self, point: Point):
         return tuple(map(int, point.get_image()[:2]))
 
-    def draw_tranform_coord(self, lines, save=False, out_jupyter=False):
+    def draw_tranform_coord(self, lines, save=False, out_jupyter=False, params=[]):
         scene = self.camera.get_scene()
 
         for start, end in lines:
-            start_trans = self.camera.direct_transform(start)
-            end_trans = self.camera.direct_transform(end)
+            start_trans = self.camera.direct_transform(start, params)
+            end_trans = self.camera.direct_transform(end, params)
 
             start_plot = self._get_cv2_format(start_trans)
             self._draw_point_with_label(scene, start_plot, start_trans.get_real())
@@ -45,7 +46,11 @@ class Plot:
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         elif out_jupyter:
-            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+            plt.figure(figsize=(10, 8))
+            plt.imshow(scene_rgb)
+            plt.axis('off')
+            plt.show()
         else:
             cv2.imwrite('../data/evalution_scene.png', scene)
 
@@ -65,6 +70,10 @@ class Plot:
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         elif out_jupyter:
-            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+            plt.figure(figsize=(10, 8))
+            plt.imshow(scene_rgb)
+            plt.axis('off')
+            plt.show()
         else:
             cv2.imwrite('../data/calibration_line.png', scene)
