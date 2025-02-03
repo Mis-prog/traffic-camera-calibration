@@ -19,14 +19,14 @@ camera = calc_init_camera('../data/scene_from_crossroads_not_dist.png', [Line_X,
 lines = [
     [[831, 689, 1, 7.71, 0, 0, 1],
      [299, 520, 1, 7.71, 20.7, 0, 1]],
-    [[1007, 425, 1, 18.9, 0, 0, 1],
+    [[896, 405, 1, 18.9, 0, 0, 1],
      [439, 322, 1, 18.9, 20.7, 0, 1]],
     [[927, 267, 1, 31.9, 0, 0, 1],
      [553, 189, 1, 31.9, 20.7, 0, 1]],
     [[890, 478, 1, 15.09, 0, 0, 1],
      [397, 379, 1, 15.09, 20.7, 0, 1]],
     [[300, 515, 1, 7.71, 20.7, 0, 1],
-     [557, 183, 1, 31.9, 20.7, 0, 1]]
+     [557, 180, 1, 31.9, 20.7, 0, 1]]
 ]
 
 lines_from_Point = []
@@ -39,6 +39,8 @@ for line in lines:
 optimize = Optimizer(camera)
 
 camera, info = optimize.optimize(lines_from_Point)
+print(info.x)
 
 plot = Plot(camera)
-plot.draw_tranform_coord(lines_from_Point,params=[700,-40,0,0,20])
+# plot.draw_calibration_line(lines_from_Point)
+plot.draw_tranform_coord(lines_from_Point,save=True)
