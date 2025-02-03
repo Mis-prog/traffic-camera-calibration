@@ -34,6 +34,8 @@ class Plot:
             start_trans = self.camera.direct_transform(start, params)
             end_trans = self.camera.direct_transform(end, params)
 
+            # print(start_trans.get_image(), ' ', start.get_real())
+            # print(end_trans.get_image(), ' ', end.get_real())
             start_plot = self._get_cv2_format(start_trans)
             self._draw_point_with_label(overlay, start_plot, start_trans.get_real())
             end_plot = self._get_cv2_format(end_trans)
@@ -46,7 +48,7 @@ class Plot:
         cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
 
         if not save and not out_jupyter:
-            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
+            cv2.imshow('Вид сцены калибровочный',scene)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         elif out_jupyter:

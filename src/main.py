@@ -41,7 +41,4 @@ optimize = Optimizer(camera)
 camera, info = optimize.optimize(lines_from_Point)
 
 plot = Plot(camera)
-plot.draw_tranform_coord(lines_from_Point,save=True)
-
-
-
+plot.draw_tranform_coord(lines_from_Point,params=[700,-40,0,0,20])
