@@ -42,5 +42,5 @@ camera, info = optimize.optimize(lines_from_Point)
 print(info.x)
 
 plot = Plot(camera)
-plot.draw_calibration_line(lines_from_Point,save=True)
+# plot.draw_calibration_line(lines_from_Point,save=True)
 plot.draw_tranform_coord(lines_from_Point,save=True)
