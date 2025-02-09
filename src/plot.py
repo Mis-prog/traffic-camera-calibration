@@ -1,5 +1,5 @@
-from camera import Camera
-from point import Point
+from .camera_model import Camera
+from .point import Point
 
 import cv2
 import matplotlib.pyplot as plt

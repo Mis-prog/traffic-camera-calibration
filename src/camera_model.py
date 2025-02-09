@@ -1,7 +1,9 @@
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
-from point import Point
+from .point import Point
+from .point2D import Point2D
+from .point3D import Point3D
 
 
 class Camera:
@@ -41,7 +43,6 @@ class Camera:
     def get_R(self, angle_output=False, output=False):
         if angle_output:
             angles = Rotation.from_matrix(self.R).as_euler('zxy', degrees=True)
-            # print(f'Углы Эйлера:\n{angles}')
             return angles
         if output:
             print(f'Матрица поворота:\n{self.R}')
@@ -74,30 +75,36 @@ class Camera:
         return self.A
 
     # прямое преобразование
-    def direct_transform(self, point_real: Point, params=[]) -> Point:
-        if len(params) >= 5:
+    def direct_transform(self, point_real: Point3D, params=[]) -> Point2D:
+        if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
-            # self.calc_T(x=params[4], y=params[5], z=params[6])
             self.calc_T(z=params[4])
+        elif len(params) == 7:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], y=params[5], z=params[6])
+
         _T1 = -self.R @ self.T
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
         _AT = self.A @ _RT
-        _new_point = _AT @ point_real.get_real_full()
-        point_image = Point.copy(point_real)
-        point_image.set_image(_new_point)
-        return point_image
+        _new_point = _AT @ point_real.get(out_homogeneous=True)
+        return _new_point
 
     # обратное преобразование
-    def back_transform(self, point_image: Point, params=[]) -> Point:
-        if len(params) >= 5:
+    def back_transform(self, point_image: Point2D, params=[]) -> Point3D:
+        if len(params) == 5:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(z=params[4])
+        elif len(params) == 7:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
         _RT = np.hstack([self.R, self.T])
         _AT_inv = np.linalg.inv(self.A @ _RT)
-        _new_point = _AT_inv @ point_image.get_image_full()
+        _new_point = _AT_inv @ point_image.get(out_homogeneous=True)
         point_real = Point.copy(point_image)
         point_real.set_real(_new_point)
         return point_real

@@ -1,50 +1,50 @@
 import numpy as np
 from scipy.optimize import least_squares
 
-from camera import Camera
-from point import Point
-
+from .camera_model import Camera
+from .point import Point
+from .point2D import Point2D
+from .point3D import Point3D
 
 class Optimizer:
-    def __init__(self, _camera: Camera):
-        self.camera = _camera
+    def __init__(self, camera: Camera):
+        self.camera = camera
 
-    def funk_error(self, line_known, line_predict):
-        pointknownStart, pointknownEnd = line_known
-        pointpredictStart, pointpredictEnd = line_predict
+    def compute_error(self, line_known: tuple[Point, Point], line_predicted: tuple[np.ndarray, np.ndarray]) -> float:
+        known_start, known_end = line_known
+        predicted_start, predicted_end = line_predicted
 
-        error = (
-                np.sqrt((pointknownStart.get_image()[0] - pointpredictStart.get_image()[0]) ** 2 +
-                        (pointknownStart.get_image()[1] - pointpredictStart.get_image()[1]) ** 2)
-                + np.sqrt((pointknownEnd.get_image()[0] - pointpredictEnd.get_image()[0]) ** 2 +
-                          (pointknownEnd.get_image()[1] - pointpredictEnd.get_image()[1]) ** 2)
-        )
+        error = np.sqrt(np.sum((known_start.get() - predicted_start) ** 2)) + \
+                np.sqrt(np.sum((known_end.get() - predicted_end) ** 2))
+
         return error
 
-    def residuals(self, params, lines):
+    def residuals(self, params: np.ndarray, lines: list[tuple[tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]) -> np.ndarray:
         residuals = []
-        for line in lines:
-            _point_known_start, _point_known_end = line
-            _point_predict_start = self.camera.direct_transform(_point_known_start, params)
-            _point_predict_end = self.camera.direct_transform(_point_known_end, params)
 
-            error = self.funk_error(
-                [_point_known_start, _point_known_end],
-                [_point_predict_start, _point_predict_end]
-            )
+        for known_start, known_end in lines:
+            known_start_2D, known_start_3D = known_start
+            known_end_2D, known_end_3D = known_end
+
+            predicted_start_2D = self.camera.direct_transform(known_start_3D, params)
+            predicted_end_2D = self.camera.direct_transform(known_end_3D, params)
+
+            error = self.compute_error((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             residuals.append(error)
 
         return np.array(residuals)
 
-    def optimize(self, lines):
+    def optimize(self, lines: list[tuple[tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]):
         angles = self.camera.get_R(angle_output=True)
-        x0 = [self.camera.get_f(), angles[0], angles[1], angles[2], 15]
-        bounds = (
+        x0 = [self.camera.get_f(), *angles, 10]
+
+        bounds = [
             (700, 1000),
             (-np.pi, np.pi),
             (-np.pi, np.pi),
             (-np.pi, np.pi),
             (10, 15)
-        )
-        result = least_squares(self.residuals, x0, args=(lines,), method='lm')
+        ]
+
+        result = least_squares(self.residuals, x0, args=(lines,), method='trf')
         return self.camera, result
