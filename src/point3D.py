@@ -14,6 +14,7 @@ class Point3D:
     def set(self, coord):
         self.coord = coord
 
+    # по умолчанию неоднородные координаты
     def get(self, out_homogeneous=False):
         if out_homogeneous:
             return self.coord

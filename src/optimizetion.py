@@ -2,24 +2,25 @@ import numpy as np
 from scipy.optimize import least_squares
 
 from .camera_model import Camera
-from .point import Point
 from .point2D import Point2D
 from .point3D import Point3D
+
 
 class Optimizer:
     def __init__(self, camera: Camera):
         self.camera = camera
 
-    def compute_error(self, line_known: tuple[Point, Point], line_predicted: tuple[np.ndarray, np.ndarray]) -> float:
+    def compute_error(self, line_known: tuple[Point2D, Point2D], line_predicted: tuple[Point2D, Point2D]) -> float:
         known_start, known_end = line_known
         predicted_start, predicted_end = line_predicted
 
-        error = np.sqrt(np.sum((known_start.get() - predicted_start) ** 2)) + \
-                np.sqrt(np.sum((known_end.get() - predicted_end) ** 2))
+        error = np.sqrt(np.sum((known_start.get() - predicted_start.get()) ** 2)) + \
+                np.sqrt(np.sum((known_end.get() - predicted_end.get()) ** 2))
 
         return error
 
-    def residuals(self, params: np.ndarray, lines: list[tuple[tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]) -> np.ndarray:
+    def residuals(self, params: np.ndarray,
+                  lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]) -> np.ndarray:
         residuals = []
 
         for known_start, known_end in lines:
@@ -34,7 +35,7 @@ class Optimizer:
 
         return np.array(residuals)
 
-    def optimize(self, lines: list[tuple[tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]):
+    def optimize(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
         angles = self.camera.get_R(angle_output=True)
         x0 = [self.camera.get_f(), *angles, 10]
 

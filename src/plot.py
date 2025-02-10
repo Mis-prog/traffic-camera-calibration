@@ -1,8 +1,9 @@
-from .camera_model import Camera
-from .point import Point
-
 import cv2
 import matplotlib.pyplot as plt
+
+from .camera_model import Camera
+from .point2D import Point2D
+from .point3D import Point3D
 
 
 class Plot:
@@ -23,23 +24,21 @@ class Plot:
         cv2.putText(img, text, (point[0] + 5, point[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-    def _get_cv2_format(self, point: Point):
-        return tuple(map(int, point.get_image()[:2]))
+    def _get_cv2_format(self, point: Point2D):
+        return tuple(map(int, point.get()))
 
     def draw_tranform_coord(self, lines, save=False, out_jupyter=False, params=[]):
         scene = self.camera.get_scene().copy()
 
         overlay = scene.copy()
         for start, end in lines:
-            start_trans = self.camera.direct_transform(start, params)
-            end_trans = self.camera.direct_transform(end, params)
+            start_trans = self.camera.direct_transform(start[1], params)
+            end_trans = self.camera.direct_transform(end[1], params)
 
-            # print(start_trans.get_image(), ' ', start.get_real())
-            # print(end_trans.get_image(), ' ', end.get_real())
             start_plot = self._get_cv2_format(start_trans)
-            self._draw_point_with_label(overlay, start_plot, start_trans.get_real())
+            self._draw_point_with_label(overlay, start_plot, start[1].get())
             end_plot = self._get_cv2_format(end_trans)
-            self._draw_point_with_label(overlay, end_plot, end_trans.get_real())
+            self._draw_point_with_label(overlay, end_plot, end[1].get())
 
             cv2.line(overlay, start_plot,
                      end_plot, (0, 255, 0), 2)
@@ -48,7 +47,7 @@ class Plot:
         cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
 
         if not save and not out_jupyter:
-            cv2.imshow('Вид сцены калибровочный',scene)
+            cv2.imshow('Вид сцены калибровочный', scene)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         elif out_jupyter:
@@ -60,14 +59,15 @@ class Plot:
         else:
             cv2.imwrite('../data/evalution_scene.png', scene)
 
-    def draw_calibration_line(self, lines, save=False, out_jupyter=False):
+    def draw_calibration_line(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]], save=False,
+                              out_jupyter=False):
         scene = self.camera.get_scene()
 
         for start, end in lines:
-            start_plot = self._get_cv2_format(start)
-            end_plot = self._get_cv2_format(end)
-            self._draw_point_with_label(scene, start_plot, start.get_real())
-            self._draw_point_with_label(scene, end_plot, end.get_real())
+            start_plot = self._get_cv2_format(start[0])
+            end_plot = self._get_cv2_format(end[0])
+            self._draw_point_with_label(scene, start_plot, start[1].get())
+            self._draw_point_with_label(scene, end_plot, end[1].get())
             cv2.line(scene, start_plot,
                      end_plot, (0, 255, 0), 2)
 
