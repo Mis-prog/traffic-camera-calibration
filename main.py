@@ -40,9 +40,10 @@ for line in lines_calib:
 
 optimize = Optimizer(camera)
 
-camera, info = optimize.optimize(lines_prep)
-print(info.x)
-# camera.set_params([931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605])
+# camera, info = optimize.optimize(lines_prep)
+# print(info.x)
+# camera.set_params([931.45763154, -99.58434695, 37.91236625, -167.6947188, 0, 0, 31])
+# camera.set_params([900, 0, 0, 0, 31])
 # lines_calib = [
 #     [[831, 689, 7.71, 0, 0],
 #      [299, 520, 7.71, 20.7, 0]],
@@ -63,6 +64,14 @@ print(info.x)
 #     end2D, end3D = Point2D.from_homogeneous(end[0:2]), Point3D.from_homogeneous(end[2:6])
 #
 #     lines_prep.append([(start2D, start3D), (end2D, end3D)])
-plot = Plot(camera)
 # plot.draw_calibration_line(lines_prep)
-plot.draw_tranform_coord(lines_prep)
+
+# camera.set_params([760, 0, 0, 0, 40])
+ps=[900, 0, -180, 0, 31]
+camera.set_params([0,0,0,0,0])
+
+plot = Plot(camera)
+#plot.draw_tranform_line(lines_prep)
+print(camera.direct_transform_world(Point3D([0.1, 0, 10, 1]), params=ps).get())
+
+#plot.draw_transform_point([Point3D([-7, 0, 0, 1])])

@@ -9,6 +9,7 @@ from .point3D import Point3D
 class Plot:
     def __init__(self, camera):
         self.camera = camera
+        self.scene_plot = self.camera.get_scene().copy()
 
         cv2.line(self.camera.get_scene(), (828, 689), (927, 262), (0, 0, 0), 2)
         cv2.line(self.camera.get_scene(), (828, 700), (290, 513), (0, 0, 0), 2)
@@ -27,13 +28,13 @@ class Plot:
     def _get_cv2_format(self, point: Point2D):
         return tuple(map(int, point.get()))
 
-    def draw_tranform_coord(self, lines, save=False, out_jupyter=False, params=[]):
+    def draw_tranform_line(self, lines, save=False, out_jupyter=False, params=[]):
         scene = self.camera.get_scene().copy()
 
         overlay = scene.copy()
         for start, end in lines:
-            start_trans = self.camera.direct_transform(start[1], params)
-            end_trans = self.camera.direct_transform(end[1], params)
+            start_trans = self.camera.direct_transform_world(start[1], params)
+            end_trans = self.camera.direct_transform_world(end[1], params)
 
             start_plot = self._get_cv2_format(start_trans)
             self._draw_point_with_label(overlay, start_plot, start[1].get())
@@ -42,6 +43,33 @@ class Plot:
 
             cv2.line(overlay, start_plot,
                      end_plot, (0, 255, 0), 2)
+
+        alpha = 0.8
+        cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
+
+        if not save and not out_jupyter:
+            cv2.imshow('Вид сцены калибровочный', scene)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        elif out_jupyter:
+            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+            plt.figure(figsize=(10, 8))
+            plt.imshow(scene_rgb)
+            plt.axis('off')
+            plt.show()
+        else:
+            cv2.imwrite('../data/evalution_scene.png', scene)
+
+    def draw_transform_point(self, points, save=False, out_jupyter=False, params=[]):
+        scene = self.camera.get_scene().copy()
+
+        overlay = scene.copy()
+        for point in points:
+            point_trans = self.camera.direct_transform_world(point, params)
+
+            start_plot = self._get_cv2_format(point_trans)
+            self._draw_point_with_label(overlay, start_plot, point_trans.get())
+
 
         alpha = 0.8
         cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)

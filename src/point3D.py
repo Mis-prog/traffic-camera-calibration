@@ -19,4 +19,4 @@ class Point3D:
         if out_homogeneous:
             return self.coord
         else:
-            return self.coord[:-1] / self.coord[-1]
+            return np.array(self.coord[:-1]) / self.coord[-1]

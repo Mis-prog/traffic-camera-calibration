@@ -45,6 +45,7 @@ class Camera:
     def calc_R(self, euler_angles):
         rot = Rotation.from_euler('zxy', euler_angles, degrees=True)
         self.R = rot.as_matrix()
+        print(self.R)
 
     def set_init_R(self, p):
         self.R = np.vstack(p).transpose()
@@ -73,6 +74,9 @@ class Camera:
             self.A = np.array([[f, 0, self.size[1] / 2],
                                [0, f * self.tau, self.size[0] / 2],
                                [0, 0, 1]])
+            # self.A = np.array([[f, 0, 0],
+            #                    [0, f * self.tau, 0],
+            #                    [0, 0, 1]])
         else:
             self.A = np.array([[f, 0, self.size[1] / 2],
                                [0, f, self.size[0] / 2],
@@ -84,7 +88,30 @@ class Camera:
         return self.A
 
     # прямое преобразование
-    def direct_transform(self, point_real: Point3D, params=[]) -> Point2D:
+    def direct_transform_world(self, point_real: Point3D, params=[]) -> Point2D:
+        if len(params) == 5:
+            print("5p")
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(z=params[4])
+
+        elif len(params) == 6:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], z=params[4])
+        elif len(params) == 7:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], y=params[5], z=params[6])
+
+        _T1 = -self.R @ self.T
+        _RT = np.hstack([self.R, _T1[:, np.newaxis]])
+        _AT = self.A @ _RT
+        _new_point = Point2D(_AT .dot( point_real.get(out_homogeneous=True)))
+        return _new_point
+
+
+    def direct_transform_camera(self, point_real: Point3D, params=[]) -> Point2D:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -98,26 +125,27 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
+        # _T1 = -self.R @ self.T
+        # _RT = np.hstack([self.R, _T1[:, np.newaxis]])
+        # _AT = self.A @ _RT
+        _new_point = Point2D(self.A @ point_real.get())
+        return _new_point
+    # обратное преобразование
+    def back_transform(self, point_image: Point2D, params=[]) -> Point3D:
+        if len(params) == 5:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(z=params[4])
+        elif len(params) == 7:
+            self.calc_A(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], y=params[5], z=params[6])
+
         _T1 = -self.R @ self.T
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
         _AT = self.A @ _RT
-        _new_point = Point2D(_AT @ point_real.get(out_homogeneous=True))
+        _AT_homogen = np.vstack([_AT, [0, 0, 0, 1]])
+        _AT_inv = np.linalg.inv(_AT_homogen)
+        print(point_image.get(out_homogeneous=True))
+        _new_point = Point3D(_AT_inv @ point_image.get(out_homogeneous=True))
         return _new_point
-
-    # обратное преобразование
-    # def back_transform(self, point_image: Point2D, params=[]) -> Point3D:  # todo переписать
-    #     if len(params) == 5:
-    #         self.calc_A(params[0])
-    #         self.calc_R(params[1:4])
-    #         self.calc_T(z=params[4])
-    #     elif len(params) == 7:
-    #         self.calc_A(params[0])
-    #         self.calc_R(params[1:4])
-    #         self.calc_T(x=params[4], y=params[5], z=params[6])
-    #
-    #     _RT = np.hstack([self.R, self.T])
-    #     _AT_inv = np.linalg.inv(self.A @ _RT)
-    #     _new_point = _AT_inv @ point_image.get(out_homogeneous=True)
-    #     point_real = Point.copy(point_image)
-    #     point_real.set_real(_new_point)
-    #     return point_real
