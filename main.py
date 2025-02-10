@@ -40,11 +40,11 @@ for line in lines_calib:
 
 optimize = Optimizer(camera)
 
-camera, info = optimize.optimize(lines_prep)
+camera, info = optimize.optimize_init(lines_prep)
 print(info.x)
 # camera.set_params([931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605])
 # lines_calib = [
-#     [[831, 689, 7.71, 0, 0],
+#     [[831, 689, 3, 0, 0],
 #      [299, 520, 7.71, 20.7, 0]],
 #     [[896, 405, 18.9, 0, 0],
 #      [439, 322, 18.9, 20.7, 0]],
@@ -53,16 +53,16 @@ print(info.x)
 #     [[890, 478, 15.09, 0, 0],
 #      [397, 379, 15.09, 20.7, 0]],
 #     [[300, 515, 7.71, 20.7, 0],
-#      [557, 180, 31.9, 20.7, 0]]
+#      [557, 180, 40, 22, 0]]
 # ]
 
-# lines_prep = []
-# for line in lines_calib:
-#     start, end = line
-#     start2D, start3D = Point2D.from_homogeneous(start[0:2]), Point3D.from_homogeneous(start[2:6])
-#     end2D, end3D = Point2D.from_homogeneous(end[0:2]), Point3D.from_homogeneous(end[2:6])
-#
-#     lines_prep.append([(start2D, start3D), (end2D, end3D)])
+lines_prep = []
+for line in lines_calib:
+    start, end = line
+    start2D, start3D = Point2D.from_homogeneous(start[0:2]), Point3D.from_homogeneous(start[2:6])
+    end2D, end3D = Point2D.from_homogeneous(end[0:2]), Point3D.from_homogeneous(end[2:6])
+
+    lines_prep.append([(start2D, start3D), (end2D, end3D)])
 plot = Plot(camera)
 # plot.draw_calibration_line(lines_prep)
 plot.draw_tranform_coord(lines_prep)
