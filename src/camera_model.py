@@ -52,6 +52,7 @@ class Camera:
     def get_R(self, angle_output=False, output=False):
         if angle_output:
             angles = Rotation.from_matrix(self.R).as_euler('zxy', degrees=True)
+            # print(angles)
             return angles
         if output:
             print(f'Матрица поворота:\n{self.R}')
@@ -153,9 +154,10 @@ class Camera:
 
         _T1 = -self.R @ self.T
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
+        _RT = np.delete(_RT, 2, axis=1)
         _AT = self.A @ _RT
-        _AT_homogen = np.vstack([_AT, [0, 0, 0, 1]])
-        _AT_inv = np.linalg.inv(_AT_homogen)
+        _AT_inv = np.linalg.inv(_AT)
+        print(_AT_inv)
         print(point_image.get(out_homogeneous=True))
         _new_point = Point3D(_AT_inv @ point_image.get(out_homogeneous=True))
         return _new_point

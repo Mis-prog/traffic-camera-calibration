@@ -65,5 +65,5 @@ def calc_init_camera(path, lines) -> Camera:
     px, py, pz = _calc_norm_vanishing_points(v[0], v[1], camera)
 
     camera.set_init_R([px, py, pz])
-    camera.calc_T(z=1)
+    camera.calc_T(z=30)
     return camera
