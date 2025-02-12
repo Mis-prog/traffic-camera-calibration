@@ -37,22 +37,6 @@ class Optimizer:
 
         return np.sum(error)
 
-    def reprojection_error(self, line_known: tuple[Point2D, Point2D],
-                           line_predicted: tuple[Point2D, Point2D]) -> float:
-        known_start, known_end = map(lambda p: np.array(p.get()), line_known)
-        predicted_points = np.array([line_predicted[0].get(), line_predicted[1].get()])
-
-        # Найдем коэффициенты прямой Ax + By + C = 0 для known
-        x1, y1 = known_start
-        x2, y2 = known_end
-        A, B = y2 - y1, x1 - x2  # Нормаль (перпендикулярный вектор)
-        C = -A * x1 - B * y1
-
-        # Вычислим расстояние от точек предсказанной линии до прямой
-        distances = np.abs(A * predicted_points[:, 0] + B * predicted_points[:, 1] + C) / np.sqrt(A ** 2 + B ** 2)
-
-        return np.mean(distances)  # Средняя ошибка перепроецирования
-
     def residuals(self, params: np.ndarray,
                   lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]) -> np.ndarray:
         residuals = []

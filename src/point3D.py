@@ -1,6 +1,6 @@
 import numpy as np
 
-
+#todo описать класс чтобы он принимал на вход вектора длины 3 для обратного преобразования
 class Point3D:
     def __init__(self, coord):
         if len(coord) == 3:
