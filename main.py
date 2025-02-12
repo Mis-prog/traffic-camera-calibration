@@ -41,7 +41,6 @@ for line in lines_calib:
 optimize = Optimizer(camera)
 camera.set_params([931.45763154, -99.58434695, 37.91236625, -167.6947188, 31])
 
-print(camera.back_transform_world(Point2D([896, 405, 1])).get())
 
 # camera, info = optimize.optimize_init(lines_prep)
 # print(info)

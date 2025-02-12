@@ -126,23 +126,8 @@ class Camera:
         _new_point = Point2D(self.A @ point_real.get())
         return _new_point
 
-    # обратное преобразование
-    def back_transform_camera(self, point_image: Point2D, params=[]) -> Point3D:
-        if len(params) == 5:
-            self.calc_A(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(z=params[4])
-        elif len(params) == 7:
-            self.calc_A(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(x=params[4], y=params[5], z=params[6])
 
-        _AT_inv = np.linalg.inv(self.A)
-        _new_point = Point3D(_AT_inv @ point_image.get(out_homogeneous=True))
-        return _new_point
-
-
-    def back_transform_world(self, point_image: Point2D, params=[]) -> Point3D:
+    def back_transform_world(self, point_image: Point2D, params=[]) -> Point2D:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -159,5 +144,5 @@ class Camera:
         _AT_inv = np.linalg.inv(_AT)
         print(_AT_inv)
         print(point_image.get(out_homogeneous=True))
-        _new_point = Point3D(_AT_inv @ point_image.get(out_homogeneous=True))
+        _new_point = Point2D(_AT_inv @ point_image.get(out_homogeneous=True))
         return _new_point
