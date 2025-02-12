@@ -70,7 +70,22 @@ class Optimizer:
 
         return np.array(residuals)
 
-    def optimize(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
+    def optimize_init(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
+        angles = self.camera.get_R(angle_output=True)
+        x0 = [self.camera.get_f(), *angles, 10]
+
+        bounds = [
+            (700, 1000),
+            (-np.pi, np.pi),
+            (-np.pi, np.pi),
+            (-np.pi, np.pi),
+            (10, 15)
+        ]
+
+        result = least_squares(self.residuals, x0, args=(lines,), method='trf')
+        return self.camera, result
+
+    def optimize_model(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
         angles = self.camera.get_R(angle_output=True)
         # x0 = [self.camera.get_f(), *angles, 10]
         x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
