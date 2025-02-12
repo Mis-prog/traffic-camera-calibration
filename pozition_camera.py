@@ -45,6 +45,6 @@ def plot_camera_orientation(rotation_matrix, position):
     plt.show()
 
 
-angles = [-167, 0, 0]
+angles = [-110, 45, -172]
 rotation_matrix = euler_to_rotation_matrix(angles)
 plot_camera_orientation(rotation_matrix, camera_position)

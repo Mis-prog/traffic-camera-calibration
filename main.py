@@ -18,60 +18,61 @@ camera = calc_init_camera('data/scene_from_crossroads_not_dist.png', [Line_X, Li
 
 # Калибровочные линии
 lines_calib = [
-    [[831, 689, 7.71, 0, 0],
-     [299, 520, 7.71, 20.7, 0]],
+    # [[831, 689, 7.71, 0, 0],
+    #  [299, 520, 7.71, 20.7, 0]],
     [[896, 405, 18.9, 0, 0],
      [439, 322, 18.9, 20.7, 0]],
     [[927, 267, 31.9, 0, 0],
      [553, 189, 31.9, 20.7, 0]],
     [[890, 478, 15.09, 0, 0],
      [397, 379, 15.09, 20.7, 0]],
-    [[300, 515, 7.71, 20.7, 0],
-     [557, 180, 31.9, 20.7, 0]]
+    # [[300, 515, 7.71, 20.7, 0],
+    #  [557, 180, 31.9, 20.7, 0]]
 ]
 
 lines_prep = []
 for line in lines_calib:
     start, end = line
-    start2D, start3D = Point2D.from_homogeneous(start[0:2]), Point3D.from_homogeneous(start[2:6])
-    end2D, end3D = Point2D.from_homogeneous(end[0:2]), Point3D.from_homogeneous(end[2:6])
+    start2D, start3D = Point2D(start[0:2]), Point3D(start[2:6])
+    end2D, end3D = Point2D(end[0:2]), Point3D(end[2:6])
 
     lines_prep.append([(start2D, start3D), (end2D, end3D)])
 
-optimize = Optimizer(camera)
+# optimize = Optimizer(camera)
 
 # camera, info = optimize.optimize(lines_prep)
-# print(info.x)
+# print(info)
+
 # camera.set_params([931.45763154, -99.58434695, 37.91236625, -167.6947188, 0, 0, 31])
 # camera.set_params([900, 0, 0, 0, 31])
 # lines_calib = [
 #     [[831, 689, 7.71, 0, 0],
 #      [299, 520, 7.71, 20.7, 0]],
-#     [[896, 405, 18.9, 0, 0],
-#      [439, 322, 18.9, 20.7, 0]],
-#     [[927, 267, 31.9, 0, 0],
-#      [553, 189, 31.9, 20.7, 0]],
-#     [[890, 478, 15.09, 0, 0],
-#      [397, 379, 15.09, 20.7, 0]],
-#     [[300, 515, 7.71, 20.7, 0],
-#      [557, 180, 31.9, 20.7, 0]]
+    # [[831, 689, 7.71, 0, 10],
+    #  [299, 520, 7.71, 20.7, 10]],
+    # [[831, 689, 7.71, 0, 0],
+    #  [299, 520, 7.71, 0, 10]],
+    # [[831, 689, 7.71, 20.7, 0],
+    #  [299, 520, 7.71, 20.7, 10]],
+    # [[896, 405, 18.9, 0, 0],
+    # [439, 322, 18.9, 20.7, 0]],
+    # [[927, 267, 31.9, 0, 0],
+    # [553, 189, 31.9, 20.7, 0]],
+    # [[890, 478, 15.09, 0, 0],
+    # [397, 379, 15.09, 20.7, 0]],
+    # [[300, 515, 7.71, 20.7, 0],
+    # [557, 180, 31.9, 20.7, 0]]
 # ]
-
 # lines_prep = []
 # for line in lines_calib:
 #     start, end = line
-#     start2D, start3D = Point2D.from_homogeneous(start[0:2]), Point3D.from_homogeneous(start[2:6])
-#     end2D, end3D = Point2D.from_homogeneous(end[0:2]), Point3D.from_homogeneous(end[2:6])
+#     start2D, start3D = Point2D(start[0:2]), Point3D(start[2:6])
+#     end2D, end3D = Point2D(end[0:2]), Point3D(end[2:6])
 #
 #     lines_prep.append([(start2D, start3D), (end2D, end3D)])
-# plot.draw_calibration_line(lines_prep)
 
 # camera.set_params([760, 0, 0, 0, 40])
-ps=[900, 0, -180, 0, 31]
-camera.set_params([0,0,0,0,0])
-
-plot = Plot(camera)
-#plot.draw_tranform_line(lines_prep)
-print(camera.direct_transform_world(Point3D([0.1, 0, 10, 1]), params=ps).get())
-
-#plot.draw_transform_point([Point3D([-7, 0, 0, 1])])
+# camera.set_params([[931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605]])
+# print(camera.back_transform_camera(Point2D([100,100,1])).get())
+# plot = Plot(camera)
+# plot.draw_tranform_line(lines_prep)

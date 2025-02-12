@@ -3,13 +3,11 @@ import numpy as np
 
 class Point3D:
     def __init__(self, coord):
-        self.coord = coord
-
-    @classmethod
-    def from_homogeneous(cls, coord):
         if len(coord) == 3:
             coord = np.append(coord, 1)
-            return cls(coord=coord)
+            self.coord = coord
+        elif len(coord) == 4:
+            self.coord = coord
 
     def set(self, coord):
         self.coord = coord

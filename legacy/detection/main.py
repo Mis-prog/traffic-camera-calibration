@@ -19,7 +19,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 
 online = False
 model_path = os.path.join(CURR_DIR, r"best_8n_car_truck_van.onnx")
-video_path = os.path.join(CURR_DIR, r"../data/Запись_экрана_(04.10.2024 22-47-57).mp4")
+video_path = os.path.join(CURR_DIR, r"../data/move.mp4")
 
 if online:
     html = requests.get('http://maps.ufanet.ru/ufa').text
