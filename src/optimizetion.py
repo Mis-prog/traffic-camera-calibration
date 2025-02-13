@@ -49,7 +49,7 @@ class Optimizer:
             predicted_end_2D = self.camera.direct_transform_world(known_end_3D, params)
 
             error1 = self.error_point_to_point((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
-            error2 = self.reprojection_error((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
+            error2 = self.error_line((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             residuals.append(error1 + error2)
 
         return np.array(residuals)
@@ -66,8 +66,9 @@ class Optimizer:
             predicted_start_3D = self.camera.back_transform_world(known_start_2D, params)
             predicted_end_3D = self.camera.back_transform_world(known_end_2D, params)
 
-            error = self.error_point_to_point((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
-            residuals.append(error)
+            error1 = self.error_point_to_point((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
+            # error2 = self.error_line((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
+            residuals.append(error1)
 
         return np.array(residuals)
 
@@ -102,11 +103,15 @@ class Optimizer:
         result = least_squares(self.residuals_reprojection, x0, args=(lines,), method='trf')
         return self.camera, result
 
+
+
     def optimize_back_reprojection(self, lines: list[tuple[tuple[Point2D, Point2D], tuple[Point2D, Point2D]]]):
         angles = self.camera.get_R(angle_output=True)
         # x0 = [self.camera.get_f(), *angles, 10]
         x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
 
-
-        result = least_squares(self.residuals_back_reprojection, x0, args=(lines,), method='lm')
+        result = least_squares(self.residuals_back_reprojection, x0, args=(lines,), method='trf'
+                               # ,verbose=2, # подробно видно как сходится
+                               # max_nfev=20000 # кол-во итераций
+                               )
         return self.camera, result

@@ -58,7 +58,7 @@ class Plot:
             plt.axis('off')
             plt.show()
         else:
-            cv2.imwrite('../data/evalution_scene.png', scene)
+            cv2.imwrite('../data/crossroads_karls_marks/evalution_scene.png', scene)
 
     def draw_transform_point(self, points, save=False, out_jupyter=False, params=[]):
         scene = self.camera.get_scene().copy()
@@ -85,7 +85,7 @@ class Plot:
             plt.axis('off')
             plt.show()
         else:
-            cv2.imwrite('../data/evalution_scene.png', scene)
+            cv2.imwrite('../data/crossroads_karls_marks/evalution_scene.png', scene)
 
     def draw_calibration_line(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]], save=False,
                               out_jupyter=False):
@@ -110,4 +110,4 @@ class Plot:
             plt.axis('off')
             plt.show()
         else:
-            cv2.imwrite('../data/calibration_line.png', scene)
+            cv2.imwrite('../data/crossroads_karls_marks/calibration_line.png', scene)
