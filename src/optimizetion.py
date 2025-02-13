@@ -37,8 +37,8 @@ class Optimizer:
 
         return np.sum(error)
 
-    def residuals(self, params: np.ndarray,
-                  lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]) -> np.ndarray:
+    def residuals_reprojection(self, params: np.ndarray,
+                               lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]) -> np.ndarray:
         residuals = []
 
         for known_start, known_end in lines:
@@ -50,7 +50,24 @@ class Optimizer:
 
             error1 = self.error_point_to_point((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             error2 = self.reprojection_error((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
-            residuals.append(error1+error2)
+            residuals.append(error1 + error2)
+
+        return np.array(residuals)
+
+    def residuals_back_reprojection(self, params: np.ndarray,
+                                    lines: list[tuple[tuple[Point2D, Point2D], tuple[Point2D, Point2D]]]) -> np.ndarray:
+
+        residuals = []
+
+        for known_start, known_end in lines:
+            known_start_2D, known_start_3D = known_start  # первая точка в пиксялях, вторая в реальных координатах z=0
+            known_end_2D, known_end_3D = known_end
+
+            predicted_start_3D = self.camera.back_transform_world(known_start_2D, params)
+            predicted_end_3D = self.camera.back_transform_world(known_end_2D, params)
+
+            error = self.error_point_to_point((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
+            residuals.append(error)
 
         return np.array(residuals)
 
@@ -66,10 +83,10 @@ class Optimizer:
             (10, 15)
         ]
 
-        result = least_squares(self.residuals, x0, args=(lines,), method='trf')
+        result = least_squares(self.residuals_reprojection, x0, args=(lines,), method='trf')
         return self.camera, result
 
-    def optimize_model(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
+    def optimize_reprojection(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
         angles = self.camera.get_R(angle_output=True)
         # x0 = [self.camera.get_f(), *angles, 10]
         x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
@@ -82,5 +99,14 @@ class Optimizer:
             (10, 15)
         ]
 
-        result = least_squares(self.residuals, x0, args=(lines,), method='trf')
+        result = least_squares(self.residuals_reprojection, x0, args=(lines,), method='trf')
+        return self.camera, result
+
+    def optimize_back_reprojection(self, lines: list[tuple[tuple[Point2D, Point2D], tuple[Point2D, Point2D]]]):
+        angles = self.camera.get_R(angle_output=True)
+        # x0 = [self.camera.get_f(), *angles, 10]
+        x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
+
+
+        result = least_squares(self.residuals_back_reprojection, x0, args=(lines,), method='lm')
         return self.camera, result
