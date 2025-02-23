@@ -35,11 +35,14 @@ class Camera:
     def get_tau(self):
         return self.tau
 
+    def calc_tau(self, height, width):
+        self.size = [height, width]  # высота и ширина
+        self.tau = height / width
+
     def load_scene(self, path):
         self.scene = cv2.imread(path)
         height, width, channels = self.scene.shape
-        self.size = [height, width]  # высота и ширина
-        self.tau = height / width
+        self.calc_tau(height, width)
 
     # вычисление матрицы поворота
     def calc_R(self, euler_angles):
@@ -125,7 +128,6 @@ class Camera:
 
         _new_point = Point2D(self.A @ point_real.get())
         return _new_point
-
 
     def back_transform_world(self, point_image: Point2D, params=[]) -> Point2D:
         if len(params) == 5:
