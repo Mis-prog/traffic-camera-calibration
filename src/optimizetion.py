@@ -45,8 +45,9 @@ class Optimizer:
             predicted_end_2D = self.camera.direct_transform_world(known_end_3D, params)
 
             error1 = self.error_point_to_point((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
-            error2 = self.error_line((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
-            residuals.append(error1 + error2)
+            # error2 = self.error_line((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
+            # residuals.append(error1 + error2 )
+            residuals.append(error1)
 
         return np.array(residuals)
 

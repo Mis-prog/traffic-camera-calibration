@@ -6,6 +6,7 @@ from scipy.spatial.transform import Rotation
 from src.camera_model import Camera
 from src.point3D import Point3D
 from src.point2D import Point2D
+from src.optimizetion import Optimizer
 
 
 def init(h):
@@ -58,7 +59,7 @@ def plot_axies(position, angles=[]):
         distances = np.linalg.norm(transform[:3, 3])
 
         ax.scatter(*transform[:3, 3], color='red',
-                   label=f'{transform[:3, 3]}, расстонияние до центра {round(distances, 2)}')
+                   label=f'{np.around(transform[:3, 3], 2)}, расстонияние до центра {round(distances, 2)}')
         ax.quiver(*origin[:-1], *(x_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(y_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(z_position[:-1] - origin[:-1]), color='black')
@@ -70,49 +71,75 @@ def plot_axies(position, angles=[]):
         ax.legend(loc='upper center')
 
 
-points = np.array([
-    [-10, -10, 0, 1],
-    [10, -10, 0, 1],
-    [10, 10, 0, 1],
-    [-10, 10, 0, 1],
-    [-10, -10, 0, 1],
+def world_to_image(params):
+    points3D = [[Point3D(start), Point3D(end)] for start, end in POINTS]
+    camera = Camera()
+    camera.calc_tau(height, width)
+    camera.set_params(params)
+    points2D = [[camera.direct_transform_world(start), camera.direct_transform_world(end)] for start, end
+                in points3D]
+
+    _points = [[start.get(), end.get()] for start, end in points2D]
+    _points = np.array(_points)
+
+    return _points
+
+
+def create_dataset(params):
+    camera = Camera()
+    camera.calc_tau(height, width)
+    camera.set_params(params)
+
+    points_dataset = [
+        [(camera.direct_transform_world(Point3D(start)), Point3D(start)),
+         (camera.direct_transform_world(Point3D(end)), Point3D(end))]
+        for start, end in POINTS]
+
+    return points_dataset
+
+
+POINTS = np.array([
+    [[-10, -20, 0, 1], [-10, 20, 0, 1]],
+    [[-5, -20, 0, 1], [-5, 20, 0, 1]],
+    [[5, -20, 0, 1], [5, 20, 0, 1]],
+    [[10, -20, 0, 1], [10, 20, 0, 1]],
+    [[-20, 10, 0, 1], [20, 10, 0, 1]],
+    [[-20, -10, 0, 1], [20, -10, 0, 1]],
 ])
 
-# points = np.array([
-#     [0, 0, 0, 1],
-#     [10, 0, 0, 1],
-#     [10, 10, 0, 1],
-#     [0, 10, 0, 1],
-#     [0, 0, 0, 1],
-# ])
 
-def plot_square_world():
-    plt.plot(points[:, 0], points[:, 1], color='black')
+def plot_lines_world():
+    for start, end in POINTS:
+        plt.plot([start[0], end[0]], [start[1], end[1]], ls='--', color='black')
     plt.axis('equal')
     plt.show()
 
 
-def plot_square_image(params):
-    points3D = [Point3D(value) for value in points]
-    camera = Camera()
-    camera.calc_tau(300, 400)
-    points2D = [camera.direct_transform_world(point3D, params) for point3D
-                in points3D]
-
-    _points = [value.get() for value in points2D]
-    _points = np.array(_points)
-    plt.plot(_points[:, 0], _points[:, 1])
-    plt.xlim(0, 400)
-    plt.ylim(0, 300)
+def plot_lines_image(params):
+    _points = world_to_image(params)
+    for start, end in _points:
+        plt.plot([start[0], end[0]], [start[1], end[1]], ls='--', color='black')
+    plt.xlim(0, width)
+    plt.ylim(0, height)
     plt.grid()
 
 
+# эталонные значения
+height, width = 300, 700
 h = 30
 angles = [0, 0, -180]
 f = 200
 ax = init(h)
 plot_axies([0, 0, 0])
 plot_axies([0, 0, h], angles)
-plot_square_world()
-plot_square_image([f, *angles, h])
+plot_lines_world()
+plot_lines_image([f, *angles, h])
 plt.show()
+
+camera = Camera()
+camera.calc_tau(height, width)
+camera.set_params([f, *angles, h])
+optimize = Optimizer(camera)
+dataset = create_dataset([f, *angles, h])
+camera, info = optimize.optimize_reprojection(dataset)
+print(np.around(info.x))
