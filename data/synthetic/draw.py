@@ -3,6 +3,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+from src.camera_model import Camera
+from src.point3D import Point3D
+from src.point2D import Point2D
+
 
 def init(h):
     fig = plt.figure()
@@ -26,36 +30,35 @@ def init(h):
     ax.set_proj_type('persp')
 
     ax.set_zlim(0, h + 10)
-    ax.set_xlim(-10, 30)
-    ax.set_ylim(0, 30)
+    ax.set_xlim(-30, 30)
+    ax.set_ylim(-30, 30)
 
     return ax
 
 
 def plot_axies(position, angles=[]):
     if not angles:
-        ax.quiver(*position, 9, 0, 0, color='black')
+        ax.quiver(*position, 6, 0, 0, color='black')
         ax.quiver(*position, 0, 6, 0, color='black')
         ax.quiver(*position, 0, 0, 6, color='black')
         text_size = 12
-        ax.text(position[0] + 9, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
-        ax.text(position[0], position[1] + 6.5, position[2], 'Y', color='black', fontsize=text_size)
-        ax.text(position[0], position[1], position[2] + 6.5, 'Z', color='black', fontsize=text_size)
+        ax.text(position[0] + 6, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
+        ax.text(position[0], position[1] + 6, position[2], 'Y', color='black', fontsize=text_size)
+        ax.text(position[0], position[1], position[2] + 6, 'Z', color='black', fontsize=text_size)
     else:
         rot = Rotation.from_euler('zxy', angles, degrees=True).as_matrix()
         transform = np.eye(4)
         transform[:3, :3] = rot
         transform[:3, 3] = -rot @ position
-
-        x_position = transform @ np.array([9, 0, 0, 1])
+        x_position = transform @ np.array([6, 0, 0, 1])
         y_position = transform @ np.array([0, 6, 0, 1])
         z_position = transform @ np.array([0, 0, 6, 1])
         origin = transform @ np.array([0, 0, 0, 1])
         # print(f'Положение камеры:\nx: {x_position[:-1]}\ny: {y_position[:-1]}\nz: {z_position[:-1]}')
-        point = transform @ origin
-        distances = np.sqrt(np.sum(point[:3] ** 2))
-        print(f'Расстояние до точки {distances}')
+        distances = np.linalg.norm(transform[:3, 3])
 
+        ax.scatter(*transform[:3, 3], color='red',
+                   label=f'{transform[:3, 3]}, расстонияние до центра {round(distances, 2)}')
         ax.quiver(*origin[:-1], *(x_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(y_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(z_position[:-1] - origin[:-1]), color='black')
@@ -64,20 +67,52 @@ def plot_axies(position, angles=[]):
         ax.text(*y_position[:-1], 'Y', color='black', fontsize=text_size)
         ax.text(*z_position[:-1], 'Z', color='black', fontsize=text_size)
 
+        ax.legend(loc='upper center')
 
-def plot_line(lines):
-    for line in lines:
-        # print(line[0])
-        # plt.scatter(x_values, y_values, color='black')  #
-        plt.plot(*line, color='black')
+
+points = np.array([
+    [-10, -10, 0, 1],
+    [10, -10, 0, 1],
+    [10, 10, 0, 1],
+    [-10, 10, 0, 1],
+    [-10, -10, 0, 1],
+])
+
+# points = np.array([
+#     [0, 0, 0, 1],
+#     [10, 0, 0, 1],
+#     [10, 10, 0, 1],
+#     [0, 10, 0, 1],
+#     [0, 0, 0, 1],
+# ])
+
+def plot_square_world():
+    plt.plot(points[:, 0], points[:, 1], color='black')
+    plt.axis('equal')
+    plt.show()
+
+
+def plot_square_image(params):
+    points3D = [Point3D(value) for value in points]
+    camera = Camera()
+    camera.calc_tau(300, 400)
+    points2D = [camera.direct_transform_world(point3D, params) for point3D
+                in points3D]
+
+    _points = [value.get() for value in points2D]
+    _points = np.array(_points)
+    plt.plot(_points[:, 0], _points[:, 1])
+    plt.xlim(0, 400)
+    plt.ylim(0, 300)
+    plt.grid()
 
 
 h = 30
+angles = [0, 0, -180]
+f = 200
 ax = init(h)
 plot_axies([0, 0, 0])
-plot_axies([0, 0, h], [-99.58434695, 37.91236625, -167.6947188])
-
-lines = [[[i, 10 * i + 10], [i + 10, 10 * i + 10]] for i in range(2)]
-# print(lines)
-plot_line(lines)
+plot_axies([0, 0, h], angles)
+plot_square_world()
+plot_square_image([f, *angles, h])
 plt.show()
