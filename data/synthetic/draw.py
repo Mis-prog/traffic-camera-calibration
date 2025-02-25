@@ -31,35 +31,36 @@ def init(h):
     ax.set_proj_type('persp')
 
     ax.set_zlim(0, h + 10)
-    ax.set_xlim(-30, 30)
-    ax.set_ylim(-30, 30)
+    ax.set_xlim(-50, 50)
+    ax.set_ylim(-50, 50)
 
     return ax
 
 
 def plot_axies(position, angles=[]):
     if not angles:
-        ax.quiver(*position, 6, 0, 0, color='black')
-        ax.quiver(*position, 0, 6, 0, color='black')
-        ax.quiver(*position, 0, 0, 6, color='black')
+        ax.quiver(*position, 15, 0, 0, color='black')
+        ax.quiver(*position, 0, 15, 0, color='black')
+        ax.quiver(*position, 0, 0, 15, color='black')
+        ax.scatter(0, 0, 0, marker='^', s = 100, color='red', label='Мировая система координат')
         text_size = 12
-        ax.text(position[0] + 6, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
-        ax.text(position[0], position[1] + 6, position[2], 'Y', color='black', fontsize=text_size)
-        ax.text(position[0], position[1], position[2] + 6, 'Z', color='black', fontsize=text_size)
+        ax.text(position[0] + 15, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
+        ax.text(position[0], position[1] + 15, position[2], 'Y', color='black', fontsize=text_size)
+        ax.text(position[0], position[1], position[2] + 15, 'Z', color='black', fontsize=text_size)
     else:
         rot = Rotation.from_euler('zxy', angles, degrees=True).as_matrix()
         transform = np.eye(4)
         transform[:3, :3] = rot
         transform[:3, 3] = -rot @ position
-        x_position = transform @ np.array([6, 0, 0, 1])
-        y_position = transform @ np.array([0, 6, 0, 1])
-        z_position = transform @ np.array([0, 0, 6, 1])
+        x_position = transform @ np.array([15, 0, 0, 1])
+        y_position = transform @ np.array([0, 15, 0, 1])
+        z_position = transform @ np.array([0, 0, 15, 1])
         origin = transform @ np.array([0, 0, 0, 1])
         # print(f'Положение камеры:\nx: {x_position[:-1]}\ny: {y_position[:-1]}\nz: {z_position[:-1]}')
         distances = np.linalg.norm(transform[:3, 3])
 
-        ax.scatter(*transform[:3, 3], color='red',
-                   label=f'{np.around(transform[:3, 3], 2)}, расстонияние до центра {round(distances, 2)}')
+        ax.scatter(*transform[:3, 3], color='red', label='Система координат камеры камеры')
+        # label=f'{np.around(transform[:3, 3], 2)}, расстонияние до центра {round(distances, 2)}')
         ax.quiver(*origin[:-1], *(x_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(y_position[:-1] - origin[:-1]), color='black')
         ax.quiver(*origin[:-1], *(z_position[:-1] - origin[:-1]), color='black')
@@ -105,13 +106,14 @@ POINTS = np.array([
     [[10, -20, 0, 1], [10, 20, 0, 1]],
     [[-20, 10, 0, 1], [20, 10, 0, 1]],
     [[-20, -10, 0, 1], [20, -10, 0, 1]],
-])
+    [[-20, -5, 0, 1], [20, -5, 0, 1]],
+    [[-20, 5, 0, 1], [20, 5, 0, 1]],
+]) * 3
 
 
 def plot_lines_world():
     for start, end in POINTS:
         plt.plot([start[0], end[0]], [start[1], end[1]], ls='--', color='black')
-    plt.axis('equal')
     plt.show()
 
 
@@ -125,10 +127,10 @@ def plot_lines_image(params):
 
 
 # эталонные значения
-height, width = 300, 700
-h = 30
-angles = [0, 0, -180]
-f = 200
+height, width = 700, 1200
+h = 40
+angles = [-70, 37, -150]
+f = 700
 ax = init(h)
 plot_axies([0, 0, 0])
 plot_axies([0, 0, h], angles)
@@ -141,5 +143,9 @@ camera.calc_tau(height, width)
 camera.set_params([f, *angles, h])
 optimize = Optimizer(camera)
 dataset = create_dataset([f, *angles, h])
-camera, info = optimize.optimize_reprojection(dataset)
+camera, info, cost_history = optimize.optimize_reprojection(dataset)
 print(np.around(info.x))
+
+import matplotlib.pyplot as plt
+plt.plot(cost_history)
+plt.show()
