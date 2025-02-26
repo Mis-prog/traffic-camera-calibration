@@ -1,6 +1,7 @@
 import numpy as np
 
-#todo описать класс чтобы он принимал на вход вектора длины 3 для обратного преобразования
+
+# todo описать класс чтобы он принимал на вход вектора длины 3 для обратного преобразования
 class Point3D:
     def __init__(self, coord):
         if len(coord) == 3:
@@ -11,6 +12,9 @@ class Point3D:
 
     def set(self, coord):
         self.coord = coord
+
+    def set_Z(self, z):
+        self.coord[2] = z
 
     # по умолчанию неоднородные координаты
     def get(self, out_homogeneous=False):

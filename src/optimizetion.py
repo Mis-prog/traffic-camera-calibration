@@ -21,6 +21,17 @@ class Optimizer:
 
         return error
 
+    def error_shape(self, line_known, line_predicted):
+        """ Ошибка, основанная на косинусном расстоянии между векторами линий """
+        known_start, known_end = line_known
+        predicted_start, predicted_end = line_predicted
+
+        v1 = known_end.get() - known_start.get()
+        v2 = predicted_end.get() - predicted_start.get()
+
+        cos_sim = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        return 1 - cos_sim  # Чем ближе к 0, тем лучше
+
     def error_line(self, line_known: tuple[Point2D, Point2D],
                    line_predicted: tuple[Point2D, Point2D]) -> float:
         known_start, known_end = line_known
@@ -45,7 +56,7 @@ class Optimizer:
 
         # return length_error + 10 * angle_error
         # print(angle_error)
-        return angle_error
+        return 10 * angle_error
 
     def residuals_reprojection(self, params: np.ndarray,
                                lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]) -> np.ndarray:
@@ -60,10 +71,10 @@ class Optimizer:
 
             error1 = self.error_point_to_point((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             error2 = self.error_line((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
-
+            error3 = self.error_shape((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             # residuals.append(log_error(error1) +   log_error(error2))
-            residuals.append(0.5 * error1 +  error2)
-            # residuals.append(error1)
+            # residuals.append(error1 + error2)
+            residuals.append(0.7 * error1 + error2 + error3)
         return np.array(residuals)
 
     def residuals_back_reprojection(self, params: np.ndarray,
@@ -88,22 +99,14 @@ class Optimizer:
         angles = self.camera.get_R(angle_output=True)
         x0 = [self.camera.get_f(), *angles, 10]
 
-        bounds = [
-            (700, 1000),
-            (-np.pi, np.pi),
-            (-np.pi, np.pi),
-            (-np.pi, np.pi),
-            (10, 15)
-        ]
-
         result = least_squares(self.residuals_reprojection, x0, args=(lines,), method='trf')
         return self.camera, result
 
     def optimize_reprojection(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
         angles = self.camera.get_R(angle_output=True)
         # x0 = [self.camera.get_f() , *angles, 20]
-        x0 = [1200, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
-        # x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 1, 1, 31.72150605]
+        # x0 = [1200, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
+        x0 = [931.45763154, -99.58434695, 37.91236625, -167.6947188, 1, 1, 31.72150605]
 
         cost_history = []
         history = []
@@ -115,8 +118,8 @@ class Optimizer:
             history.append(params.copy())
             return residuals
 
-        bounds = ([800, -180, -180, -180, 10], [1500, 180, 180, 180, 60])
-        result = least_squares(wrapped_residuals, x0, method='trf', verbose=2, max_nfev=2000, bounds=bounds)
+        # bounds = ([800, -180, -180, -180, 10], [1500, 180, 180, 180, 60])
+        result = least_squares(wrapped_residuals, x0, method='trf', verbose=2, max_nfev=20000)
 
         return self.camera, result, cost_history, history
 

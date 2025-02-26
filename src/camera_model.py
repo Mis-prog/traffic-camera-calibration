@@ -42,6 +42,7 @@ class Camera:
     def load_scene(self, path):
         self.scene = cv2.imread(path)
         height, width, channels = self.scene.shape
+        print(height,width)
         self.calc_tau(height, width)
 
     # вычисление матрицы поворота
