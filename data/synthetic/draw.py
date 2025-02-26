@@ -143,7 +143,7 @@ camera.calc_tau(height, width)
 camera.set_params([f, *angles, h])
 optimize = Optimizer(camera)
 dataset = create_dataset([f, *angles, h])
-camera, info, cost_history = optimize.optimize_reprojection(dataset)
+camera, info, cost_history, history = optimize.optimize_reprojection(dataset)
 print(np.around(info.x))
 
 import matplotlib.pyplot as plt

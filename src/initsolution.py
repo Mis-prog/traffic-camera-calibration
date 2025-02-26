@@ -53,17 +53,21 @@ def _calc_f(vx, vy, camera=None):
         return np.sqrt(-np.dot(vx, vy))
     else:
         M = np.array([[1, 0], [0, camera.tau ** (-2)]])
-        return np.sqrt(- vx.T @ M @ vy)
+        return np.sqrt(abs(vx.T @ M @ vy))
 
 
 def calc_init_camera(path, lines) -> Camera:
     camera = Camera()
     camera.load_scene(path)
     v = _search_vanishing_points(lines)
+    # print(v)
     f = _calc_f(v[0], v[1], camera)
+    # print(f)
     camera.calc_A(f)
     px, py, pz = _calc_norm_vanishing_points(v[0], v[1], camera)
+    # print(px,py,pz)
 
-    camera.set_init_R([px, py, pz])
+    camera.set_init_R([pz, px, py])
+    # print(np.around(camera.get_R(angle_output=True), 2))
     camera.calc_T(z=30)
     return camera
