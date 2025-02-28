@@ -24,13 +24,9 @@ Python 3.10
 ### Скорость
    1. [Вычисление скорости и калибровка по кривым линиям](materials/speed/Скорость.pdf)
 ## Входные данные
-1. Точки схода по X
-    ![Точки cхода](data/crossroads_karls_marks/scene_from_crossroads_not_dist_lineX.png)
-2. Точки схода по Y
-   ![Точки cхода](data/crossroads_karls_marks/scene_from_crossroads_not_dist_lineY.png)
-3. Калибровочные линии 
-   ![Калибровочные линии](data/crossroads_karls_marks/calibration_line.png)
+1Калибровочные линии 
+   ![Калибровочные линии](example/pushkin_aksakov/calibration_line.png)
 ## Результаты
 1. Калибровка точка в точку с линейной функцией ошибки
-   ![Калибровка](data/crossroads_karls_marks/evalution_scene.png)
+   ![Калибровка](example/pushkin_aksakov/evalution_scene.png)
 2. Калибровка c использованием оптимизации модели с линейной функцией ошибки
