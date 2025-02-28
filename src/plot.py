@@ -42,7 +42,35 @@ class Plot:
             self._draw_point_with_label(overlay, end_plot, end[1].get())
 
             cv2.line(overlay, start_plot,
-                     end_plot, (0, 255, 0), 2)
+                     end_plot, (0, 255, 0), 3)
+
+        for start, end in lines:
+            # start_trans = self.camera.direct_transform_world(start[1], params)
+            # end_trans = self.camera.direct_transform_world(end[1], params)
+
+            start_plot = self._get_cv2_format(start[0])
+            # self._draw_point_with_label(overlay, start_plot, start[0].get())
+            end_plot = self._get_cv2_format(end[0])
+            # self._draw_point_with_label(overlay, end_plot, end[1].get())
+
+            cv2.line(overlay, start_plot,
+                     end_plot, (255, 0, 0), 2)
+
+
+        # start, end = Point3D([0, 0, 0]), Point3D([0, 3, 0])
+        # start_trans, end_trans = self.camera.direct_transform_world(start, params), self.camera.direct_transform_world(
+        #     end, params)
+        # start_plot, end_plot = self._get_cv2_format(start_trans), self._get_cv2_format(end_trans)
+        # cv2.arrowedLine(overlay, start_plot, end_plot, (255, 0, 0), 2, tipLength=0.2)
+        # end_plot_point = self._get_cv2_format(end_trans)
+        # self._draw_point_with_label(overlay, end_plot_point, end.get())
+        # start, end = Point3D([0, 0, 0]), Point3D([3, 0, 0])
+        # start_trans, end_trans = self.camera.direct_transform_world(start, params), self.camera.direct_transform_world(
+        #     end, params)
+        # start_plot, end_plot = self._get_cv2_format(start_trans), self._get_cv2_format(end_trans)
+        # end_plot_point = self._get_cv2_format(end_trans)
+        # self._draw_point_with_label(overlay, end_plot_point, end.get())
+        # cv2.arrowedLine(overlay, start_plot, end_plot, (255, 0, 0), 2, tipLength=0.2)
 
         alpha = 0.8
         cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)

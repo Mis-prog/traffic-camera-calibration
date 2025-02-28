@@ -42,7 +42,7 @@ def plot_axies(position, angles=[]):
         ax.quiver(*position, 15, 0, 0, color='black')
         ax.quiver(*position, 0, 15, 0, color='black')
         ax.quiver(*position, 0, 0, 15, color='black')
-        ax.scatter(0, 0, 0, marker='^', s = 100, color='red', label='Мировая система координат')
+        ax.scatter(0, 0, 0, marker='^', s=100, color='red', label='Мировая система координат')
         text_size = 12
         ax.text(position[0] + 15, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
         ax.text(position[0], position[1] + 15, position[2], 'Y', color='black', fontsize=text_size)
@@ -108,7 +108,7 @@ POINTS = np.array([
     [[-20, -10, 0, 1], [20, -10, 0, 1]],
     [[-20, -5, 0, 1], [20, -5, 0, 1]],
     [[-20, 5, 0, 1], [20, 5, 0, 1]],
-]) * 3
+]) * 2
 
 
 def plot_lines_world():
@@ -129,8 +129,8 @@ def plot_lines_image(params):
 # эталонные значения
 height, width = 700, 1200
 h = 40
-angles = [-70, 37, -150]
-f = 700
+angles = [-90, 20, -170]
+f = 920
 ax = init(h)
 plot_axies([0, 0, 0])
 plot_axies([0, 0, h], angles)
@@ -147,5 +147,12 @@ camera, info, cost_history, history = optimize.optimize_reprojection(dataset)
 print(np.around(info.x))
 
 import matplotlib.pyplot as plt
-plt.plot(cost_history)
+
+# plt.plot(np.arange(0, len(cost_history)), np.log(cost_history))
+plt.plot(np.arange(0, len(cost_history)), cost_history)
+plt.ylabel('Точность')
+plt.xlabel('Количество итераций')
 plt.show()
+
+
+print(cost_history[-1])

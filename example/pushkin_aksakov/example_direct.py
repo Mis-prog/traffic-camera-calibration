@@ -26,11 +26,8 @@ LINE_CALIB = [
     [[54.723735, 55.933514, 1133, 790], [54.723917, 55.933596, 815, 394]],
     [[54.723863, 55.933352, 535, 668], [54.723793, 55.933774, 1320, 451]],
     [[54.723696, 55.933495, 1219, 911], [54.723957, 55.933613, 768, 340]],
-
-    [[54.723889, 55.933191, 95, 803], [54.723761, 55.933949, 1565, 392]],
-
-    [[54.723764, 55.933953, 1558, 386], [54.723847, 55.933996, 1395, 268]],
-
+    # [[54.723889, 55.933191, 95, 803], [54.723761, 55.933949, 1565, 392]],
+    # [[54.723764, 55.933953, 1558, 386], [54.723847, 55.933996, 1395, 268]],
 ]
 
 LINE_CALIB_NEW = []
@@ -51,18 +48,23 @@ for line in LINE_CALIB_NEW:
     LINE_PREP.append([(start2D, start3D), (end2D, end3D)])
 
 print(LINE_CALIB_NEW)
-camera.set_params([905.78, -139.41, 18.27, -186.59, 4.81, 3.27, 27.09])
-# optimize = Optimizer(camera)
-# camera, info, cost_history, history = optimize.optimize_reprojection(LINE_PREP)
-# print("Финальная ошибка:", info.cost)
-# print("Финальные параметры:", np.around(info.x, 2))
+camera.set_params([929.67, -141.65, 17.12, -186.47, 5.31, 3.68, 27.73])
+optimize = Optimizer(camera)
+camera, info, cost_history, history = optimize.optimize_reprojection(LINE_PREP)
+print("Финальная ошибка:", info.cost)
+print("Финальные параметры:", np.around(info.x, 2))
 
 plot = Plot(camera)
-plot.draw_tranform_net(LINE_PREP, save=True)
+plot.draw_tranform_line(LINE_PREP, save=True)
 # plot.draw_calibration_line(LINE_PREP, save=True)
-#
 
-# import matplotlib.pyplot as plt
 #
-# plt.plot(cost_history)
-# plt.show()
+import matplotlib.pyplot as plt
+
+plt.plot(np.arange(0, len(cost_history)), np.log(cost_history))
+plt.ylabel('Точность')
+plt.xlabel('Количество итераций')
+plt.show()
+
+
+print(cost_history[-1])
