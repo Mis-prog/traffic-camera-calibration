@@ -21,17 +21,6 @@ class Optimizer:
 
         return error
 
-    def error_shape(self, line_known, line_predicted):
-        """ Ошибка, основанная на косинусном расстоянии между векторами линий """
-        known_start, known_end = line_known
-        predicted_start, predicted_end = line_predicted
-
-        v1 = known_end.get() - known_start.get()
-        v2 = predicted_end.get() - predicted_start.get()
-
-        cos_sim = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-        return 1 - cos_sim  # Чем ближе к 0, тем лучше
-
     def error_line(self, line_known: tuple[Point2D, Point2D],
                    line_predicted: tuple[Point2D, Point2D]) -> float:
         known_start, known_end = line_known
@@ -76,31 +65,6 @@ class Optimizer:
             # residuals.append(error1 + error2)
             residuals.append(0.2 * error1 + error2)
         return np.array(residuals)
-
-    def residuals_back_reprojection(self, params: np.ndarray,
-                                    lines: list[tuple[tuple[Point2D, Point2D], tuple[Point2D, Point2D]]]) -> np.ndarray:
-
-        residuals = []
-
-        for known_start, known_end in lines:
-            known_start_2D, known_start_3D = known_start  # первая точка в пиксялях, вторая в реальных координатах z=0
-            known_end_2D, known_end_3D = known_end
-
-            predicted_start_3D = self.camera.back_transform_world(known_start_2D, params)
-            predicted_end_3D = self.camera.back_transform_world(known_end_2D, params)
-
-            error1 = self.error_point_to_point((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
-            error2 = self.error_line((known_start_3D, known_end_3D), (predicted_start_3D, predicted_end_3D))
-            residuals.append(error1 + error2)
-
-        return np.array(residuals)
-
-    def optimize_init(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
-        angles = self.camera.get_R(angle_output=True)
-        x0 = [self.camera.get_f(), *angles, 10]
-
-        result = least_squares(self.residuals_reprojection, x0, args=(lines,), method='trf')
-        return self.camera, result
 
     def optimize_reprojection(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]]):
         angles = self.camera.get_R(angle_output=True)
@@ -157,3 +121,14 @@ class Optimizer:
         )
 
         return self.camera, result
+
+    def residuals_back_reprojection(self, params: np.ndarray, primitive) -> np.ndarray:
+        def error_between_line(params, primitive):
+            pass
+
+        def error_between_angle(params, primitive):
+            pass
+
+        residuals = []
+
+        return np.array(residuals)
