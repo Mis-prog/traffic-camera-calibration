@@ -147,7 +147,5 @@ class Camera:
         _RT = np.delete(_RT, 2, axis=1)
         _AT = self.A @ _RT
         _AT_inv = np.linalg.inv(_AT)
-        # print(_AT_inv)
-        # print(point_image.get(out_homogeneous=True))
         _new_point = Point2D(_AT_inv @ point_image.get(out_homogeneous=True))
         return _new_point
