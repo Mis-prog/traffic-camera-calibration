@@ -8,6 +8,7 @@ import numpy as np
 from .camera_model import Camera
 from .point2D import Point2D
 from .point3D import Point3D
+from .pointND import PointND
 
 
 class DisplayMode(Enum):
@@ -17,78 +18,90 @@ class DisplayMode(Enum):
 
 
 class Plot:
-    def __init__(self, camera):
+    def __init__(self, camera: Camera):
         self.camera = camera
-        self.scene_plot = self.camera.get_scene().copy()
+        self.scene_plot = self.camera.get_scene().copy()  # копия сцены
+        self.overlay = self.scene_plot.copy()  # слой сцены
+        self.mode = DisplayMode.INTERACTIVE
 
-    def _draw_point_with_label(self, img, point, coords):
-        cv2.circle(img, point, 5, (0, 0, 255), -1)
+    def set_mode(self, mode: DisplayMode):
+        self.mode = mode
+
+    def _transform_pointND_to_cv2_format(self, point: PointND):
+        return tuple(map(int, point.get()))
+
+    def _draw_point_with_label(self, point2d, coords):
+        cv2.circle(self.overlay, point2d, 5, (0, 0, 255), -1)
         if len(coords) == 2:
             text = f"({coords[0]:.1f}, {coords[1]:.1f})"
         else:
             text = f"({coords[0]:.1f}, {coords[1]:.1f}, {coords[2]:.1f} )"
-        cv2.putText(img, text, (point[0] + 5, point[1] - 5),
+        cv2.putText(self.overlay, text, (point2d[0] + 5, point2d[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-    def _get_cv2_format(self, point):
-        return tuple(map(int, point.get()))
+    def draw_point(self, points: np.ndarray, params=None):
+        if self.mode == DisplayMode.JUPYTER:
+            self.overlay = self.scene_plot.copy()
 
-    def _draw_line_with_point(self, line, params=None):
-        start, end = line
         params = params or []
+        for point in points:
+            point2d, point3d = point
 
-        if params:
-            start_point = self.camera.direct_transform_world(start, params)
-            end_point = self.camera.direct_transform_world(end, params)
-        else:
-            start_point = start
-            end_point = end
+            if params:
+                point_plot = self.camera.direct_transform_world(point3d, params)
+            else:
+                point_plot = point2d
 
-        start_plot = self._get_cv2_format(start_point)
-        end_plot = self._get_cv2_format(end_point)
+            point_plot = self._transform_pointND_to_cv2_format(point_plot)
+            self._draw_point_with_label(point_plot, point3d.get())
 
-        self._draw_point_with_label(self.scene_plot, start_plot, start.get())
-        self._draw_point_with_label(self.scene_plot, end_plot, end.get())
+        alpha = 0.8
+        cv2.addWeighted(self.overlay, alpha, self.scene_plot, 1 - alpha, 0, self.scene_plot)
 
-        cv2.line(
-            self.scene_plot,
-            start_plot,
-            end_plot,
-            (0, 255, 0),
-            2
-        )
+    def draw_line(self, lines: np.ndarray, params=None):
+        if self.mode == DisplayMode.JUPYTER:
+            self.overlay = self.scene_plot.copy()
 
+        params = params or []
+        for line in lines:
+            start2d, start3d, end2d, end3d = line
 
-"""
-Пример данных 
-    [[Point2D, Point3D],
-    [Point2D,Point3D]],
-    [[],[]],
-       
-"""
+            if params:
+                start_plot = self.camera.direct_transform_world(start3d, params)
+                end_plot = self.camera.direct_transform_world(end3d, params)
+            else:
+                start_plot = start2d
+                end_plot = end2d
 
+            start_plot = self._transform_pointND_to_cv2_format(start_plot)
+            end_plot = self._transform_pointND_to_cv2_format(end_plot)
+            self._draw_point_with_label(start_plot, start3d.get())
+            self._draw_point_with_label(end_plot, end3d.get())
 
-def draw_point(self, points: np.ndarray, params=None):
-    pass
+            cv2.line(
+                self.overlay,
+                start_plot,
+                end_plot,
+                (0, 255, 0),
+                2
+            )
 
+        alpha = 0.8
+        cv2.addWeighted(self.overlay, alpha, self.scene_plot, 1 - alpha, 0, self.scene_plot)
 
-def draw_line(self, lines: np.ndarray, params=None):
-    params = params or []
-    for start, end in lines:
-        pass
+    def visible(self, mode: DisplayMode = None):
+        mode = mode or self.mode
 
-
-def visible(self, mode: DisplayMode):
-    if mode == DisplayMode.SAVE:
-        filename = Path(self.camera.path).name
-        cv2.imwrite('calib_' + filename, self.scene_plot)
-    elif mode == DisplayMode.JUPYTER:
-        scene_rgb = cv2.cvtColor(self.scene_plot, cv2.COLOR_BGR2RGB)
-        plt.figure(figsize=(10, 8))
-        plt.imshow(scene_rgb)
-        plt.axis('off')
-        plt.show()
-    elif mode == DisplayMode.INTERACTIVE:
-        cv2.imshow('Calibration scene', self.scene_plot)  # todo как редактировать размер окна?
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        if mode == DisplayMode.SAVE:
+            filename = Path(self.camera.path).name
+            cv2.imwrite('calib_' + filename, self.overlay)
+        elif mode == DisplayMode.JUPYTER:
+            scene_rgb = cv2.cvtColor(self.overlay, cv2.COLOR_BGR2RGB)
+            plt.figure(figsize=(10, 8))
+            plt.imshow(scene_rgb)
+            plt.axis('off')
+            plt.show()
+        elif mode == DisplayMode.INTERACTIVE:
+            cv2.imshow('Calibration scene', self.overlay)  # todo как редактировать размер окна?
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
