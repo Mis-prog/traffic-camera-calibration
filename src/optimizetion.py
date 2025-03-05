@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 from .camera_model import Camera
 from .point2D import Point2D
 from .point3D import Point3D
+from .pointND import PointND
 
 
 class Optimizer:
@@ -133,7 +134,6 @@ class Optimizer:
             end1_3D = self.camera.back_transform_world(end1, params)
             start2_3D = self.camera.back_transform_world(start2, params)
             end2_3D = self.camera.back_transform_world(end2, params)
-
 
         residuals = []
 

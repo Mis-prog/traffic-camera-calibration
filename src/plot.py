@@ -40,6 +40,14 @@ class Plot:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
     def draw_point(self, points: np.ndarray, params=None):
+        """
+        Пример входных данных
+            points = [
+                        [PointND,PointND],
+                        [,],
+                    ]
+        """
+
         if self.mode == DisplayMode.JUPYTER:
             self.overlay = self.scene_plot.copy()
 
@@ -59,6 +67,13 @@ class Plot:
         cv2.addWeighted(self.overlay, alpha, self.scene_plot, 1 - alpha, 0, self.scene_plot)
 
     def draw_line(self, lines: np.ndarray, params=None):
+        """
+        Пример входных данных
+        lines = [
+                    [PointND,PointND,PointND,PointND],
+                    [,,,],
+                ]
+        """
         if self.mode == DisplayMode.JUPYTER:
             self.overlay = self.scene_plot.copy()
 
@@ -94,6 +109,7 @@ class Plot:
 
         if mode == DisplayMode.SAVE:
             filename = Path(self.camera.path).name
+            print('calib_' + filename)
             cv2.imwrite('calib_' + filename, self.overlay)
         elif mode == DisplayMode.JUPYTER:
             scene_rgb = cv2.cvtColor(self.overlay, cv2.COLOR_BGR2RGB)
