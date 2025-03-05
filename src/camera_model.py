@@ -11,6 +11,7 @@ class Camera:
         self.scene = None
         self.tau = None
         self.f = None
+        self.path = None
 
         self.A = np.zeros((3, 3))
         self.R = np.zeros((3, 3))
@@ -40,9 +41,10 @@ class Camera:
         self.tau = height / width
 
     def load_scene(self, path):
+        self.path = path
         self.scene = cv2.imread(path)
         height, width, channels = self.scene.shape
-        print(height,width)
+        # print(height,width)
         self.calc_tau(height, width)
 
     # вычисление матрицы поворота

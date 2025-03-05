@@ -126,8 +126,14 @@ class Optimizer:
         def error_between_line(params, primitive):
             pass
 
-        def error_between_angle(params, primitive):
-            pass
+        def error_between_angle(params, lines: tuple[Point2D, Point2D, Point2D, Point2D]):
+            start1, end1, start2, end2 = lines
+
+            start1_3D = self.camera.back_transform_world(start1, params)
+            end1_3D = self.camera.back_transform_world(end1, params)
+            start2_3D = self.camera.back_transform_world(start2, params)
+            end2_3D = self.camera.back_transform_world(end2, params)
+
 
         residuals = []
 

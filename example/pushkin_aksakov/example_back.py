@@ -8,3 +8,5 @@ from src.distance import gps_to_enu
 
 import numpy as np
 
+camera = Camera()
+camera.load_scene('crossroads_not_dist.jpg')

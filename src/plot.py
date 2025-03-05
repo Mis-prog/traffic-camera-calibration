@@ -1,9 +1,19 @@
 import cv2
 import matplotlib.pyplot as plt
+from enum import Enum, auto
+from pathlib import Path
+
+import numpy as np
 
 from .camera_model import Camera
 from .point2D import Point2D
 from .point3D import Point3D
+
+
+class DisplayMode(Enum):
+    INTERACTIVE = auto()
+    JUPYTER = auto()
+    SAVE = auto()
 
 
 class Plot:
@@ -20,102 +30,65 @@ class Plot:
         cv2.putText(img, text, (point[0] + 5, point[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-    def _get_cv2_format(self, point: Point2D):
+    def _get_cv2_format(self, point):
         return tuple(map(int, point.get()))
 
-    def draw_tranform_line(self, lines, save=False, out_jupyter=False, params=[]):
-        scene = self.camera.get_scene().copy()
+    def _draw_line_with_point(self, line, params=None):
+        start, end = line
+        params = params or []
 
-        overlay = scene.copy()
-        for start, end in lines:
-            start_trans = self.camera.direct_transform_world(start[1], params)
-            end_trans = self.camera.direct_transform_world(end[1], params)
-
-            start_plot = self._get_cv2_format(start_trans)
-            self._draw_point_with_label(overlay, start_plot, start[1].get())
-            end_plot = self._get_cv2_format(end_trans)
-            self._draw_point_with_label(overlay, end_plot, end[1].get())
-
-            cv2.line(overlay, start_plot,
-                     end_plot, (0, 255, 0), 3)
-
-        for start, end in lines:
-            start_trans = self.camera.direct_transform_world(start[1], params)
-            end_trans = self.camera.direct_transform_world(end[1], params)
-
-            start_plot = self._get_cv2_format(start[0])
-            self._draw_point_with_label(overlay, start_plot, start[0].get())
-            end_plot = self._get_cv2_format(end[0])
-            self._draw_point_with_label(overlay, end_plot, end[1].get())
-
-            cv2.line(overlay, start_plot,
-                     end_plot, (255, 0, 0), 2)
-
-
-        alpha = 0.8
-        cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
-
-        if not save and not out_jupyter:
-            cv2.imshow('Вид сцены калибровочный', scene)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        elif out_jupyter:
-            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
-            plt.figure(figsize=(10, 8))
-            plt.imshow(scene_rgb)
-            plt.axis('off')
-            plt.show()
+        if params:
+            start_point = self.camera.direct_transform_world(start, params)
+            end_point = self.camera.direct_transform_world(end, params)
         else:
-            cv2.imwrite('evalution_scene.png', scene)
+            start_point = start
+            end_point = end
 
-    def draw_transform_point(self, points, save=False, out_jupyter=False, params=[]):
-        scene = self.camera.get_scene().copy()
+        start_plot = self._get_cv2_format(start_point)
+        end_plot = self._get_cv2_format(end_point)
 
-        overlay = scene.copy()
-        for point in points:
-            point_trans = self.camera.direct_transform_world(point, params)
+        self._draw_point_with_label(self.scene_plot, start_plot, start.get())
+        self._draw_point_with_label(self.scene_plot, end_plot, end.get())
 
-            start_plot = self._get_cv2_format(point_trans)
-            self._draw_point_with_label(overlay, start_plot, point_trans.get())
+        cv2.line(
+            self.scene_plot,
+            start_plot,
+            end_plot,
+            (0, 255, 0),
+            2
+        )
 
-        alpha = 0.8
-        cv2.addWeighted(overlay, alpha, scene, 1 - alpha, 0, scene)
 
-        if not save and not out_jupyter:
-            scene_resized = cv2.resize(scene, (600, 400))  # Масштабируем изображение
-            cv2.imshow('Вид сцены калибровочный', scene_resized)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        elif out_jupyter:
-            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
-            plt.figure(figsize=(10, 8))
-            plt.imshow(scene_rgb)
-            plt.axis('off')
-            plt.show()
-        else:
-            cv2.imwrite('../data/crossroads_karls_marks/evalution_scene.png', scene)
+"""
+Пример данных 
+    [[Point2D, Point3D],
+    [Point2D,Point3D]],
+    [[],[]],
+       
+"""
 
-    def draw_calibration_line(self, lines: list[tuple[tuple[Point2D, Point3D], tuple[Point2D, Point3D]]], save=False,
-                              out_jupyter=False):
-        scene = self.camera.get_scene()
 
-        for start, end in lines:
-            start_plot = self._get_cv2_format(start[0])
-            end_plot = self._get_cv2_format(end[0])
-            self._draw_point_with_label(scene, start_plot, start[1].get())
-            self._draw_point_with_label(scene, end_plot, end[1].get())
-            cv2.line(scene, start_plot,
-                     end_plot, (0, 255, 0), 2)
+def draw_point(self, points: np.ndarray, params=None):
+    pass
 
-        if not save and not out_jupyter:
-            cv2.imshow('Вид сцены калибровочный', self.camera.get_scene())
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        elif out_jupyter:
-            scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
-            plt.figure(figsize=(10, 8))
-            plt.imshow(scene_rgb)
-            plt.axis('off')
-            plt.show()
-        else:
-            cv2.imwrite('calibration_line.png', scene)
+
+def draw_line(self, lines: np.ndarray, params=None):
+    params = params or []
+    for start, end in lines:
+        pass
+
+
+def visible(self, mode: DisplayMode):
+    if mode == DisplayMode.SAVE:
+        filename = Path(self.camera.path).name
+        cv2.imwrite('calib_' + filename, self.scene_plot)
+    elif mode == DisplayMode.JUPYTER:
+        scene_rgb = cv2.cvtColor(self.scene_plot, cv2.COLOR_BGR2RGB)
+        plt.figure(figsize=(10, 8))
+        plt.imshow(scene_rgb)
+        plt.axis('off')
+        plt.show()
+    elif mode == DisplayMode.INTERACTIVE:
+        cv2.imshow('Calibration scene', self.scene_plot)  # todo как редактировать размер окна?
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
