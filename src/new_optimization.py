@@ -15,16 +15,16 @@ class NewOptimization:
         self.params = params
 
     def back_projection(self, data):
-        def angle_restrictions(line: np.ndarray):
+        def _back_project_line_3d(start2d, end2d):
+            pre_start3d = self.camera.back_transform_world(start2d, self.params)
+            pre_end3d = self.camera.back_transform_world(end2d, self.params)
+            return pre_end3d.get() - pre_start3d.get()
+
+        def _angle_restrictions(line: np.ndarray):
             start2d_1, end2d_1, start2d_2, end2d_2 = line
 
-            pre_start3d_1 = self.camera.back_transform_world(start2d_1, self.params)
-            pre_end3d_1 = self.camera.back_transform_world(end2d_1, self.params)
-            pre_start3d_2 = self.camera.back_transform_world(start2d_2, self.params)
-            pre_end3d_2 = self.camera.back_transform_world(end2d_2, self.params)
-
-            line_1 = pre_end3d_1.get() - pre_start3d_1.get()
-            line_2 = pre_end3d_2.get() - pre_start3d_2.get()
+            line_1 = _back_project_line_3d(start2d_1, end2d_1)
+            line_2 = _back_project_line_3d(start2d_2, end2d_2)
 
             dot_product = np.dot(line_1, line_2)
             norm_known = np.linalg.norm(line_1)
@@ -36,15 +36,11 @@ class NewOptimization:
 
             return abs(angle_deg - 90)
 
-        def parallelism_restrictions(line: np.ndarray):
+        def _parallel_restrictions(line: np.ndarray):
             start2d_1, end2d_1, start2d_2, end2d_2 = line
-            pre_start3d_1 = self.camera.back_transform_world(start2d_1, self.params)
-            pre_end3d_1 = self.camera.back_transform_world(end2d_1, self.params)
-            pre_start3d_2 = self.camera.back_transform_world(start2d_2, self.params)
-            pre_end3d_2 = self.camera.back_transform_world(end2d_2, self.params)
 
-            line_1 = pre_end3d_1.get() - pre_start3d_1.get()
-            line_2 = pre_end3d_2.get() - pre_start3d_2.get()
+            line_1 = _back_project_line_3d(start2d_1, end2d_1)
+            line_2 = _back_project_line_3d(start2d_2, end2d_2)
 
             dot_product = np.dot(line_1, line_2)
             norm_known = np.linalg.norm(line_1)
@@ -54,14 +50,33 @@ class NewOptimization:
 
             return abs(1 - cos_theta)
 
-        def dist_between_line(line: np.ndarray):
+        def _dist_between_line(line: np.ndarray, dist):
             start2d_1, end2d_1, start2d_2, end2d_2 = line
-            pre_start3d_1 = self.camera.back_transform_world(start2d_1, self.params)
-            pre_end3d_1 = self.camera.back_transform_world(end2d_1, self.params)
-            pre_start3d_2 = self.camera.back_transform_world(start2d_2, self.params)
-            pre_end3d_2 = self.camera.back_transform_world(end2d_2, self.params)
 
+            line_1 = _back_project_line_3d(start2d_1, start2d_2)
+            line_2 = _back_project_line_3d(end2d_1, end2d_2)
 
+            dist_start = np.linalg.norm(line_1)
+            dist_end = np.linalg.norm(line_2)
 
-        data_angle = data['angle']
-        data_dist_between_line = data['line']
+            return abs(dist_start - dist) + abs(dist_end - dist)
+
+        def target_funk(params):
+            residuals = []
+
+            data_angle = data['angle']
+            data_dist_between_line = data['dist_between_line']
+            data_parallel_line = data['parallel']
+            for _data in data_angle:
+                residuals.append(_angle_restrictions(_data))
+
+            for _data in data_dist_between_line:
+                residuals.append(_dist_between_line(_data, _data[-1]))
+
+            for _data in data_parallel_line:
+                residuals.append(_parallel_restrictions(_data))
+
+            return residuals
+
+        x0 = [930, -99.58434695, 37.91236625, -167.6947188, 1, 1, 31.72150605]
+        result = least_squares(target_funk, x0, method='lm', verbose=2)
