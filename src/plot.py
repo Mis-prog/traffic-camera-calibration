@@ -28,7 +28,8 @@ class Plot:
         self.mode = mode
 
     def _transform_pointND_to_cv2_format(self, point: PointND):
-        return tuple(map(int, point.get()))
+        if point:
+            return tuple(map(int, point.get()))
 
     def _draw_point_with_label(self, point2d, coords):
         cv2.circle(self.overlay, point2d, 5, (0, 0, 255), -1)
