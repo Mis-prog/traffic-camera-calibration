@@ -118,6 +118,10 @@ class Plot:
             plt.axis('off')
             plt.show()
         elif mode == DisplayMode.INTERACTIVE:
-            cv2.imshow('Calibration scene', self.overlay)  # todo как редактировать размер окна?
+            cv2.namedWindow('Calibration scene', cv2.WINDOW_NORMAL)
+            initial_width = 1000  # Ширина окна
+            initial_height = 700  # Высота окна
+            cv2.resizeWindow('Calibration scene', initial_width, initial_height)
+            cv2.imshow('Calibration scene', self.overlay)
             cv2.waitKey(0)
             cv2.destroyAllWindows()

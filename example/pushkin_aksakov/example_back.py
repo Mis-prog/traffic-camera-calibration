@@ -11,4 +11,4 @@ import numpy as np
 camera = Camera()
 camera.load_scene('crossroads_not_dist.jpg')
 plot = Plot(camera)
-plot.visible(mode=DisplayMode.JUPYTER)
+plot.visible(mode=DisplayMode.INTERACTIVE)
