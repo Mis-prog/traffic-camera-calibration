@@ -84,18 +84,17 @@ class NewOptimization:
         for _data in data_between_line:
             residuals.append(self._point_to_point(_data, params))
 
-        RESIDUALS.append(residuals)
+        RESIDUALS.append(np.array(residuals))
         PARAMS.append(params)
         return residuals
 
     def back_projection(self, data):
-        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
+        self.params = [900, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
         bounds = ([500, -360, -360, -360, 5], [2000, 360, 360, 360, 60])
-        # self.params = np.log1p(self.params)
-        # print(self.params)
 
-        result = least_squares(self.target_function, self.params, args=(data,), method='trf', verbose=2,
-                                bounds=bounds
+        result = least_squares(self.target_function, self.params, args=(data,), method='trf',
+                               verbose=2,
+                               bounds=bounds
                                )
         print(*np.around(result.x, 2))
         # print("Градиенты (Якобиан):", result.jac)
