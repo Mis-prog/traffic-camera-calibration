@@ -113,6 +113,7 @@ class Plot:
         elif mode == DisplayMode.JUPYTER:
             scene_rgb = cv2.cvtColor(self.overlay, cv2.COLOR_BGR2RGB)
             plt.figure(figsize=(10, 8))
+            # plt.title()
             plt.imshow(scene_rgb)
             plt.axis('off')
             plt.show()
