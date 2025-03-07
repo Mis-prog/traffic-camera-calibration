@@ -52,13 +52,17 @@ camera.load_scene('crossroads_not_dist.jpg')
 
 # Тесты
 camera.set_params(load_params('calib_data.txt'))
-data_calc = prep_data_back_to_reverse(camera,
-                                      load_data('angle_lines.txt') + load_data('parallel_lines.txt') + load_data(
-                                          'point_to_point.txt'))
+optimize = NewOptimization(camera)
 
-plot = Plot(camera)
+# data_calc = prep_data_back_to_reverse(camera,
+#                                       load_data('angle_lines.txt') + load_data('parallel_lines.txt') + load_data(
+#                                           'point_to_point.txt'))
+# plot = Plot(camera)
 # plot.draw_line(data_calc,thickness = 4 )
-plot.draw_line(load_data('angle_lines.txt'), color=(0, 255, 0))
-plot.draw_line(load_data('parallel_lines.txt'), color=(0, 255, 0))
-plot.draw_line(load_data('point_to_point.txt'), color=(0, 255, 0))
-plot.visible(DisplayMode.SAVE)
+# plot.draw_line(load_data('angle_lines.txt'), color=(0, 255, 0))
+# plot.draw_line(load_data('parallel_lines.txt'), color=(0, 255, 0))
+# plot.draw_line(load_data('point_to_point.txt'), color=(0, 255, 0))
+# plot.visible(DisplayMode.SAVE)
+
+data = load_data('calibration_lines.txt')
+print(np.linalg.norm(optimize._back_project_line_3d(*data[0], load_params('calib_data.txt'))))
