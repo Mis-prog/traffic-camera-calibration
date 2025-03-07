@@ -87,7 +87,7 @@ class NewOptimization:
         return residuals
 
     def back_projection(self, data):
-        self.params = [900, -99.58434695, 37.91236625, -167.6947188, 1, 1, 31.72150605]
+        self.params = [900, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
         bounds = ([500, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
         result = least_squares(self.target_function, self.params, args=(data,), method='lm', verbose=2
                                # , bounds=bounds

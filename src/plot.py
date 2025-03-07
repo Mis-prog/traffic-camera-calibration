@@ -17,6 +17,11 @@ class DisplayMode(Enum):
     SAVE = auto()
 
 
+class ProjectionMode(Enum):
+    DIRECT = auto()
+    BACK = auto()
+
+
 class Plot:
     def __init__(self, camera: Camera):
         self.camera = camera
@@ -40,59 +45,52 @@ class Plot:
         cv2.putText(self.overlay, text, (point2d[0] + 5, point2d[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-    def draw_point(self, points: np.ndarray, params=None):
-        """
-        Пример входных данных
-            points = [
-                        [PointND,PointND],
-                        [,],
-                    ]
-        """
-
+    def draw_point(self, points: np.ndarray, params=None, mode=ProjectionMode.DIRECT):
         if self.mode == DisplayMode.JUPYTER:
             self.overlay = self.scene_plot.copy()
 
         params = params or []
         for point in points:
-            point2d, point3d = point
+            point_plot = None
 
             if params:
-                point_plot = self.camera.direct_transform_world(point3d, params)
+                if ProjectionMode.DIRECT:
+                    point_plot = self.camera.direct_transform_world(point, params)
+                elif ProjectionMode.BACK:
+                    point_plot = self.camera.back_transform_world(point, params)
             else:
-                point_plot = point2d
+                point_plot = point
 
             point_plot = self._transform_pointND_to_cv2_format(point_plot)
-            self._draw_point_with_label(point_plot, point3d.get())
+            self._draw_point_with_label(point_plot, point.get())
 
         alpha = 0.8
         cv2.addWeighted(self.overlay, alpha, self.scene_plot, 1 - alpha, 0, self.scene_plot)
 
-    def draw_line(self, lines: np.ndarray, params=None):
-        """
-        Пример входных данных
-        lines = [
-                    [PointND,PointND,PointND,PointND],
-                    [,,,],
-                ]
-        """
+    def draw_line(self, lines: np.ndarray, params=None, mode=ProjectionMode.DIRECT):
         if self.mode == DisplayMode.JUPYTER:
             self.overlay = self.scene_plot.copy()
 
         params = params or []
         for line in lines:
-            start2d, start3d, end2d, end3d = line
+            start, end = line
+            start_plot, end_plot = None, None
 
             if params:
-                start_plot = self.camera.direct_transform_world(start3d, params)
-                end_plot = self.camera.direct_transform_world(end3d, params)
+                if mode == ProjectionMode.DIRECT:
+                    start_plot = self.camera.direct_transform_world(start, params)
+                    end_plot = self.camera.direct_transform_world(end, params)
+                elif mode == ProjectionMode.BACK:
+                    start_plot = self.camera.back_transform_world(start, params)
+                    end_plot = self.camera.back_transform_world(end, params)
             else:
-                start_plot = start2d
-                end_plot = end2d
+                start_plot = start
+                end_plot = end
 
             start_plot = self._transform_pointND_to_cv2_format(start_plot)
             end_plot = self._transform_pointND_to_cv2_format(end_plot)
-            self._draw_point_with_label(start_plot, start3d.get())
-            self._draw_point_with_label(end_plot, end3d.get())
+            self._draw_point_with_label(start_plot, start.get())
+            self._draw_point_with_label(end_plot, end.get())
 
             cv2.line(
                 self.overlay,

@@ -11,15 +11,19 @@ import matplotlib.pyplot as plt
 
 data = {
     'angle': prep_data_angle(load_data('angle_lines.txt')),
-    'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
+    # 'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
     'dist_between_line': prep_data_parallel(load_data('parallel_lines.txt'))
 }
 
+
 camera = Camera()
 camera.load_scene('crossroads_not_dist.jpg')
-optimize = NewOptimization(camera)
-optimize.back_projection(data)
-
-print(np.array(RESIDUALS))
-plt.plot(RESIDUALS[-1])
-plt.show()
+plot = Plot(camera)
+plot.draw_line(np.array(load_data('angle_lines.txt')))
+plot.visible(DisplayMode.JUPYTER)
+# optimize = NewOptimization(camera)
+# optimize.back_projection(data)
+#
+# print(np.array(RESIDUALS))
+# plt.plot(RESIDUALS[-1])
+# plt.show()
