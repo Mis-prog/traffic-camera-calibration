@@ -2,9 +2,9 @@ import numpy as np
 
 
 class PointND:
-    def __init__(self, coord):
+    def __init__(self, coord, add_weight=True):
         coord = np.asarray(coord)
-        if len(coord) + 1 in [3, 4]:
+        if len(coord) + 1 in [3, 4] and add_weight:
             coord = np.append(coord, 1)
         self.coord = coord
 

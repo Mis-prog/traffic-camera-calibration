@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
-from .point2D import Point2D
-from .point3D import Point3D
+from .pointND import PointND
 
 
 class Camera:
@@ -94,7 +93,7 @@ class Camera:
         return self.A
 
     # прямое преобразование
-    def direct_transform_world(self, point_real: Point3D, params=[]) -> Point2D:
+    def direct_crop(self, point_real: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -112,14 +111,15 @@ class Camera:
         _T1 = -self.R @ self.T
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
         _AT = self.A @ _RT
-        _new_point = Point2D(_AT.dot(point_real.get(out_homogeneous=True)))
+        _new_point = PointND(_AT.dot(point_real.get(out_homogeneous=True)))
         return _new_point
 
-    def direct_transform_camera(self, point_real: Point3D, params=[]) -> Point2D:
+    def direct_full(self, point_real: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
             self.calc_T(z=params[4])
+
         elif len(params) == 6:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -129,10 +129,14 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
-        _new_point = Point2D(self.A @ point_real.get())
+        _T1 = -self.R @ self.T
+        _RT = np.hstack([self.R, _T1[:, np.newaxis]])
+        _RT = np.delete(_RT, 2, axis=1)
+        _AT = self.A @ _RT
+        _new_point = PointND(_AT.dot(point_real.get(out_homogeneous=True)))
         return _new_point
 
-    def back_transform_world(self, point_image: Point2D, params=[]) -> Point2D:
+    def back_crop(self, point_image: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -147,5 +151,5 @@ class Camera:
         _RT = np.delete(_RT, 2, axis=1)
         _AT = self.A @ _RT
         _AT_inv = np.linalg.inv(_AT)
-        _new_point = Point2D(_AT_inv @ point_image.get(out_homogeneous=True))
+        _new_point = PointND(_AT_inv @ point_image.get(out_homogeneous=True), add_weight=False)
         return _new_point

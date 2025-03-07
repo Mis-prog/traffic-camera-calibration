@@ -77,7 +77,7 @@ def world_to_image(params):
     camera = Camera()
     camera.calc_tau(height, width)
     camera.set_params(params)
-    points2D = [[camera.direct_transform_world(start), camera.direct_transform_world(end)] for start, end
+    points2D = [[camera.direct_full(start), camera.direct_full(end)] for start, end
                 in points3D]
 
     _points = [[start.get(), end.get()] for start, end in points2D]
@@ -92,8 +92,8 @@ def create_dataset(params):
     camera.set_params(params)
 
     points_dataset = [
-        [(camera.direct_transform_world(Point3D(start)), Point3D(start)),
-         (camera.direct_transform_world(Point3D(end)), Point3D(end))]
+        [(camera.direct_full(Point3D(start)), Point3D(start)),
+         (camera.direct_full(Point3D(end)), Point3D(end))]
         for start, end in POINTS]
 
     return points_dataset

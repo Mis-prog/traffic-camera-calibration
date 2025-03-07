@@ -56,8 +56,8 @@ class Optimizer:
             known_start_2D, known_start_3D = known_start
             known_end_2D, known_end_3D = known_end
 
-            predicted_start_2D = self.camera.direct_transform_world(known_start_3D, params)
-            predicted_end_2D = self.camera.direct_transform_world(known_end_3D, params)
+            predicted_start_2D = self.camera.direct_full(known_start_3D, params)
+            predicted_end_2D = self.camera.direct_full(known_end_3D, params)
 
             error1 = self.error_point_to_point((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
             error2 = self.error_line((known_start_2D, known_end_2D), (predicted_start_2D, predicted_end_2D))
@@ -130,10 +130,10 @@ class Optimizer:
         def error_between_angle(params, lines: tuple[Point2D, Point2D, Point2D, Point2D]):
             start1, end1, start2, end2 = lines
 
-            start1_3D = self.camera.back_transform_world(start1, params)
-            end1_3D = self.camera.back_transform_world(end1, params)
-            start2_3D = self.camera.back_transform_world(start2, params)
-            end2_3D = self.camera.back_transform_world(end2, params)
+            start1_3D = self.camera.back_crop(start1, params)
+            end1_3D = self.camera.back_crop(end1, params)
+            start2_3D = self.camera.back_crop(start2, params)
+            end2_3D = self.camera.back_crop(end2, params)
 
         residuals = []
 

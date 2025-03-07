@@ -1,5 +1,5 @@
 from src.camera_model import Camera
-from src.new_optimization import NewOptimization, RESIDUALS
+from src.new_optimization import NewOptimization, RESIDUALS, PARAMS
 from src.initsolution import calc_init_camera
 from src.plot import Plot, DisplayMode, ProjectionMode
 from src.pointND import PointND
@@ -11,18 +11,34 @@ import matplotlib.pyplot as plt
 
 data = {
     'angle': prep_data_angle(load_data('angle_lines.txt')),
-    # 'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
-    'dist_between_line': prep_data_parallel(load_data('parallel_lines.txt'))
+    'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
+    'point_to_point': np.array(load_data('point_to_point.txt'))
 }
 
 camera = Camera()
 camera.load_scene('crossroads_not_dist.jpg')
 plot = Plot(camera)
-plot.draw_line(np.array(load_data('angle_lines.txt')))
-plot.visible(DisplayMode.JUPYTER)
-# optimize = NewOptimization(camera)
-# optimize.back_projection(data)
-#
-# print(np.array(RESIDUALS))
-# plt.plot(RESIDUALS[-1])
-# plt.show()
+optimize = NewOptimization(camera)
+optimize.back_projection(data)
+
+HIST = [np.sum(values) for values in RESIDUALS]
+
+plt.figure(1)
+plt.subplot(1, 2, 1)
+plt.plot(np.arange(0, len(HIST)), HIST)
+
+plt.subplot(1, 2, 2)
+plt.plot(RESIDUALS[0], label='Начальные остатки')
+plt.plot(RESIDUALS[-1], label='Конечные остатки')
+plt.legend()
+plt.show()
+
+PARAMS = np.array(PARAMS)
+plt.plot(PARAMS[:, :0].ravel(), label='Фокусное расстояние')
+plt.plot(PARAMS[:, :1].ravel(), label='Вращение вокруг Z')
+plt.plot(PARAMS[:, :2].ravel(), label='Вращение вокруг X')
+plt.plot(PARAMS[:, :3].ravel(), label='Вращение вокруг Y')
+plt.plot(PARAMS[:, :4].ravel(), label='Высота')
+plt.legend()
+
+plt.show()

@@ -55,9 +55,9 @@ class Plot:
 
             if params:
                 if ProjectionMode.DIRECT:
-                    point_plot = self.camera.direct_transform_world(point, params)
+                    point_plot = self.camera.direct_full(point, params)
                 elif ProjectionMode.BACK:
-                    point_plot = self.camera.back_transform_world(point, params)
+                    point_plot = self.camera.back_crop(point, params)
             else:
                 point_plot = point
 
@@ -78,11 +78,11 @@ class Plot:
 
             if params:
                 if mode == ProjectionMode.DIRECT:
-                    start_plot = self.camera.direct_transform_world(start, params)
-                    end_plot = self.camera.direct_transform_world(end, params)
+                    start_plot = self.camera.direct_full(start, params)
+                    end_plot = self.camera.direct_full(end, params)
                 elif mode == ProjectionMode.BACK:
-                    start_plot = self.camera.back_transform_world(start, params)
-                    end_plot = self.camera.back_transform_world(end, params)
+                    start_plot = self.camera.back_crop(start, params)
+                    end_plot = self.camera.back_crop(end, params)
             else:
                 start_plot = start
                 end_plot = end
