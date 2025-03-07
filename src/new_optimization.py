@@ -97,4 +97,3 @@ class NewOptimization:
                                bounds=bounds
                                )
         print(*np.around(result.x, 2))
-        # print("Градиенты (Якобиан):", result.jac)

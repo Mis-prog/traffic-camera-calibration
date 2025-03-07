@@ -28,3 +28,18 @@ def prep_data_parallel(data):
     for i in range(0, len(data) - 1):
         _data.append(data[i] + data[i + 1])
     return np.array(_data)
+
+
+def load_params(path):
+    with open(path, 'r') as file:
+        return [float(value) for value in file.readline().split()]
+
+
+def prep_data_back_to_reverse(camera, data):
+    data = np.array(data)
+    data_calc = []
+    for start, end in data:
+        start_3d = camera.back_crop(start)
+        end_3d = camera.back_crop(end)
+        data_calc.append([camera.direct_crop(start_3d), camera.direct_crop(end_3d)])
+    return np.array(data_calc)

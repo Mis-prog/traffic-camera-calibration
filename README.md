@@ -24,9 +24,9 @@ Python 3.10
 ### Скорость
    1. [Вычисление скорости и калибровка по кривым линиям](materials/speed/Скорость.pdf)
 ## Входные данные
-1Калибровочные линии 
-   ![Калибровочные линии](example/pushkin_aksakov/calibration_line.png)
+__Перекресток Пушкина Аксакова__ 
+![Результат](example/pushkin_aksakov/calibline_crossroads_not_dist.jpg)
 ## Результаты
-1. Калибровка точка в точку с линейной функцией ошибки
-   ![Калибровка](example/pushkin_aksakov/evalution_scene.png)
-2. Калибровка c использованием оптимизации модели с линейной функцией ошибки
+__Перекресток Пушкина Аксакова(погрешность: 2.0856e-01)__: 
+   ![Результат](example/pushkin_aksakov/calib_crossroads_not_dist.jpg)
+   

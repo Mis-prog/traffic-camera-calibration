@@ -6,8 +6,6 @@ from pathlib import Path
 import numpy as np
 
 from .camera_model import Camera
-from .point2D import Point2D
-from .point3D import Point3D
 from .pointND import PointND
 
 
@@ -67,7 +65,7 @@ class Plot:
         alpha = 0.8
         cv2.addWeighted(self.overlay, alpha, self.scene_plot, 1 - alpha, 0, self.scene_plot)
 
-    def draw_line(self, lines: np.ndarray, params=None, mode=ProjectionMode.DIRECT):
+    def draw_line(self, lines: np.ndarray, params=None, mode=ProjectionMode.DIRECT, color=(255, 0, 0), thickness=2):
         if self.mode == DisplayMode.JUPYTER:
             self.overlay = self.scene_plot.copy()
 
@@ -96,8 +94,8 @@ class Plot:
                 self.overlay,
                 start_plot,
                 end_plot,
-                (0, 255, 0),
-                2
+                color,
+                thickness
             )
 
         alpha = 0.8
@@ -109,7 +107,7 @@ class Plot:
         if mode == DisplayMode.SAVE:
             filename = Path(self.camera.path).name
             print('calib_' + filename)
-            cv2.imwrite('calib_' + filename, self.overlay)
+            cv2.imwrite('calibline_' + filename, self.overlay)
         elif mode == DisplayMode.JUPYTER:
             scene_rgb = cv2.cvtColor(self.overlay, cv2.COLOR_BGR2RGB)
             plt.figure(figsize=(10, 8))

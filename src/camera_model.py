@@ -93,16 +93,12 @@ class Camera:
         return self.A
 
     # прямое преобразование
-    def direct_crop(self, point_real: PointND, params=[]) -> PointND:
+
+    def direct_full(self, point_real: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
             self.calc_T(z=params[4])
-
-        elif len(params) == 6:
-            self.calc_A(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(x=params[4], z=params[4])
         elif len(params) == 7:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -111,19 +107,14 @@ class Camera:
         _T1 = -self.R @ self.T
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
         _AT = self.A @ _RT
-        _new_point = PointND(_AT.dot(point_real.get(out_homogeneous=True)))
+        _new_point = PointND(_AT @ point_real.get(out_homogeneous=True), add_weight=False)
         return _new_point
 
-    def direct_full(self, point_real: PointND, params=[]) -> PointND:
+    def direct_crop(self, point_real: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
             self.calc_T(z=params[4])
-
-        elif len(params) == 6:
-            self.calc_A(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(x=params[4], z=params[4])
         elif len(params) == 7:
             self.calc_A(params[0])
             self.calc_R(params[1:4])
@@ -133,7 +124,7 @@ class Camera:
         _RT = np.hstack([self.R, _T1[:, np.newaxis]])
         _RT = np.delete(_RT, 2, axis=1)
         _AT = self.A @ _RT
-        _new_point = PointND(_AT.dot(point_real.get(out_homogeneous=True)))
+        _new_point = PointND(_AT @ point_real.get(out_homogeneous=True), add_weight=False)
         return _new_point
 
     def back_crop(self, point_image: PointND, params=[]) -> PointND:
