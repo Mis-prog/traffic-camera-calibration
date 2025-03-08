@@ -54,7 +54,7 @@ class NewOptimization:
 
         return abs(1 - cos_theta)
 
-    def _point_to_point(self, line: np.ndarray, params):
+    def _point_to_point(self, line: np.ndarray, params, log_calc=False):
         start, end = line
 
         line = self._back_project_line_3d(start, end, params)
@@ -63,14 +63,32 @@ class NewOptimization:
 
         dist = 4
 
-        return abs(dist_calc - dist)
+        if not log_calc:
+            return abs(dist_calc - dist)
+        else:
+            return np.log(abs(dist_calc - dist))
+
+    def _dist_between_line(self, line: np.ndarray, params, log_calc=False):
+        start2d_1, end2d_1, start2d_2, end2d_2 = line
+        line_1 = self._back_project_line_3d(start2d_1, start2d_2, params)
+        line_2 = self._back_project_line_3d(end2d_1, end2d_2, params)
+
+        dist_start = np.linalg.norm(line_1)
+        dist_end = np.linalg.norm(line_2)
+
+        dist = 20 / 2
+
+        if not log_calc:
+            return abs(dist_start - dist) + abs(dist_end - dist)
+        else:
+            return np.log(abs(dist_start - dist)) + np.log1p(abs(dist_end - dist))
 
     def target_function(self, params, data):
         residuals = []
 
         data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
         data_parallel_line = data['parallel'] if 'parallel' in data and data['parallel'].size > 0 else []
-        data_between_line = data['point_to_point'] if 'point_to_point' in data and data[
+        data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
             'point_to_point'].size > 0 else []
 
         for _data in data_angle:
@@ -80,8 +98,9 @@ class NewOptimization:
         for _data in data_parallel_line:
             # print(f'Parallel: {self._parallel_restrictions(_data, params)}')
             residuals.append(self._parallel_restrictions(_data, params))
+            residuals.append(0.25 * self._dist_between_line(_data, params))
 
-        for _data in data_between_line:
+        for _data in data_point_to_point:
             residuals.append(self._point_to_point(_data, params))
 
         RESIDUALS.append(np.array(residuals))
@@ -89,8 +108,8 @@ class NewOptimization:
         return residuals
 
     def back_projection(self, data):
-        self.params = [900, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
-        bounds = ([500, -360, -360, -360, 5], [2000, 360, 360, 360, 60])
+        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
+        bounds = ([500, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
 
         result = least_squares(self.target_function, self.params, args=(data,), method='trf',
                                verbose=2,
