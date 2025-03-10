@@ -76,21 +76,34 @@ def load_data(path):
     with open(path, 'r') as file:
         for line in file:
             points = eval(line.strip())
-            lines.append([PointND([x, y, z]) for x, y, z in points])
+            lines.append([PointND([x, y]) for x, y in points])
     return lines
 
 
 # эталонные значения
-height, width = 700, 1200
-h = 40
-angles = [189.07, 24.53, -159.51]
-f = 920
+height, width = 1200, 2000
+h = 50
+angles = [194.38, 30, -180]
+f = 900
+camera = Camera()
+camera.calc_tau(height, width)
+camera.set_params([f, *angles, h])
 
 ax = init(h)
 plot_axies([0, 0, 0])
 plot_axies([0, 0, h], angles)
 
+plot_coord = []
 for start, end in load_data('data.txt'):
-    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]],  color='black')
+    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]], color='black')
+    start_plot = camera.direct_crop(start)
+    end_plot = camera.direct_crop(end)
+    plot_coord.append([start_plot, end_plot])
 
+plt.show()
+
+for start, end in plot_coord:
+    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]], color='black')
+plt.xlim(0, width)
+plt.ylim(0, height)
 plt.show()
