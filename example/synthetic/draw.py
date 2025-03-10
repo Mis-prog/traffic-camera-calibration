@@ -4,9 +4,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 from src.camera_model import Camera
-from src.point3D import Point3D
-from src.point2D import Point2D
-from src.optimizetion import Optimizer
+from src.pointND import PointND
+from src.new_optimization import NewOptimization
 
 
 def init(h):
@@ -31,8 +30,8 @@ def init(h):
     ax.set_proj_type('persp')
 
     ax.set_zlim(0, h + 10)
-    ax.set_xlim(-50, 50)
-    ax.set_ylim(-50, 50)
+    ax.set_xlim(-60, 60)
+    ax.set_ylim(-60, 60)
 
     return ax
 
@@ -72,87 +71,26 @@ def plot_axies(position, angles=[]):
         ax.legend(loc='upper center')
 
 
-def world_to_image(params):
-    points3D = [[Point3D(start), Point3D(end)] for start, end in POINTS]
-    camera = Camera()
-    camera.calc_tau(height, width)
-    camera.set_params(params)
-    points2D = [[camera.direct_full(start), camera.direct_full(end)] for start, end
-                in points3D]
-
-    _points = [[start.get(), end.get()] for start, end in points2D]
-    _points = np.array(_points)
-
-    return _points
-
-
-def create_dataset(params):
-    camera = Camera()
-    camera.calc_tau(height, width)
-    camera.set_params(params)
-
-    points_dataset = [
-        [(camera.direct_full(Point3D(start)), Point3D(start)),
-         (camera.direct_full(Point3D(end)), Point3D(end))]
-        for start, end in POINTS]
-
-    return points_dataset
-
-
-POINTS = np.array([
-    [[-10, -20, 0, 1], [-10, 20, 0, 1]],
-    [[-5, -20, 0, 1], [-5, 20, 0, 1]],
-    [[5, -20, 0, 1], [5, 20, 0, 1]],
-    [[10, -20, 0, 1], [10, 20, 0, 1]],
-    [[-20, 10, 0, 1], [20, 10, 0, 1]],
-    [[-20, -10, 0, 1], [20, -10, 0, 1]],
-    [[-20, -5, 0, 1], [20, -5, 0, 1]],
-    [[-20, 5, 0, 1], [20, 5, 0, 1]],
-]) * 2
-
-
-def plot_lines_world():
-    for start, end in POINTS:
-        plt.plot([start[0], end[0]], [start[1], end[1]], ls='--', color='black')
-    plt.show()
-
-
-def plot_lines_image(params):
-    _points = world_to_image(params)
-    for start, end in _points:
-        plt.plot([start[0], end[0]], [start[1], end[1]], ls='--', color='black')
-    plt.xlim(0, width)
-    plt.ylim(0, height)
-    plt.grid()
+def load_data(path):
+    lines = []
+    with open(path, 'r') as file:
+        for line in file:
+            points = eval(line.strip())
+            lines.append([PointND([x, y, z]) for x, y, z in points])
+    return lines
 
 
 # эталонные значения
 height, width = 700, 1200
 h = 40
-angles = [-90, 20, -170]
+angles = [189.07, 24.53, -159.51]
 f = 920
+
 ax = init(h)
 plot_axies([0, 0, 0])
 plot_axies([0, 0, h], angles)
-plot_lines_world()
-plot_lines_image([f, *angles, h])
+
+for start, end in load_data('data.txt'):
+    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]],  color='black')
+
 plt.show()
-
-camera = Camera()
-camera.calc_tau(height, width)
-camera.set_params([f, *angles, h])
-optimize = Optimizer(camera)
-dataset = create_dataset([f, *angles, h])
-camera, info, cost_history, history = optimize.optimize_reprojection(dataset)
-print(np.around(info.x))
-
-import matplotlib.pyplot as plt
-
-# plt.plot(np.arange(0, len(cost_history)), np.log(cost_history))
-plt.plot(np.arange(0, len(cost_history)), cost_history)
-plt.ylabel('Точность')
-plt.xlabel('Количество итераций')
-plt.show()
-
-
-print(cost_history[-1])

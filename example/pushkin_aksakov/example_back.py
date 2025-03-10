@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 camera = Camera()
-camera.load_scene('crossroads_not_dist.jpg')
+camera.load_scene('image/crossroads_not_dist.jpg')
 
 # Отрисовка исходных линий
 # plot = Plot(camera)
@@ -51,7 +51,7 @@ camera.load_scene('crossroads_not_dist.jpg')
 # plt.show()
 
 # Тесты
-camera.set_params(load_params('calib_data.txt'))
+camera.set_params(load_params('marked_data/calib_data.txt'))
 optimize = NewOptimization(camera)
 
 # data_calc = prep_data_back_to_reverse(camera,
@@ -64,5 +64,5 @@ optimize = NewOptimization(camera)
 # plot.draw_line(load_data('point_to_point.txt'), color=(0, 255, 0))
 # plot.visible(DisplayMode.SAVE)
 
-data = load_data('calibration_lines.txt')
-print(np.linalg.norm(optimize._back_project_line_3d(*data[0], load_params('calib_data.txt'))))
+# data = load_data('calibration_lines.txt')
+# print(np.linalg.norm(optimize._back_project_line_3d(*data[0], load_params('marked_data/calib_data.txt'))))

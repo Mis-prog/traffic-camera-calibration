@@ -25,8 +25,8 @@ Python 3.10
    1. [Вычисление скорости и калибровка по кривым линиям](materials/speed/Скорость.pdf)
 ## Входные данные
 __Перекресток Пушкина Аксакова__ 
-![Результат](example/pushkin_aksakov/calibline_crossroads_not_dist.jpg)
+![Результат](example/pushkin_aksakov/image/calibline_crossroads_not_dist.jpg)
 ## Результаты
 __Перекресток Пушкина Аксакова(погрешность: 2.0856e-01)__: 
-   ![Результат](example/pushkin_aksakov/calib_crossroads_not_dist.jpg)
+   ![Результат](example/pushkin_aksakov/image/calib_crossroads_not_dist.jpg)
    

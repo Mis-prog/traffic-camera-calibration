@@ -12,7 +12,7 @@ Line_Y = [[[297, 521], [1365, 272]], [[378, 555], [1462, 301]], [[417, 702], [13
           [[1197, 283], [1396, 244]]]
 Line_X = [[[755, 810], [601, 453]], [[1258, 962], [745, 315]], [[1388, 653], [1096, 345]], [[949, 268], [852, 179]]]
 
-camera = calc_init_camera('crossroads_not_dist.jpg', [Line_X, Line_Y])
+camera = calc_init_camera('image/crossroads_not_dist.jpg', [Line_X, Line_Y])
 
 # Опорная точка (центр локальной системы)
 ref_lat, ref_lon = 54.723767, 55.933369

@@ -156,7 +156,7 @@ def delete_selected_line():
 
 
 # Загружаем изображение
-img = cv2.imread('../example/pushkin_aksakov/crossroads_not_dist.jpg')
+img = cv2.imread('../example/pushkin_aksakov/image/crossroads_not_dist.jpg')
 if img is None:
     print("Ошибка загрузки изображения. Проверьте путь к файлу.")
     exit()
