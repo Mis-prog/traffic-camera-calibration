@@ -8,51 +8,56 @@ from src.data_preparation import load_data, prep_data_parallel, prep_data_angle,
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+
+matplotlib.use("TkAgg")
 
 camera = Camera()
 camera.load_scene('image/crossroads_not_dist.jpg')
 
 # Отрисовка исходных линий
-# plot = Plot(camera)
-# plot.draw_line(load_data('angle_lines.txt'))
-# plot.draw_line(load_data('parallel_lines.txt'))
-# plot.draw_line(load_data('point_to_point.txt'))
-# plot.visible()
+plot = Plot(camera)
+plot.draw_line(load_data('angle_lines.txt'))
+plot.draw_line(load_data('parallel_lines.txt'))
+plot.draw_line(load_data('point_to_point.txt'))
+plot.visible()
 
 # Оптимизация
-# data = {
-#     'angle': prep_data_angle(load_data('angle_lines.txt')),
-#     'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
-#     'point_to_point': np.array(load_data('point_to_point.txt'))
-# }
-# optimize = NewOptimization(camera)
-# optimize.back_projection(data)
+data = {
+    'angle': prep_data_angle(load_data('angle_lines.txt')),
+    'parallel': prep_data_parallel(load_data('parallel_lines.txt')),
+    'point_to_point': np.array(load_data('point_to_point.txt'))
+}
+optimize = NewOptimization(camera)
+optimize.back_projection(data)
 
 # Отрисовка результатов оптимизации
-# HIST = [np.sum(values) for values in RESIDUALS]
-#
-# plt.figure(1)
-# plt.subplot(1, 2, 1)
-# plt.plot(np.arange(0, len(HIST)), HIST)
-#
-# plt.subplot(1, 2, 2)
-# plt.plot(RESIDUALS[0], label='Начальные остатки')
-# plt.plot(RESIDUALS[-1], label='Конечные остатки')
-# plt.legend()
-# plt.show()
-# PARAMS = np.array(PARAMS)
-#
-# plt.plot(PARAMS[:, 0], label='Фокусное расстояние')
-# plt.plot(PARAMS[:, 1], label='Вращение вокруг Z')
-# plt.plot(PARAMS[:, 2], label='Вращение вокруг X')
-# plt.plot(PARAMS[:, 3], label='Вращение вокруг Y')
-# plt.plot(PARAMS[:, 4], label='Высота')
-# plt.legend()
-# plt.show()
+HIST = [np.sum(values) for values in RESIDUALS]
+
+plt.figure(1)
+plt.subplot(1, 2, 1)
+plt.plot(np.arange(0, len(HIST)), HIST)
+
+plt.subplot(1, 2, 2)
+# for i in range(0, len(RESIDUALS) - 40, 10):
+#     plt.plot(RESIDUALS[i], label=f'Итериция {i}')
+plt.plot(RESIDUALS[0], label='Начальные остатки')
+plt.plot(RESIDUALS[-1], label='Конечные остатки')
+plt.legend()
+plt.show()
+PARAMS = np.array(PARAMS)
+
+plt.plot(PARAMS[:, 0], label='Фокусное расстояние')
+plt.plot(PARAMS[:, 1], label='Вращение вокруг Z')
+plt.plot(PARAMS[:, 2], label='Вращение вокруг X')
+plt.plot(PARAMS[:, 3], label='Вращение вокруг Y')
+plt.plot(PARAMS[:, 4], label='Высота')
+plt.legend()
+plt.show()
 
 # Тесты
-camera.set_params(load_params('marked_data/calib_data.txt'))
-optimize = NewOptimization(camera)
+# camera.set_params(load_params('calib_data.txt'))
+# optimize = NewOptimization(camera)
 
 # data_calc = prep_data_back_to_reverse(camera,
 #                                       load_data('angle_lines.txt') + load_data('parallel_lines.txt') + load_data(
@@ -65,4 +70,4 @@ optimize = NewOptimization(camera)
 # plot.visible(DisplayMode.SAVE)
 
 # data = load_data('calibration_lines.txt')
-# print(np.linalg.norm(optimize._back_project_line_3d(*data[0], load_params('marked_data/calib_data.txt'))))
+# print(np.linalg.norm(optimize._back_project_line_3d(*data[0], load_params('calib_data.txt'))))
