@@ -52,7 +52,7 @@ class NewOptimization:
 
         cos_theta = np.clip(dot_product / (norm_known * norm_predicted), -1.0, 1.0)
 
-        return abs(1 - cos_theta)
+        return 2 * abs(1 - cos_theta)
 
     def _point_to_point(self, line: np.ndarray, params, log_calc=False):
         start, end = line
@@ -61,7 +61,7 @@ class NewOptimization:
 
         dist_calc = np.linalg.norm(line)
 
-        dist = 4
+        dist = 4.2
 
         if not log_calc:
             return abs(dist_calc - dist)
@@ -75,11 +75,12 @@ class NewOptimization:
 
         dist_start = np.linalg.norm(line_1)
         dist_end = np.linalg.norm(line_2)
-
+        print(dist_start, dist_end)
         dist = 20 / 2
 
         if not log_calc:
-            return abs(dist_start - dist) + abs(dist_end - dist)
+            # return (dist_start + dist_end) / 2 - dist
+            return abs(dist_start - dist_end)
         else:
             return np.log(abs(dist_start - dist)) + np.log1p(abs(dist_end - dist))
 
@@ -90,15 +91,18 @@ class NewOptimization:
         data_parallel_line = data['parallel'] if 'parallel' in data and data['parallel'].size > 0 else []
         data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
             'point_to_point'].size > 0 else []
+        data_parallel_line_2 = data['parallel_2'] if 'parallel_2' in data and data['parallel_2'].size > 0 else []
 
         for _data in data_angle:
-            # print(f'Angle: {self._angle_restrictions(_data, params)}')
+            #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
             residuals.append(self._angle_restrictions(_data, params))
 
         for _data in data_parallel_line:
-            # print(f'Parallel: {self._parallel_restrictions(_data, params)}')
             residuals.append(self._parallel_restrictions(_data, params))
-            residuals.append(0.25 * self._dist_between_line(_data, params))
+            # residuals.append(self._dist_between_line(_data, params))
+        for _data in data_parallel_line_2:
+            # print(self._parallel_restrictions(_data, params))
+            residuals.append(self._parallel_restrictions(_data, params))
 
         for _data in data_point_to_point:
             residuals.append(self._point_to_point(_data, params))
@@ -106,13 +110,20 @@ class NewOptimization:
         RESIDUALS.append(np.array(residuals))
         PARAMS.append(params)
         return residuals
+        # return np.sum(np.array(residuals) ** 2)
 
     def back_projection(self, data):
-        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 31.72150605]
-        bounds = ([500, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
+        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 10]
 
+        bounds = ([1000, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
+        # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
         result = least_squares(self.target_function, self.params, args=(data,), method='trf',
                                verbose=2,
-                               bounds=bounds
+                               bounds=bounds,
+                               # loss='huber',
+                               # jac='3-point'
+                               # ftol=1e-8, xtol=1e-8, gtol=1e-8
                                )
+        # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
+        #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 1000, 'disp': True})
         print(*np.around(result.x, 2))
