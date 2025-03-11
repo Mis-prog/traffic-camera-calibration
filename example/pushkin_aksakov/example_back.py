@@ -104,18 +104,32 @@ camera = Camera()
 camera.load_scene('image/crossroads_not_dist_ver2.webp')
 camera.set_params(load_params('marked_data/calib_data.txt'))
 
-coord = []
-for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_1.txt')):
-    start3d = camera.back_crop(start)
-    end3d = camera.back_crop(end)
-    x = np.linspace(-50, 50, 100)
-    plt.plot(x, fun_lines(x, start3d, end3d), label=f'{i}')
+import cv2
+
+scene = cv2.imread('image/crossroads_not_dist_ver2.webp')
+scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+plt.imshow(scene_rgb)
 
 for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_2.txt')):
     start3d = camera.back_crop(start)
     end3d = camera.back_crop(end)
-    x = np.linspace(-50, 50, 100)
-    plt.plot(x, fun_lines(x, start3d, end3d), label=f'{i}')
+    x = np.linspace(-30, 30, 100)
+    y = fun_lines(x, start3d, end3d)
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    plt.scatter([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]])
+    plt.plot(x_new, y_new, label='Transformed Line')
+for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_1.txt')):
+    start3d = camera.back_crop(start)
+    end3d = camera.back_crop(end)
+    x = np.linspace(-30, 50, 100)
+    y = fun_lines(x, start3d, end3d)
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    plt.scatter([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]])
+    plt.plot(x_new, y_new, label='Transformed Line')
+plt.xlim(0, 1920)
+plt.ylim(0, 1080)
+plt.gca().invert_yaxis()
 
-plt.legend()
 plt.show()
