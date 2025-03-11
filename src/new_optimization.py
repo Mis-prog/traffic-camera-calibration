@@ -113,7 +113,7 @@ class NewOptimization:
         # return np.sum(np.array(residuals) ** 2)
 
     def back_projection(self, data):
-        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 10]
+        self.params = [1400, -99.58434695, 37.91236625, -167.6947188, 10]
 
         bounds = ([1000, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
         # self.params = np.random.uniform(low=bounds[0], high=bounds[1])

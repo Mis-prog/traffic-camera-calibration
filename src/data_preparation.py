@@ -43,3 +43,10 @@ def prep_data_back_to_reverse(camera, data):
         end_3d = camera.back_crop(end)
         data_calc.append([camera.direct_crop(start_3d), camera.direct_crop(end_3d)])
     return np.array(data_calc)
+
+
+def fun_lines(x, start: PointND, end: PointND):
+    x1, y1 = start.get()
+    x2, y2 = end.get()
+
+    return (x - x1) * (y2 - y1) / (x2 - x1) + y1
