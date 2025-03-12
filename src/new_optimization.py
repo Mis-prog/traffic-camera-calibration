@@ -4,6 +4,7 @@ from scipy.optimize import minimize
 
 from .camera_model import Camera
 from .pointND import PointND
+from .data_preparation import fun_lines
 
 RESIDUALS = []
 PARAMS = []
@@ -68,62 +69,55 @@ class NewOptimization:
         else:
             return np.log(abs(dist_calc - dist))
 
-    def _dist_between_line(self, line: np.ndarray, params, log_calc=False):
+    def _dist_between_line(self, line: np.ndarray, params):
         start2d_1, end2d_1, start2d_2, end2d_2 = line
         line_1 = self._back_project_line_3d(start2d_1, start2d_2, params)
         line_2 = self._back_project_line_3d(end2d_1, end2d_2, params)
 
-        dist_start = np.linalg.norm(line_1)
-        dist_end = np.linalg.norm(line_2)
-        print(dist_start, dist_end)
-        dist = 20 / 2
+        # return abs(dist_start - dist_end)
 
-        if not log_calc:
-            # return (dist_start + dist_end) / 2 - dist
-            return abs(dist_start - dist_end)
-        else:
-            return np.log(abs(dist_start - dist)) + np.log1p(abs(dist_end - dist))
 
-    def target_function(self, params, data):
-        residuals = []
+def target_function(self, params, data):
+    residuals = []
 
-        data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
-        data_parallel_line = data['parallel'] if 'parallel' in data and data['parallel'].size > 0 else []
-        data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
-            'point_to_point'].size > 0 else []
-        data_parallel_line_2 = data['parallel_2'] if 'parallel_2' in data and data['parallel_2'].size > 0 else []
+    data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
+    data_parallel_line_1 = data['parallel-1'] if 'parallel-1' in data and data['parallel-1'].size > 0 else []
+    data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
+        'point_to_point'].size > 0 else []
+    data_parallel_line_2 = data['parallel-2'] if 'parallel-2' in data and data['parallel-2'].size > 0 else []
 
-        for _data in data_angle:
-            #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
-            residuals.append(self._angle_restrictions(_data, params))
+    for _data in data_angle:
+        #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
+        residuals.append(self._angle_restrictions(_data, params))
 
-        for _data in data_parallel_line:
-            residuals.append(self._parallel_restrictions(_data, params))
-            # residuals.append(self._dist_between_line(_data, params))
-        for _data in data_parallel_line_2:
-            # print(self._parallel_restrictions(_data, params))
-            residuals.append(self._parallel_restrictions(_data, params))
+    for _data in data_parallel_line_1:
+        residuals.append(self._parallel_restrictions(_data, params))
+        # residuals.append(self._dist_between_line(_data, params))
+    for _data in data_parallel_line_2:
+        # print(self._parallel_restrictions(_data, params))
+        residuals.append(self._parallel_restrictions(_data, params))
 
-        for _data in data_point_to_point:
-            residuals.append(self._point_to_point(_data, params))
+    for _data in data_point_to_point:
+        residuals.append(self._point_to_point(_data, params))
 
-        RESIDUALS.append(np.array(residuals))
-        PARAMS.append(params)
-        return residuals
-        # return np.sum(np.array(residuals) ** 2)
+    RESIDUALS.append(np.array(residuals))
+    PARAMS.append(params)
+    return residuals
+    # return np.sum(np.array(residuals) ** 2)
 
-    def back_projection(self, data):
-        self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 10]
 
-        bounds = ([700, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
-        # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
-        result = least_squares(self.target_function, self.params, args=(data,), method='trf',
-                               verbose=2,
-                               bounds=bounds,
-                               # loss='huber',
-                               # jac='3-point'
-                               # ftol=1e-8, xtol=1e-8, gtol=1e-8
-                               )
-        # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
-        #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 1000, 'disp': True})
-        print(*np.around(result.x, 2))
+def back_projection(self, data):
+    self.params = [1200, -99.58434695, 37.91236625, -167.6947188, 10]
+
+    bounds = ([700, -180, -180, -180, 5], [2000, 180, 180, 180, 60])
+    # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
+    result = least_squares(self.target_function, self.params, args=(data,), method='trf',
+                           verbose=2,
+                           bounds=bounds,
+                           # loss='huber',
+                           # jac='3-point'
+                           # ftol=1e-8, xtol=1e-8, gtol=1e-8
+                           )
+    # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
+    #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 1000, 'disp': True})
+    print(*np.around(result.x, 2))

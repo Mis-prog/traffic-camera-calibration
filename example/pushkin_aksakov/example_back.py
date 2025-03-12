@@ -13,39 +13,39 @@ import matplotlib
 
 matplotlib.use("TkAgg")
 
-camera = Camera()
-camera.load_scene('image/crossroads_not_dist_ver2.webp')
+# camera = Camera()
+# camera.load_scene('image/crossroads_not_dist_ver2.webp')
 
 # Отрисовка исходных линий
-plot = Plot(camera)
+# plot = Plot(camera)
 # plot.draw_line(load_data('marked_data/angle_lines.txt'))
-plot.draw_line(load_data('marked_data/parallel_lines_1.txt'))
-plot.draw_line(load_data('marked_data/parallel_lines_2.txt'))
-plot.draw_line(load_data('marked_data/point_to_point.txt'))
-plot.visible()
-
-# Оптимизация
-data = {
-    # 'angle': prep_data_angle(load_data('marked_data/angle_lines.txt')),
-    'parallel': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('marked_data/point_to_point.txt')),
-    'parallel_2': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
-}
-optimize = NewOptimization(camera)
-optimize.back_projection(data)
+# plot.draw_line(load_data('marked_data/parallel_lines_1.txt'))
+# plot.draw_line(load_data('marked_data/parallel_lines_2.txt'))
+# plot.draw_line(load_data('marked_data/point_to_point.txt'))
+# plot.visible()
+#
+# # Оптимизация
+# data = {
+#     # 'angle': prep_data_angle(load_data('marked_data/angle_lines.txt')),
+#     'parallel-1': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
+#     'point_to_point': np.array(load_data('marked_data/point_to_point.txt')),
+#     'parallel-2': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
+# }
+# optimize = NewOptimization(camera)
+# optimize.back_projection(data)
 
 # # Отрисовка результатов оптимизации
-HIST = [np.sum(values) for values in RESIDUALS]
-
-plt.figure(1)
-plt.subplot(1, 2, 1)
-plt.plot(np.arange(0, len(HIST)), HIST)
-
-plt.subplot(1, 2, 2)
-plt.plot(RESIDUALS[0], label='Начальные остатки')
-plt.plot(RESIDUALS[-1], label='Конечные остатки')
-plt.legend()
-plt.show()
+# HIST = [np.sum(values) for values in RESIDUALS]
+#
+# plt.figure(1)
+# plt.subplot(1, 2, 1)
+# plt.plot(np.arange(0, len(HIST)), HIST)
+#
+# plt.subplot(1, 2, 2)
+# plt.plot(RESIDUALS[0], label='Начальные остатки')
+# plt.plot(RESIDUALS[-1], label='Конечные остатки')
+# plt.legend()
+# plt.show()
 # PARAMS = np.array(PARAMS)
 #
 # plt.plot(PARAMS[:, 0], label='Фокусное расстояние')
@@ -78,9 +78,9 @@ plt.show()
 # camera = Camera()
 # camera.load_scene('image/crossroads_not_dist_ver2.webp')
 # camera.set_params(load_params('marked_data/calib_data.txt'))
-
+#
 # plot_coord = []
-# for start, end in load_data('marked_data/parallel_lines_1.txt'):
+# for start, end in load_data('marked_data/parallel_lines_2.txt'):
 #     start3d = camera.back_crop(start)
 #     end3d = camera.back_crop(end)
 #     plot_coord.append([start3d, end3d])
@@ -116,7 +116,7 @@ for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_1.txt')):
     end3d = camera.back_crop(end)
     x = np.linspace(-30, 30, 100)
     y = fun_lines(x, start3d, end3d)
-    coord.append([np.array(x), np.array(y)])
+    # coord.append([np.array(x), np.array(y)])
     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
     x_new, y_new = zip(*[p.get() for p in points])
     plt.scatter([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]])
@@ -126,31 +126,34 @@ for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_2.txt')):
     end3d = camera.back_crop(end)
     x = np.linspace(-30, 50, 100)
     y = fun_lines(x, start3d, end3d)
-    coord.append([np.array(x), np.array(y)])
+    # coord.append([np.array(x), np.array(y)])
     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
     x_new, y_new = zip(*[p.get() for p in points])
     plt.scatter([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]])
     plt.plot(x_new, y_new, label='Transformed Line')
+
+# На известных данных
+# for y_dist in [-10, 0, 10]:
+#     start, end = load_data('marked_data/parallel_lines_1.txt')[1]
+#     start3d = camera.back_crop(start)
+#     end3d = camera.back_crop(end)
+#     x = np.linspace(-30, 30, 100)
+#     y = fun_lines(x, start3d, end3d) - y_dist
+#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+#     x_new, y_new = zip(*[p.get() for p in points])
+#     plt.plot(x_new, y_new, label='Transformed Line')
+#
+# for y_dist in [-7, 0, 7]:
+#     start, end = load_data('marked_data/parallel_lines_2.txt')[1]
+#     start3d = camera.back_crop(start)
+#     end3d = camera.back_crop(end)
+#     x = np.linspace(-30, 30, 100)
+#     y = fun_lines(x, start3d, end3d) - y_dist
+#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+#     x_new, y_new = zip(*[p.get() for p in points])
+#     plt.plot(x_new, y_new, label='Transformed Line')
+
 plt.xlim(0, 1920)
 plt.ylim(0, 1080)
 plt.gca().invert_yaxis()
-
-# plt.show()
-coord = np.array(coord)
-plt.figure()
-plt.plot(coord[0][0], coord[0][1])
-plt.plot(coord[1][0], coord[1][1])
-plt.plot(coord[2][0], coord[2][1])
-plt.plot(coord[3][0], coord[3][1])
-plt.plot(coord[4][0], coord[4][1])
-plt.plot(coord[5][0], coord[5][1])
-
 plt.show()
-
-
-def dist_line(x1, x2, y1, y2):
-    return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-
-
-print(dist_line(coord[0][0], coord[2][0], coord[0][1], coord[2][1]))
-print(dist_line(coord[3][0], coord[4][0], coord[3][1], coord[4][1]))
