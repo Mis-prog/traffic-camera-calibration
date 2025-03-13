@@ -11,40 +11,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.use("TkAgg")
-
-camera = Camera()
-camera.load_scene('image/image.webp')
+# matplotlib.use("TkAgg")
+#
+# camera = Camera()
+# camera.load_scene('image/image.webp')
 
 # # Отрисовка исходных линий
-plot = Plot(camera)
-# plot.draw_line(load_data('marked_data/angle_lines.txt'))
-plot.draw_line(load_data('marked_data/parallel_lines_1.txt'))
-plot.draw_line(load_data('marked_data/parallel_lines_2.txt'))
-plot.draw_line(load_data('marked_data/point_to_point.txt'))
-plot.visible()
+# plot = Plot(camera)
+# # plot.draw_line(load_data('marked_data/angle_lines.txt'))
+# plot.draw_line(load_data('marked_data/parallel_lines_1.txt'))
+# plot.draw_line(load_data('marked_data/parallel_lines_2.txt'))
+# plot.draw_line(load_data('marked_data/point_to_point.txt'))
+# plot.visible()
 # # #
 # # Оптимизация
-data = {
-    # 'angle': prep_data_angle(load_data('marked_data/angle_lines.txt')),
-    'parallel-1': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('marked_data/point_to_point.txt')),
-    'parallel-2': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
-}
-optimize = NewOptimization(camera)
-optimize.back_projection(data)
-
-# # # Отрисовка результатов оптимизации
-HIST = [np.sum(values) for values in RESIDUALS]
-
-plt.figure(1)
-plt.subplot(1, 2, 1)
-plt.plot(np.arange(0, len(HIST)), HIST)
-
-plt.subplot(1, 2, 2)
-plt.plot(RESIDUALS[0], label='Начальные остатки')
-plt.plot(RESIDUALS[-1], label='Конечные остатки')
-plt.show()
+# data = {
+#     # 'angle': prep_data_angle(load_data('marked_data/angle_lines.txt')),
+#     'parallel-1': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
+#     'point_to_point': np.array(load_data('marked_data/point_to_point.txt')),
+#     'parallel-2': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
+# }
+# optimize = NewOptimization(camera)
+# optimize.back_projection(data)
+#
+# # # # Отрисовка результатов оптимизации
+# HIST = [np.sum(values) for values in RESIDUALS]
+#
+# plt.figure(1)
+# plt.subplot(1, 2, 1)
+# plt.plot(np.arange(0, len(HIST)), HIST)
+#
+# plt.subplot(1, 2, 2)
+# plt.plot(RESIDUALS[0], label='Начальные остатки')
+# plt.plot(RESIDUALS[-1], label='Конечные остатки')
+# plt.show()
 # PARAMS = np.array(PARAMS)
 #
 # plt.plot(PARAMS[:, 0], label='Фокусное расстояние')
@@ -99,15 +99,15 @@ plt.show()
 
 # Прямая линия продолжение
 
-camera = Camera()
-camera.load_scene('image/image.webp')
-camera.set_params(load_params('marked_data/calib_data.txt'))
-
-import cv2
-
-scene = cv2.imread('image/image.webp')
-scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
-plt.imshow(scene_rgb)
+# camera = Camera()
+# camera.load_scene('image/image.webp')
+# camera.set_params(load_params('marked_data/calib_data.txt'))
+#
+# import cv2
+#
+# scene = cv2.imread('image/crossroads.jpg')
+# scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+# plt.imshow(scene_rgb)
 #
 # coord1 = []
 # coord2 = []
@@ -125,28 +125,27 @@ plt.imshow(scene_rgb)
 
 #
 # На известных данных
-for y_dist in [0, 20]:
-    start, end = load_data('marked_data/parallel_lines_2.txt')[0]
-    start3d = camera.back_crop(start)
-    end3d = camera.back_crop(end)
-    x = np.linspace(-100, 100, 100)
-    y = fun_lines(x, start3d, end3d) - y_dist
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-    x_new, y_new = zip(*[p.get() for p in points])
-    plt.plot(x_new, y_new, label='Transformed Line')
-
-
-for y_dist in [-11.5, 0, 11.5]:
-    start, end = load_data('marked_data/parallel_lines_1.txt')[1]
-    start3d = camera.back_crop(start)
-    end3d = camera.back_crop(end)
-    x = np.linspace(-100, 100, 100)
-    y = fun_lines(x, start3d, end3d) - y_dist
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-    x_new, y_new = zip(*[p.get() for p in points])
-    plt.plot(x_new, y_new, label='Transformed Line')
-
-plt.xlim(0, 1920)
-plt.ylim(0, 1080)
-plt.gca().invert_yaxis()
-plt.show()
+# for y_dist in [-10, 0, 10]:
+#     start, end = load_data('marked_data/parallel_lines_2.txt')[1]
+#     start3d = camera.back_crop(start)
+#     end3d = camera.back_crop(end)
+#     x = np.linspace(-100, 100, 100)
+#     y = fun_lines(x, start3d, end3d) - y_dist
+#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+#     x_new, y_new = zip(*[p.get() for p in points])
+#     plt.plot(x_new, y_new, label='Transformed Line')
+#
+# for y_dist in [-11.5, 0, 11.5]:
+#     start, end = load_data('marked_data/parallel_lines_1.txt')[1]
+#     start3d = camera.back_crop(start)
+#     end3d = camera.back_crop(end)
+#     x = np.linspace(-100, 100, 100)
+#     y = fun_lines(x, start3d, end3d) - y_dist
+#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+#     x_new, y_new = zip(*[p.get() for p in points])
+#     plt.plot(x_new, y_new, label='Transformed Line')
+#
+# plt.xlim(0, 1920)
+# plt.ylim(0, 1080)
+# plt.gca().invert_yaxis()
+# plt.show()
