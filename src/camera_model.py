@@ -73,7 +73,7 @@ class Camera:
         return self.T
 
     # вычисление внутренней матрицы
-    def calc_A(self, f, using_tau=False):
+    def calc_A(self, f, using_tau=True):
         self.f = f
         if using_tau:
             self.A = np.array([[f, 0, self.size[1] / 2],

@@ -5,7 +5,8 @@ from scipy.spatial.transform import Rotation
 
 from src.camera_model import Camera
 from src.pointND import PointND
-from src.new_optimization import NewOptimization
+from src.new_optimization import NewOptimization,RESIDUALS
+from src.data_preparation import fun_lines, load_params, load_data
 
 
 def init(h):
@@ -30,8 +31,8 @@ def init(h):
     ax.set_proj_type('persp')
 
     ax.set_zlim(0, h + 10)
-    ax.set_xlim(-60, 60)
-    ax.set_ylim(-60, 60)
+    ax.set_xlim(-40, 40)
+    ax.set_ylim(-40, 40)
 
     return ax
 
@@ -71,39 +72,156 @@ def plot_axies(position, angles=[]):
         ax.legend(loc='upper center')
 
 
-def load_data(path):
-    lines = []
-    with open(path, 'r') as file:
-        for line in file:
-            points = eval(line.strip())
-            lines.append([PointND([x, y]) for x, y in points])
-    return lines
+def get_normals(x, y, length=4):
+    """
+    Строит нормальные (перпендикулярные) отрезки длиной `length` для заданных точек линии `x, y`.
+
+    Возвращает:
+    - norm_lines_x: список массивов x-координат отрезков
+    - norm_lines_y: список массивов y-координат отрезков
+    """
+    norm_lines_x = []
+    norm_lines_y = []
+
+    # Выбираем точки для построения нормалей
+    indices = [73, 69]  # Можно выбрать другие индексы
+    for idx in indices:
+        if idx >= len(x) - 1:  # Проверяем границы массива
+            continue
+
+        # Определяем направление линии в данной точке
+        dx = x[idx + 1] - x[idx]
+        dy = y[idx + 1] - y[idx]
+
+        # Вычисляем нормальный вектор
+        norm = np.array([-dy, dx])
+        norm = length * norm / np.linalg.norm(norm)  # Делаем его длиной `length`
+
+        # Вычисляем координаты концов нормального отрезка
+        norm_x = [x[idx] - norm[0] / 2, x[idx] + norm[0] / 2]
+        norm_y = [y[idx] - norm[1] / 2, y[idx] + norm[1] / 2]
+
+        norm_lines_x.append(norm_x)
+        norm_lines_y.append(norm_y)
+
+    return norm_lines_x, norm_lines_y
 
 
 # эталонные значения
-height, width = 1200, 2000
-h = 50
-angles = [194.38, 30, -180]
-f = 900
 camera = Camera()
-camera.calc_tau(height, width)
-camera.set_params([f, *angles, h])
+camera.load_scene('../pushkin_aksakov/image/image.webp')
+params = load_params('../pushkin_aksakov/marked_data/calib_data.txt')
+camera.set_params(params)
 
-ax = init(h)
+ax = init(params[-1])
 plot_axies([0, 0, 0])
-plot_axies([0, 0, h], angles)
+plot_axies([0, 0, params[-1]], params[1:4])
 
-plot_coord = []
-for start, end in load_data('data.txt'):
-    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]], color='black')
-    start_plot = camera.direct_crop(start)
-    end_plot = camera.direct_crop(end)
-    plot_coord.append([start_plot, end_plot])
+data = {}
+data['parallel-1'] = []
+data['parallel-2'] = []
+data['angle'] = []
+data['point_to_point'] = []
+
+# Паралельные линии
+start, end = load_data('../pushkin_aksakov/marked_data/parallel_lines_1.txt')[1]
+start3d = camera.back_crop(start)
+end3d = camera.back_crop(end)
+print(np.linalg.norm(end3d.get() - start3d.get()))
+
+for y_dist in [-10, 0, 10]:
+    x = np.linspace(-60, 25, 100)
+    y = fun_lines(x, start3d, end3d) - y_dist
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    data['parallel-1'].append(np.array([x_new, y_new]))
+    plt.plot(x, y, color='black')
+
+norm_x, norm_y = get_normals(x, y, length=4)
+for i in range(len(norm_x)):
+    plt.plot(norm_x[i], norm_y[i], color='black', label=f"Normal {i + 1}")
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(norm_x[i], norm_y[i])]
+    x_new, y_new = zip(*[p.get() for p in points])
+    data['point_to_point'].append(np.array([x_new, y_new]))
+
+# Ортогональные линии
+x = np.linspace(5, 13, 100)
+y = fun_lines(x, start3d, end3d, orthogonal=True)
+plt.plot(x, y, color='black')
+points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+x_new, y_new = zip(*[p.get() for p in points])
+data['angle'].append(np.array([x_new, y_new]))
+
+start, end = load_data('../pushkin_aksakov/marked_data/parallel_lines_2.txt')[1]
+start3d = camera.back_crop(start)
+end3d = camera.back_crop(end)
+print(np.linalg.norm(end3d.get() - start3d.get()))
+for y_dist in [-10, 0, 10]:
+    x = np.linspace(-17, 17, 100)
+    y = fun_lines(x, start3d, end3d) - y_dist
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    data['parallel-2'].append(np.array([x_new, y_new]))
+    plt.plot(x, y, color='black')
+
+# Ортогональные линии
+x = np.linspace(0, 4, 100)
+y = fun_lines(x, start3d, end3d, orthogonal=True)
+plt.plot(x, y, color='black')
+points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+x_new, y_new = zip(*[p.get() for p in points])
+data['angle'].append(np.array([x_new, y_new]))
 
 plt.show()
 
-for start, end in plot_coord:
-    plt.plot([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]], color='black')
-plt.xlim(0, width)
-plt.ylim(0, height)
+data_optimize = {}
+
+data_optimize['parallel-1'] = []
+data_optimize['parallel-2'] = []
+data_optimize['angle'] = []
+data_optimize['point_to_point'] = []
+
+for x, y in data['parallel-1']:
+    plt.plot(x, y, color='black')
+    data_optimize['parallel-1'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
+
+for x, y in data['parallel-2']:
+    plt.plot(x, y, color='black')
+    data_optimize['parallel-2'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
+
+for x, y in data['angle']:
+    plt.plot(x, y, color='black')
+    data_optimize['angle'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
+
+for x, y in data['point_to_point']:
+    plt.plot(x, y, color='black')
+    data_optimize['point_to_point'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
+
+
+plt.xlim(0, 1920)
+plt.ylim(0, 1080)
+plt.gca().invert_yaxis()
+plt.show()
+
+curr = []
+for i in range(1, len(data_optimize['parallel-1'])):
+    curr.append(data_optimize['parallel-1'][i - 1] + data_optimize['parallel-1'][i])
+data_optimize['parallel-1'] = np.array(curr)
+
+curr = []
+for i in range(1, len(data_optimize['parallel-2'])):
+    curr.append(data_optimize['parallel-2'][i - 1] + data_optimize['parallel-2'][i])
+data_optimize['parallel-2'] = np.array(curr)
+data_optimize['angle'] = np.array
+data_optimize['point_to_point'] = np.array(data_optimize['point_to_point'])
+optimize = NewOptimization(camera)
+optimize.back_projection(data_optimize)
+
+HIST = [np.sum(values) for values in RESIDUALS]
+
+
+plt.title('График погрешности')
+plt.ylabel('Точность')
+plt.xlabel('Количество итераций')
+plt.plot(np.arange(0, len(HIST)), HIST)
 plt.show()

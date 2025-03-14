@@ -45,8 +45,11 @@ def prep_data_back_to_reverse(camera, data):
     return np.array(data_calc)
 
 
-def fun_lines(x, start: PointND, end: PointND):
+def fun_lines(x, start: PointND, end: PointND, orthogonal=False):
     x1, y1 = start.get()
     x2, y2 = end.get()
-
-    return (x - x1) * (y2 - y1) / (x2 - x1) + y1
+    if not orthogonal:
+        return (x - x1) * (y2 - y1) / (x2 - x1) + y1
+    else:
+        m = (y2 - y1) / (x2 - x1)
+        return (-1 / m) * (x - x1) + y1

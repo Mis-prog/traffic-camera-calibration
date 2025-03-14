@@ -53,7 +53,7 @@ class NewOptimization:
 
         cos_theta = np.clip(dot_product / (norm_known * norm_predicted), -1.0, 1.0)
 
-        return 2 * abs(1 - cos_theta)
+        return abs(1 - cos_theta)
 
     def _point_to_point(self, line: np.ndarray, params, log_calc=False):
         start, end = line
@@ -62,7 +62,7 @@ class NewOptimization:
 
         dist_calc = np.linalg.norm(line)
 
-        dist = 4.5
+        dist = 4.2
 
         return abs(dist_calc - dist)
 
@@ -79,17 +79,21 @@ class NewOptimization:
         return np.linalg.norm(np.array(y_known) - np.array(y_predict))
 
     def target_function(self, params, data):
+
+        params[1] = self.periodic_bound(params[1], -360, 360)
+        params[2] = self.periodic_bound(params[2], -360, 360)
+        params[3] = self.periodic_bound(params[3], -360, 360)
         residuals = []
 
-        data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
+        # data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
         data_parallel_line_1 = data['parallel-1'] if 'parallel-1' in data and data['parallel-1'].size > 0 else []
         data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
             'point_to_point'].size > 0 else []
         data_parallel_line_2 = data['parallel-2'] if 'parallel-2' in data and data['parallel-2'].size > 0 else []
 
-        for _data in data_angle:
-            #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
-            residuals.append(self._angle_restrictions(_data, params))
+        # for _data in data_angle:
+        #     #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
+        #     residuals.append(self._angle_restrictions(_data, params))
 
         for dist, _data in zip([-11, 11], data_parallel_line_1):
             residuals.append(self._parallel_restrictions(_data, params))
@@ -106,10 +110,14 @@ class NewOptimization:
         PARAMS.append(params)
         return np.concatenate([np.ravel(res) for res in residuals])
 
-    def back_projection(self, data):
-        self.params = [1200, -180, 0.91236625, -180.6947188,  15]
+    def periodic_bound(self, value, lower_bound, upper_bound):
+        range_width = upper_bound - lower_bound
+        return lower_bound + (value - lower_bound) % range_width
 
-        bounds = ([900, -360, -360, -360, 5], [4000, 360, 360, 360,60])
+    def back_projection(self, data):
+        self.params = [1400, -180, 0.91236625, -180.6947188, 15]
+
+        bounds = ([900, -360, -360, -360, 5], [4000, 360, 360, 360, 60])
         # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
         result = least_squares(self.target_function, self.params, args=(data,), method='dogbox',
                                verbose=2,
