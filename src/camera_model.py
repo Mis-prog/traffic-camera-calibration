@@ -84,7 +84,7 @@ class Camera:
             #                    [0, 0, 1]])
         else:
             self.A = np.array([[f, 0, self.size[1] / 2],
-                               [0, f, self.size[0] / 2],
+                               [0, f * self.size[1] / self.size[0], self.size[0] / 2],
                                [0, 0, 1]])
 
     def get_A(self, output=False):
