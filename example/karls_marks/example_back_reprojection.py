@@ -1,9 +1,9 @@
-from src.camera_model import Camera
-from src.optimizetion import Optimizer
-from src.initsolution import calc_init_camera
-from src.plot import Plot
-from src.point3D import Point3D
-from src.point2D import Point2D
+from source.camera_model import Camera
+from source.optimizetion import Optimizer
+from source.initsolution import calc_init_camera
+from source.plot import Plot
+from source.point3D import Point3D
+from source.point2D import Point2D
 
 # Линии схода относительно направлений
 Line_Y = [[[786, 689], [281, 515]], [[1061, 516], [213, 340]], [[1008, 421], [375, 311]], [[355, 264], [70, 238]],

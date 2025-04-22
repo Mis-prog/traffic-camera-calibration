@@ -3,10 +3,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from src.camera_model import Camera
-from src.pointND import PointND
-from src.new_optimization import NewOptimization,RESIDUALS
-from src.data_preparation import fun_lines, load_params, load_data
+from source.camera_model import Camera
+from source.pointND import PointND
+from source.new_optimization import NewOptimization,RESIDUALS
+from source.data_preparation import fun_lines, load_params, load_data
 
 
 def init(h):
