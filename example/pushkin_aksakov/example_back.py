@@ -1,10 +1,10 @@
-from src.camera_model import Camera
-from src.new_optimization import NewOptimization, RESIDUALS, PARAMS
-from src.initsolution import calc_init_camera
-from src.plot import Plot, DisplayMode, ProjectionMode
-from src.pointND import PointND
-from src.distance import gps_to_enu
-from src.data_preparation import load_data, prep_data_parallel, prep_data_angle, load_params, prep_data_back_to_reverse, \
+from source.camera_model import Camera
+from source.new_optimization import NewOptimization, RESIDUALS, PARAMS
+from source.initsolution import calc_init_camera
+from source.plot import Plot, DisplayMode, ProjectionMode
+from source.pointND import PointND
+from source.distance import gps_to_enu
+from source.data_preparation import load_data, prep_data_parallel, prep_data_angle, load_params, prep_data_back_to_reverse, \
     fun_lines
 
 import numpy as np
