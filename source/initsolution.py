@@ -53,7 +53,7 @@ def _calc_f(vx, vy, camera=None):
         return np.sqrt(-np.dot(vx, vy))
     else:
         M = np.array([[1, 0], [0, camera.tau ** (-2)]])
-        return np.sqrt(abs(vx.T @ M @ vy))
+        return np.sqrt(abs(vx.C @ M @ vy))
 
 
 def calc_init_camera(path, lines) -> Camera:
@@ -63,7 +63,7 @@ def calc_init_camera(path, lines) -> Camera:
     # print(v)
     f = _calc_f(v[0], v[1], camera)
     # print(f)
-    camera.calc_A(f)
+    camera.calc_K(f)
     px, py, pz = _calc_norm_vanishing_points(v[0], v[1], camera)
     # print(px,py,pz)
 

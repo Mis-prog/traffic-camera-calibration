@@ -17,7 +17,7 @@ from ultralytics import YOLO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 
-online = False
+online = True
 model_path = os.path.join(CURR_DIR, r"best_8n_car_truck_van.onnx")
 video_path = os.path.join(CURR_DIR, r"../data/move.mp4")
 

@@ -2,15 +2,15 @@ import numpy as np
 from scipy.optimize import least_squares
 from scipy.optimize import minimize
 
-from .camera_model import Camera
-from .pointND import PointND
-from .data_preparation import fun_lines
+from source.camera_model import Camera
+from source.pointND import PointND
+from source.data_preparation import fun_lines
 
 RESIDUALS = []
 PARAMS = []
 
 
-class NewOptimization:
+class BackProjectionOptimizer:
     def __init__(self, camera):
         self.camera = camera
         self.params = None
@@ -39,7 +39,7 @@ class NewOptimization:
         angle_rad = np.arccos(cos_theta)
         angle_deg = np.degrees(angle_rad)
 
-        return abs(angle_deg - 90)
+        return abs(angle_deg - 90) ** 2
 
     def _parallel_restrictions(self, line: np.ndarray, params):
         start2d_1, end2d_1, start2d_2, end2d_2 = line
@@ -53,7 +53,7 @@ class NewOptimization:
 
         cos_theta = np.clip(dot_product / (norm_known * norm_predicted), -1.0, 1.0)
 
-        return abs(1 - cos_theta)
+        return (1 - cos_theta ** 2) * 100
 
     def _point_to_point(self, line: np.ndarray, params, log_calc=False):
         start, end = line
@@ -62,9 +62,12 @@ class NewOptimization:
 
         dist_calc = np.linalg.norm(line)
 
-        dist = 4.2
+        dist = 4
 
-        return abs(dist_calc - dist)
+        if 3.8 <= dist_calc <= 4.2:
+            return 0
+        else:
+            return abs(dist_calc - dist) ** 2
 
     def _dist_between_line(self, line: np.ndarray, y_dist, params):
         start2d_1, end2d_1, start2d_2, end2d_2 = line
@@ -80,9 +83,6 @@ class NewOptimization:
 
     def target_function(self, params, data):
 
-        params[1] = self.periodic_bound(params[1], -360, 360)
-        params[2] = self.periodic_bound(params[2], -360, 360)
-        params[3] = self.periodic_bound(params[3], -360, 360)
         residuals = []
 
         # data_angle = data['angle'] if 'angle' in data and data['angle'].size > 0 else []
@@ -90,6 +90,7 @@ class NewOptimization:
         data_point_to_point = data['point_to_point'] if 'point_to_point' in data and data[
             'point_to_point'].size > 0 else []
         data_parallel_line_2 = data['parallel-2'] if 'parallel-2' in data and data['parallel-2'].size > 0 else []
+        data_parallel_line_3 = data['parallel-3'] if 'parallel-3' in data and data['parallel-3'].size > 0 else []
 
         # for _data in data_angle:
         #     #     # print(f'Angle: {self._angle_restrictions(_data, params)}')
@@ -100,6 +101,10 @@ class NewOptimization:
             # residuals.append(self._dist_between_line(_data, dist, params))
 
         for dist, _data in zip([-7, 7], data_parallel_line_2):
+            residuals.append(self._parallel_restrictions(_data, params))
+            # residuals.append(self._dist_between_line(_data, dist, params))
+
+        for dist, _data in zip([-7, 7], data_parallel_line_3):
             residuals.append(self._parallel_restrictions(_data, params))
             # residuals.append(self._dist_between_line(_data, dist, params))
 
@@ -115,11 +120,11 @@ class NewOptimization:
         return lower_bound + (value - lower_bound) % range_width
 
     def back_projection(self, data):
-        self.params = [1400, -180, 0.91236625, -180.6947188, 15]
+        self.params = [2000, - 180, 0.91236625, -180.6947188, 15]
 
-        bounds = ([900, -360, -360, -360, 5], [4000, 360, 360, 360, 60])
+        bounds = ([900, -360, -360, -360, 5], [3000, 360, 360, 360, 60])
         # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
-        result = least_squares(self.target_function, self.params, args=(data,), method='dogbox',
+        result = least_squares(self.target_function, self.params, args=(data,), method='trf',
                                verbose=2,
                                bounds=bounds,
                                # loss='soft_l1',
@@ -129,3 +134,6 @@ class NewOptimization:
         # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
         #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 1000, 'disp': True})
         print(*np.around(result.x, 2))
+
+    def print_result(self):
+        pass

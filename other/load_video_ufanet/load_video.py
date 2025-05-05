@@ -15,7 +15,7 @@
 
 import ffmpeg
 
-input_url = "http://136.169.226.80/1600746658/tracks-v1/index.fmp4.m3u8?token=89421cab65a94ce99d2ef99798bb0896"
+input_url = "http://136.169.226.80/1-4/tracks-v1/index.fmp4.m3u8?token=09312e2086a6423bb3fba98b5058af1e"
 output_file = "output.mp4"
 
 # Загружаем 10 секунд видео
