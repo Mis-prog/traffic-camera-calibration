@@ -1,5 +1,5 @@
 from source.camera_model import Camera
-from source.data_preparation import load_data, prep_data_parallel, load_params, fun_lines
+from source.data_preparation import load_data, prep_data_parallel, load_params, fun_lines, prep_data_angle
 from source.plot import Plot
 from source.pointND import PointND
 from source.calibration.back_optimization import BackProjectionOptimizer, RESIDUALS, PARAMS
@@ -12,29 +12,34 @@ import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
 
 camera = Camera()
-camera.load_scene('image/crossroads.jpg')
+camera.load_scene('image/building_corrected_image.png')
 
 # Отрисовка исходных линий
-# plot = Plot(camera)
-# plot.draw_line(load_data('marked_data/angle_lines.txt'))
-# plot.draw_line(load_data('marked_data_new/parallel_lines_1.txt'))
-# plot.draw_line(load_data('marked_data_new/parallel_lines_2.txt'))
-# plot.draw_line(load_data('marked_data_new/point_to_point.txt'))
-# plot.visible()
+plot = Plot(camera)
+plot.draw_line(load_data('marked_data_3/parallel_lines_1.txt'))
+plot.draw_line(load_data('marked_data_3/parallel_lines_2.txt'))
+# plot.draw_line(load_data('marked_data_3/parallel_lines_3.txt'))
+plot.draw_line(load_data('marked_data_3/parallel_lines_4.txt'))
+plot.draw_line(load_data('marked_data_3/point_to_point.txt'))
+plot.visible()
 
-# Оптимизация
 data = {
-    # 'angle': prep_data_angle(load_data('marked_data/angle_lines.txt')),
-    'parallel-1': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('marked_data/point_to_point.txt')),
-    'parallel-2': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
-    # 'parallel-3': prep_data_parallel(load_data('marked_data_new/parallel_lines_3.txt'))
+    # 'angle': prep_data_angle(load_data(('marked_data_3/angle_lines.txt'))),
+    'parallel-1': prep_data_parallel(load_data('marked_data_3/parallel_lines_1.txt')),
+    'point_to_point': np.array(load_data('marked_data_3/point_to_point.txt')),
+    'parallel-2': prep_data_parallel(load_data('marked_data_3/parallel_lines_2.txt')),
+    'parallel-3': prep_data_parallel(load_data('marked_data_3/parallel_lines_3.txt')),
+    'parallel-4': prep_data_parallel(load_data('marked_data_3/parallel_lines_4.txt')),
+    # 'parallel-4': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
+    # 'parallel-5': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
+    # 'point_to_point_2': np.array(load_data('marked_data/point_to_point.txt'))
 }
+# Оптимизация
 
 optimize = BackProjectionOptimizer(camera)
 optimize.back_projection(data)
-# # #
-# # # # # Отрисовка результатов оптимизации
+# #
+# # # # Отрисовка результатов оптимизации
 HIST = [np.sum(values) for values in RESIDUALS]
 
 plt.figure(1)
@@ -61,12 +66,11 @@ plt.legend()
 plt.show()
 # PARAMS = np.array(PARAMS)
 # #
-# plt.plot(PARAMS[:, 0], label='fx')
-# plt.plot(PARAMS[:, 1], label='fy')
-# plt.plot(PARAMS[:, 2], label='Z')
-# plt.plot(PARAMS[:, 3], label='X')
-# plt.plot(PARAMS[:, 4], label='Y')
-# plt.plot(PARAMS[:, 5], label='H')
+# plt.plot(PARAMS[:, 0], label='f')
+# plt.plot(PARAMS[:, 1], label='Z')
+# plt.plot(PARAMS[:, 2], label='X')
+# plt.plot(PARAMS[:, 3], label='Y')
+# plt.plot(PARAMS[:, 4], label='H')
 # plt.legend()
 # plt.show()
 
@@ -90,7 +94,8 @@ plt.show()
 
 # Прямая линия
 # camera = Camera()
-# camera.load_scene('image/crossroads_not_dist_ver2.webp')
+# camera.load_scene('image/image.webp')
+# print(load_params('marked_data/calib_data.txt'))
 # camera.set_params(load_params('marked_data/calib_data.txt'))
 #
 # plot_coord = []
@@ -111,14 +116,13 @@ plt.show()
 
 # Прямая линия продолжение
 
-# camera = Camera()
-# camera.load_scene('image/crossroads.jpg')
-# camera.set_params(load_params('marked_data/calib_data.txt'))
-#
-# scene = cv2.imread('image/crossroads.jpg')
-# scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
-# plt.imshow(scene_rgb)
+camera = Camera()
+camera.load_scene('image/building_corrected_image.png')
+camera.set_params(load_params('marked_data_new/calib_data.txt'))
 
+scene = cv2.imread('image/building_corrected_image.png')
+scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
+plt.imshow(scene_rgb)
 
 # for i, (start, end) in enumerate(load_data('marked_data/parallel_lines_2.txt')):
 #     start3d = camera.back_crop(start)
@@ -129,39 +133,53 @@ plt.show()
 #     x_new, y_new = zip(*[p.get() for p in points])
 #     plt.scatter([start.get()[0], end.get()[0]], [start.get()[1], end.get()[1]])
 #     plt.plot(x_new, y_new, label=f'Transformed Line 1 - {i}')
-#     coord1.append(np.array([x, y]))
+# coord1.append(np.array([x, y]))
 
-# # На известных данных
-# for y_dist in [-12, 0, 12]:
-#     start, end = load_data('marked_data/parallel_line_2.txt')[1]
-#     start3d = camera.back_crop(start)
-#     end3d = camera.back_crop(end)
-#     x = np.linspace(-100, 100, 100)
-#     y = fun_lines(x, start3d, end3d) - y_dist
-#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-#     x_new, y_new = zip(*[p.get() for p in points])
-#     if y_dist == 0:
-#         plt.plot(x_new, y_new, label='Центральная линия', color='black', ls='-.')
-#     else:
-#         plt.plot(x_new, y_new, color='black')
-#
-# for y_dist in [-11.5, 0, 11.5]:
-#     start, end = load_data('marked_data/parallel_lines_1.txt')[1]
-#     start3d = camera.back_crop(start)
-#     end3d = camera.back_crop(end)
-#     x = np.linspace(-100, 150, 100)
-#     y = fun_lines(x, start3d, end3d) - y_dist
-#     points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-#     x_new, y_new = zip(*[p.get() for p in points])
-#     if y_dist == 0:
-#         plt.plot(x_new, y_new, color='black', ls='-.')
-#     else:
-#         plt.plot(x_new, y_new, color='black')
-#
-# plt.xlim(0, 1920)
-# plt.ylim(0, 1080)
-# plt.gca().invert_yaxis()
+# На известных данных
+for y_dist in [-80, 0, 80]:
+    start, end = load_data('marked_data/parallel_lines_2.txt')[1]
+    start3d = camera.back_crop(start)
+    end3d = camera.back_crop(end)
+    x = np.linspace(-1000, 1000, 100)
+    y = fun_lines(x, start3d, end3d) - y_dist
 
+    plt.plot(x, y)
+    plt.scatter(*start3d.get())
+    plt.scatter(*end3d.get())
+    plt.scatter(*start.get())
+    plt.scatter(*end.get())
+
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    if y_dist == 0:
+        plt.plot(x_new, y_new, color='red')
+    else:
+        plt.plot(x_new, y_new, color='black')
+
+for y_dist in [-100, 0, 100]:
+    start, end = load_data('marked_data/parallel_lines_1.txt')[1]
+    start3d = camera.back_crop(start)
+    end3d = camera.back_crop(end)
+    x = np.linspace(-1000, 1000, 100)
+    y = fun_lines(x, start3d, end3d) - y_dist
+
+    plt.plot(x, y)
+    plt.scatter(*start3d.get())
+    plt.scatter(*end3d.get())
+    plt.scatter(*start.get())
+    plt.scatter(*end.get())
+
+    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    x_new, y_new = zip(*[p.get() for p in points])
+    if y_dist == 0:
+        plt.plot(x_new, y_new, color='red')
+    else:
+        plt.plot(x_new, y_new, color='black')
+
+plt.xlim(0, 1920)
+plt.ylim(0, 1080)
+plt.gca().invert_yaxis()
+plt.show()
 
 # # Создание синтетических данных
 # camera = Camera()
