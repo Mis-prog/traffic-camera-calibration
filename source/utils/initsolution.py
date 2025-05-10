@@ -1,5 +1,5 @@
 import numpy as np
-from .camera_model import Camera
+from ..camera_model import Camera
 
 
 # вычисление нормали к линии (вектора направления)

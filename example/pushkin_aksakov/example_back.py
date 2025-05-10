@@ -1,5 +1,5 @@
 from source.camera_model import Camera
-from source.data_preparation import load_data, prep_data_parallel, load_params, fun_lines, prep_data_angle
+from source.utils.data_preparation import load_data, prep_data_parallel, load_params, fun_lines, prep_data_angle
 from source.plot import Plot
 from source.pointND import PointND
 from source.calibration.back_optimization import BackProjectionOptimizer, RESIDUALS, PARAMS
@@ -9,61 +9,61 @@ import matplotlib
 import cv2
 import matplotlib.pyplot as plt
 
-matplotlib.use("TkAgg")
-
-camera = Camera()
-camera.load_scene('image/building_corrected_image.png')
+# matplotlib.use("TkAgg")
+#
+# camera = Camera()
+# camera.load_scene('image/pattern_corrected_image.png')
 
 # Отрисовка исходных линий
-plot = Plot(camera)
-plot.draw_line(load_data('marked_data_3/parallel_lines_1.txt'))
-plot.draw_line(load_data('marked_data_3/parallel_lines_2.txt'))
-# plot.draw_line(load_data('marked_data_3/parallel_lines_3.txt'))
-plot.draw_line(load_data('marked_data_3/parallel_lines_4.txt'))
-plot.draw_line(load_data('marked_data_3/point_to_point.txt'))
-plot.visible()
+# plot = Plot(camera)
+# plot.draw_line(load_data('marked_data_4/parallel_lines_1.txt'))
+# plot.draw_line(load_data('marked_data_4/parallel_lines_2.txt'))
+# plot.draw_line(load_data('marked_data_4/parallel_lines_3.txt'))
+# # plot.draw_line(load_data('marked_data_4/parallel_lines_4.txt'))
+# plot.draw_line(load_data('marked_data_4/point_to_point.txt'))
+# plot.visible()
 
-data = {
-    # 'angle': prep_data_angle(load_data(('marked_data_3/angle_lines.txt'))),
-    'parallel-1': prep_data_parallel(load_data('marked_data_3/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('marked_data_3/point_to_point.txt')),
-    'parallel-2': prep_data_parallel(load_data('marked_data_3/parallel_lines_2.txt')),
-    'parallel-3': prep_data_parallel(load_data('marked_data_3/parallel_lines_3.txt')),
-    'parallel-4': prep_data_parallel(load_data('marked_data_3/parallel_lines_4.txt')),
-    # 'parallel-4': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
-    # 'parallel-5': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
-    # 'point_to_point_2': np.array(load_data('marked_data/point_to_point.txt'))
-}
-# Оптимизация
-
-optimize = BackProjectionOptimizer(camera)
-optimize.back_projection(data)
+# data = {
+#     # 'angle': prep_data_angle(load_data(('marked_data_3/angle_lines.txt'))),
+#     'parallel-1': prep_data_parallel(load_data('marked_data_4/parallel_lines_1.txt')),
+#     'point_to_point': np.array(load_data('marked_data_4/point_to_point.txt')),
+#     'parallel-2': prep_data_parallel(load_data('marked_data_4/parallel_lines_2.txt')),
+#     'parallel-3': prep_data_parallel(load_data('marked_data_4/parallel_lines_3.txt')),
+#     # 'parallel-4': prep_data_parallel(load_data('marked_data_4/parallel_lines_4.txt')),
+#     # 'parallel-4': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
+#     # 'parallel-5': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),
+#     # 'point_to_point_2': np.array(load_data('marked_data/point_to_point.txt'))
+# }
+# # Оптимизация
+#
+# optimize = BackProjectionOptimizer(camera)
+# optimize.back_projection(data)
 # #
 # # # # Отрисовка результатов оптимизации
-HIST = [np.sum(values) for values in RESIDUALS]
-
-plt.figure(1)
-plt.subplot(1, 2, 1)
-plt.title('График погрешности')
-plt.ylabel('Точность')
-plt.xlabel('Количество итераций')
-plt.plot(np.arange(0, len(HIST)), HIST)
-
-plt.subplot(1, 2, 2)
-plt.plot(RESIDUALS[0], label='Первая итерация')
-plt.plot(RESIDUALS[-1], label='Последняя итерация')
-plt.axvspan(0, 3, color='lightgrey', alpha=0.5,label='Параллельные прямые')
-# plt.axvspan(1, 3, color='lightgrey', alpha=0.5)
-plt.axvspan(3, 14, color='darkgrey', alpha=0.5,label='Расстояние от точки до точки')
-# plt.axvline(x=1, color='black', linestyle='--')  # Вертикальная линия на X=5
-# plt.axvline(x=3, color='black', linestyle='--')
-plt.text(2.5, 12, 'Область 1', horizontalalignment='center', verticalalignment='center', color='black', fontsize=10)
-plt.text(7.5, 12, 'Область 2', horizontalalignment='center', verticalalignment='center', color='black', fontsize=10)
-plt.title('Погрешность для всех наборов данных')
-plt.ylabel('Погрешность')
-plt.xlabel('Наборы данных')
-plt.legend()
-plt.show()
+# HIST = [np.sum(values) for values in RESIDUALS]
+#
+# plt.figure(1)
+# plt.subplot(1, 2, 1)
+# plt.title('График погрешности')
+# plt.ylabel('Точность')
+# plt.xlabel('Количество итераций')
+# plt.plot(np.arange(0, len(HIST)), HIST)
+#
+# plt.subplot(1, 2, 2)
+# plt.plot(RESIDUALS[0], label='Первая итерация')
+# plt.plot(RESIDUALS[-1], label='Последняя итерация')
+# plt.axvspan(0, 3, color='lightgrey', alpha=0.5,label='Параллельные прямые')
+# # plt.axvspan(1, 3, color='lightgrey', alpha=0.5)
+# plt.axvspan(3, 14, color='darkgrey', alpha=0.5,label='Расстояние от точки до точки')
+# # plt.axvline(x=1, color='black', linestyle='--')  # Вертикальная линия на X=5
+# # plt.axvline(x=3, color='black', linestyle='--')
+# plt.text(2.5, 12, 'Область 1', horizontalalignment='center', verticalalignment='center', color='black', fontsize=10)
+# plt.text(7.5, 12, 'Область 2', horizontalalignment='center', verticalalignment='center', color='black', fontsize=10)
+# plt.title('Погрешность для всех наборов данных')
+# plt.ylabel('Погрешность')
+# plt.xlabel('Наборы данных')
+# plt.legend()
+# plt.show()
 # PARAMS = np.array(PARAMS)
 # #
 # plt.plot(PARAMS[:, 0], label='f')
@@ -116,11 +116,10 @@ plt.show()
 
 # Прямая линия продолжение
 
-camera = Camera()
-camera.load_scene('image/building_corrected_image.png')
-camera.set_params(load_params('marked_data_new/calib_data.txt'))
+camera = Camera('image/building_corrected_image.png')
+camera.set_params(load_params('ideal_params.txt'))
 
-scene = cv2.imread('image/building_corrected_image.png')
+scene = cv2.imread('image/pattern_corrected_image.png')
 scene_rgb = cv2.cvtColor(scene, cv2.COLOR_BGR2RGB)
 plt.imshow(scene_rgb)
 
@@ -136,10 +135,10 @@ plt.imshow(scene_rgb)
 # coord1.append(np.array([x, y]))
 
 # На известных данных
-for y_dist in [-80, 0, 80]:
+for y_dist in [-7, 0, 7]:
     start, end = load_data('marked_data/parallel_lines_2.txt')[1]
-    start3d = camera.back_crop(start)
-    end3d = camera.back_crop(end)
+    start3d = camera.homography(start, direction='back')
+    end3d = camera.homography(end, direction='back')
     x = np.linspace(-1000, 1000, 100)
     y = fun_lines(x, start3d, end3d) - y_dist
 
@@ -149,17 +148,17 @@ for y_dist in [-80, 0, 80]:
     plt.scatter(*start.get())
     plt.scatter(*end.get())
 
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    points = [camera.homography(PointND([xi, yi])) for xi, yi in zip(x, y)]
     x_new, y_new = zip(*[p.get() for p in points])
     if y_dist == 0:
         plt.plot(x_new, y_new, color='red')
     else:
         plt.plot(x_new, y_new, color='black')
 
-for y_dist in [-100, 0, 100]:
+for y_dist in [-10, 0, 10]:
     start, end = load_data('marked_data/parallel_lines_1.txt')[1]
-    start3d = camera.back_crop(start)
-    end3d = camera.back_crop(end)
+    start3d = camera.homography(start, direction='back')
+    end3d = camera.homography(end, direction='back')
     x = np.linspace(-1000, 1000, 100)
     y = fun_lines(x, start3d, end3d) - y_dist
 
@@ -169,7 +168,7 @@ for y_dist in [-100, 0, 100]:
     plt.scatter(*start.get())
     plt.scatter(*end.get())
 
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
+    points = [camera.homography(PointND([xi, yi])) for xi, yi in zip(x, y)]
     x_new, y_new = zip(*[p.get() for p in points])
     if y_dist == 0:
         plt.plot(x_new, y_new, color='red')

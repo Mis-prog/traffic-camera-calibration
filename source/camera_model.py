@@ -5,12 +5,11 @@ from .pointND import PointND
 
 
 class Camera:
-    def __init__(self):
-        self.size = None
-        self.scene = None
+    def __init__(self, path_image):
+        self.size = list(cv2.imread(path_image).shape[:2])
+        self.path = path_image
         self.fx = None
         self.fy = None
-        self.path = None
 
         self.K = np.zeros((3, 3))
         self.R = np.zeros((3, 3))
@@ -26,25 +25,12 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
-    def get_scene(self):
-        return self.scene
-
     def get_f(self):
         return self.fx, self.fy
 
-    def load_scene(self, path):
-        self.path = path
-        self.scene = cv2.imread(path)
-        height, width, channels = self.scene.shape
-        self.size = [height, width]
-
-    # вычисление матрицы поворота
     def calc_R(self, euler_angles):
         rot = Rotation.from_euler('zxy', euler_angles, degrees=True)
         self.R = rot.as_matrix()
-
-    def set_init_R(self, p):
-        self.R = np.vstack(p).transpose()
 
     def get_R(self, angle_output=False, output=False):
         if angle_output:
@@ -53,14 +39,13 @@ class Camera:
         if output:
             print(f'Матрица поворота:\n{self.R}')
         return self.R
-
-    # вычисление столбца переноса
+    
     def calc_T(self, x=0, y=0, z=0):
         self.C = np.array([x, y, z])
 
     def get_T(self, output=False):
         if output:
-            print(f'Столбец переноса:\n{self.C}')
+            print(f'Столбец трансляции:\n{self.C}')
         return self.C
 
     # вычисление внутренней матрицы
@@ -79,8 +64,7 @@ class Camera:
             print(f'Внутренние параметры камеры:\n{self.K}')
         return self.K
 
-    # прямое преобразование
-    def direct_full(self, point_real: PointND, params=[]) -> PointND:
+    def direct(self, point_real: PointND, params=[]) -> PointND:
         if len(params) == 5:
             self.calc_K(params[0])
             self.calc_R(params[1:4])
@@ -95,25 +79,21 @@ class Camera:
         _AT = self.K @ _RT
         _new_point = PointND(_AT @ point_real.get(out_homogeneous=True), add_weight=False)
         return _new_point
+    
+    def back(self, point_image:PointND, params=[]) -> PointND:
+        pass
+    
+    def homography(self, point: PointND, params=[], direction='direct') -> PointND:
+        """
+        Преобразование точки через гомографию между 3D плоскостью (Z=0) и изображением.
 
-    def direct_crop(self, point_real: PointND, params=[]) -> PointND:
-        if len(params) == 5:
-            self.calc_K(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(z=params[4])
-        elif len(params) == 7:
-            self.calc_K(params[0])
-            self.calc_R(params[1:4])
-            self.calc_T(x=params[4], y=params[5], z=params[6])
-
-        _T = -self.R @ self.C
-        _RT = np.hstack([self.R, _T[:, np.newaxis]])
-        _RT = np.delete(_RT, 2, axis=1)
-        _AT = self.K @ _RT
-        _new_point = PointND(_AT @ point_real.get(out_homogeneous=True), add_weight=False)
-        return _new_point
-
-    def back_crop(self, point_image: PointND, params=[]) -> PointND:
+        :param point: PointND — входная точка (в изображении или на плоскости)
+        :param params: параметры [f, rz, rx, ry, tx, ty, tz] или другие допустимые форматы
+        :param direction: 'direct' — из мира в изображение
+                        'back' — из изображения в мир
+        :return: PointND
+        """
+        # Установка параметров
         if len(params) == 5:
             self.calc_K(params[0])
             self.calc_R(params[1:4])
@@ -122,11 +102,24 @@ class Camera:
             self.calc_K(params[0:2])
             self.calc_R(params[2:5])
             self.calc_T(z=params[5])
+        elif len(params) == 7:
+            self.calc_K(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], y=params[5], z=params[6])
 
-        _T = -self.R @ self.C
-        _RT = np.hstack([self.R, _T[:, np.newaxis]])
-        _RT = np.delete(_RT, 2, axis=1)
-        _AT = self.K @ _RT
-        _AT_inv = np.linalg.inv(_AT)
-        _new_point = PointND(_AT_inv @ point_image.get(out_homogeneous=True), add_weight=False)
-        return _new_point
+        T = -self.R @ self.C
+        RT = np.hstack([self.R, T[:, np.newaxis]])      # [R | t]
+        RT = np.delete(RT, 2, axis=1)                   # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
+        H = self.K @ RT                                 # Гомография
+
+        p = point.get(out_homogeneous=True)
+
+        if direction == 'direct':
+            transformed = H @ p
+        elif direction == 'back':
+            H_inv = np.linalg.inv(H)
+            transformed = H_inv @ p
+        else:
+            raise ValueError("Аргумент direction должен быть 'direct' или 'back'.")
+
+        return PointND(transformed, add_weight=False)

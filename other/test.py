@@ -7,6 +7,7 @@ lsd = cv2.createLineSegmentDetector()
 
 lines, _, _, _ = lsd.detect(img)
 
+
 drawn_img = lsd.drawSegments(img.copy(), lines)
 
 scale = 0.5  # уменьшить в 2 раза

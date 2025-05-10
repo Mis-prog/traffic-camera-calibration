@@ -1,4 +1,4 @@
-from .pointND import PointND
+from source.pointND import PointND
 
 import numpy as np
 

@@ -4,10 +4,21 @@ from scipy.optimize import minimize
 
 from source.camera_model import Camera
 from source.pointND import PointND
-from source.data_preparation import fun_lines
+from source.utils.data_preparation import fun_lines
 
 RESIDUALS = []
 PARAMS = []
+
+
+def huber_loss(error, delta=1.0):
+    if abs(error) <= delta:
+        return 0.5 * error ** 2
+    else:
+        return delta * (abs(error) - 0.5 * delta)
+
+
+def pseudo_huber_loss(error, delta=5.0):
+    return delta ** 2 * (np.sqrt(1 + (error / delta) ** 2) - 1)
 
 
 class BackProjectionOptimizer:
@@ -20,9 +31,8 @@ class BackProjectionOptimizer:
 
     def _back_project_line_3d(self, start2d: PointND, end2d: PointND, params):
         # print(start2d.get(out_homogeneous=True))
-        pre_start3d = self.camera.back_crop(start2d, params)
-        pre_end3d = self.camera.back_crop(end2d, params)
-        # print(pre_start3d.get())
+        pre_start3d = self.camera.homography(start2d, params, direction='back')
+        pre_end3d = self.camera.homography(end2d, params, direction='back')
         return pre_end3d.get() - pre_start3d.get()
 
     def _angle_restrictions(self, line: np.ndarray, params):
@@ -59,22 +69,25 @@ class BackProjectionOptimizer:
 
         return (1 - cos_theta ** 2)
 
-    def _point_to_point(self, line: np.ndarray, params, log_calc=False):
+    def _point_to_point(self, line: np.ndarray, params):
         start, end = line
 
         line = self._back_project_line_3d(start, end, params)
 
         dist_calc = np.linalg.norm(line)
 
-        dist = 40  # в дм
+        with open('dist_calc_log.txt', 'a') as f:
+            np.savetxt(f, [dist_calc], newline='\n')
+
+        dist = 41  # в дм
 
         # if 40 <= dist_calc <= 60:
         #     return np.log(abs(dist_calc - dist))
         # else:
         #     return abs(dist_calc - dist) ** 2
         # return  50 * np.log1p(abs(dist_calc-dist))
-
-        return np.log1p(abs(dist_calc - dist)) ** 2
+        error = dist_calc - dist
+        return huber_loss(error)
 
     def _dist_between_line(self, line: np.ndarray, y_dist, params):
         start2d_1, end2d_1, start2d_2, end2d_2 = line
@@ -132,8 +145,13 @@ class BackProjectionOptimizer:
             residuals.append(self._parallel_restrictions(_data, params))
             # residuals.append(self._dist_between_line(_data, dist, params))
 
-        for _data in data_point_to_point:
-            residuals.append(self._point_to_point(_data, params))
+        LENGTH = np.array([
+            np.linalg.norm(self._back_project_line_3d(start, end, params)) for (start, end) in data_point_to_point])
+        MEAN_LEN = 70
+        loss = (LENGTH - MEAN_LEN) ** 2
+        residuals.extend(loss)
+        # for _data in data_point_to_point:
+        # residuals.append(self._point_to_point(_data, params))
 
         for _data in data_point_to_point_2:
             residuals.append(self._point_to_point(_data, params))
@@ -155,14 +173,14 @@ class BackProjectionOptimizer:
         result = least_squares(self.target_function, self.params, args=(data,), method='trf',
                                verbose=2,
                                bounds=bounds,
-                               loss='soft_l1',
-                               jac='3-point'
-                               # ftol=1e-8,   xtol=1e-8, gtol=1e-8
+                               # loss='soft_l1',
+                               # jac='3-point'
+                               ftol=1e-8, xtol=1e-8, gtol=1e-8
                                )
         # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
         #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 3000, 'disp': True})
         result_to_numpy = np.array(result.x)
-        np.savetxt('../../example/pushkin_aksakov/marked_data_new/calib_data.txt',
+        np.savetxt('../../example/pushkin_aksakov/marked_data_4/calib_data.txt',
                    [np.around(result_to_numpy, 2)], fmt='%.2f', delimiter=' ', newline='')
         print(f'f: {result.x[0]}')
         print(
