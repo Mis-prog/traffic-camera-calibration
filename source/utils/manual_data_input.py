@@ -156,7 +156,7 @@ def delete_selected_line():
 
 
 # Загружаем изображение
-img = cv2.imread('../example/pushkin_aksakov/image/pattern_corrected_image.png')
+img = cv2.imread('../../example/pushkin_aksakov/image/crossroads.jpg')
 if img is None:
     print("Ошибка загрузки изображения. Проверьте путь к файлу.")
     exit()
@@ -187,7 +187,7 @@ while True:
     if key == 27 or key == ord('q'):  # Esc или q для выхода
         break
     elif key == ord('s'):  # 's' для сохранения
-        with open('../example/pushkin_aksakov/marked_data/calibration_lines.txt', 'w') as f:
+        with open('calibration_lines.txt', 'w') as f:
             for idx, line in enumerate(lines):
                 f.write(f"Line {idx + 1}: {line}\n")
         print(f"Сохранено {len(lines)} линий в файл 'calibration_lines.txt'")
