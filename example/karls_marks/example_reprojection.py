@@ -1,7 +1,6 @@
-from source.camera_model import Camera
 from source.optimizetion import Optimizer
 from source.utils.initsolution import calc_init_camera
-from source.plot import Plot
+from visualization.plot import CameraPlotter
 from source.point3D import Point3D
 from source.point2D import Point2D
 import numpy as np
@@ -73,7 +72,7 @@ camera, info, cost_history, history = optimize.optimize_reprojection(lines_prep)
 print("Финальная ошибка:", info.cost)
 print("Финальные параметры:", np.around(info.x, 2))
 
-plot = Plot(camera)
+plot = CameraPlotter(camera)
 plot.draw_tranform_line(lines_prep)
 # plot.draw_calibration_line(lines_prep)
 

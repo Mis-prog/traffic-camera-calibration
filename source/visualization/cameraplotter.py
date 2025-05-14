@@ -5,8 +5,9 @@ from pathlib import Path
 
 import numpy as np
 
-from .camera_model import Camera
-from .pointND import PointND
+from core.camera_model import Camera
+from core.pointND import PointND
+from .drawable import Drawable
 
 
 class DisplayMode(Enum):
@@ -20,7 +21,7 @@ class ProjectionMode(Enum):
     BACK = auto()
 
 
-class Plot:
+class CameraPlotter(Drawable):
     def __init__(self, camera: Camera):
         self.camera = camera
         self.scene_plot = self.camera.get_scene().copy()  # копия сцены
@@ -31,7 +32,7 @@ class Plot:
         self.mode = mode
 
     def _transform_pointND_to_cv2_format(self, point: PointND):
-        if point:
+        if point is None:
             return tuple(map(int, point.get()))
 
     def _draw_point_with_label(self, point2d, coords):
@@ -52,7 +53,7 @@ class Plot:
             point_plot = None
 
             if params:
-                if ProjectionMode.DIRECT:
+                if mode == ProjectionMode.DIRECT:
                     point_plot = self.camera.direct(point, params)
                 elif ProjectionMode.BACK:
                     point_plot = self.camera.back_crop(point, params)
@@ -107,7 +108,7 @@ class Plot:
         if mode == DisplayMode.SAVE:
             filename = Path(self.camera.path).name
             print('calib_' + filename)
-            cv2.imwrite('calibline_' + filename, self.overlay)
+            cv2.imwrite('calibline_' + filename, self.overlay.copy())
         elif mode == DisplayMode.JUPYTER:
             scene_rgb = cv2.cvtColor(self.overlay, cv2.COLOR_BGR2RGB)
             plt.figure(figsize=(10, 8))

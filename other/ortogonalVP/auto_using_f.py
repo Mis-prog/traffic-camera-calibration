@@ -87,7 +87,7 @@ plt.scatter(VP_pixel[:, 0], VP_pixel[:, 1], label='VP Detect')
 #     plt.scatter(x, y)
 
 
-from source.camera_model import Camera
+from core.camera_model import Camera
 
 camera = Camera('../../example/pushkin_aksakov/image/pattern_corrected_image.png')
 camera.set_params([1419.59, -142.56, 49.5, -185.62, -12.82, -18.38, 30.63])

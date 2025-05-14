@@ -1,10 +1,8 @@
 import numpy as np
 from scipy.optimize import least_squares
-from scipy.optimize import minimize
 
-from source.camera_model import Camera
-from source.pointND import PointND
-from source.utils.data_preparation import fun_lines
+from core.pointND import PointND
+from .base import Calibration
 
 RESIDUALS = []
 PARAMS = []
@@ -21,13 +19,9 @@ def pseudo_huber_loss(error, delta=5.0):
     return delta ** 2 * (np.sqrt(1 + (error / delta) ** 2) - 1)
 
 
-class BackProjectionOptimizer:
+class BackProjectionOptimizer(Calibration):
     def __init__(self, camera):
-        self.camera = camera
-        self.params = None
-
-    def set_params(self, params):
-        self.params = params
+        super().__init__(camera)
 
     def _back_project_line_3d(self, start2d: PointND, end2d: PointND, params):
         # print(start2d.get(out_homogeneous=True))

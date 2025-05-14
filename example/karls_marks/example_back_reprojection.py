@@ -1,7 +1,6 @@
-from source.camera_model import Camera
 from source.optimizetion import Optimizer
 from source.utils.initsolution import calc_init_camera
-from source.plot import Plot
+from visualization.plot import CameraPlotter
 from source.point3D import Point3D
 from source.point2D import Point2D
 
@@ -103,5 +102,5 @@ print("Финальные параметры:", info.x)
 #     end2D, end3D = Point2D(end[0:2]), Point3D(end[2:6])
 #
 #     lines_prep.append([(start2D, start3D), (end2D, end3D)])
-plot = Plot(camera)
+plot = CameraPlotter(camera)
 plot.draw_tranform_line(lines_prep)

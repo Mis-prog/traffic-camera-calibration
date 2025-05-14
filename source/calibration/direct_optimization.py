@@ -1,14 +1,14 @@
 import numpy as np
 from scipy.optimize import least_squares
-from scipy.optimize import minimize
 
-from source.camera_model import Camera
-from source.pointND import PointND
+from core.camera_model import Camera
+from core.pointND import PointND
+from .base import Calibration
 
 
 class DirectProjectionOptimizer:
     def __init__(self, camera: Camera):
-        self.camera = camera
+        super().__init__(camera)
 
     def error_point_to_point(self, line_known: tuple[PointND, PointND],
                              line_predicted: tuple[PointND, PointND]) -> float:
@@ -75,7 +75,6 @@ class DirectProjectionOptimizer:
             # residuals.append(error1 + error2)
             residuals.append(0.2 * error1 + error2)
         return np.array(residuals)
-
 
     def optimize_init(self, lines: list[tuple[tuple[PointND, PointND], tuple[PointND, PointND]]]):
         angles = self.camera.get_R(angle_output=True)

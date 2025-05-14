@@ -1,11 +1,8 @@
-from source.camera_model import Camera
-from source.utils.data_preparation import load_data, prep_data_parallel, load_params, fun_lines, prep_data_angle
-from source.plot import Plot
-from source.pointND import PointND
-from source.calibration.back_optimization import BackProjectionOptimizer, RESIDUALS, PARAMS
+from core.camera_model import Camera
+from source.utils.data_preparation import load_data, load_params, fun_lines
+from core.pointND import PointND
 
 import numpy as np
-import matplotlib
 import cv2
 import matplotlib.pyplot as plt
 

@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
-from .pointND import PointND
+from core.pointND import PointND
 
 
 class Camera:
