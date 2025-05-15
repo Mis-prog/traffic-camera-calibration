@@ -1,50 +1,67 @@
 import numpy as np
-
-from base import Calibration
-from core import Camera
-
+from .base import Calibration
+from source.core import Camera  # поправь путь, если нужно
 
 class VanishingPointCalibration(Calibration):
     def __init__(self, camera: Camera):
         super().__init__(camera)
-        self.vp1 = None  # vanishing point 1
-        self.vp2 = None  # vanishing point 2
-        self.vp3 = None  # vanishing point 3
+        self.vpX = None  # точка схода по оси X (горизонт)
+        self.vpY = None  # точка схода по оси Y (горизонт)
+        self.vpZ = None  # точка схода по оси Z (вертикаль)
 
-    def set_vanishing_points(self, vp1, vp2, vp3):
-        self.vp1 = np.array(vp1, dtype=float)
-        self.vp2 = np.array(vp2, dtype=float)
-        self.vp3 = np.array(vp3, dtype=float)
+    def set_vanishing_points(self, vpX, vpY=None, vpZ=None):
+        self.vpX = np.array(vpX, dtype=float)
+        if vpY is not None:
+            self.vpY = np.array(vpY, dtype=float)
+        if vpZ is not None:
+            self.vpZ = np.array(vpZ, dtype=float)
 
-    def calc_f(self, cx, cy):
-        if self.vp1 is None or self.vp2 is None:
-            raise ValueError("vp1 and vp2 must be set")
+    def calc_f(self):
+        if self.vpX is None or self.vpZ is None:
+            raise ValueError("vpX и vpZ обязательны для расчета фокусного расстояния.")
 
-        v1 = np.append(self.vp1, 1.0)  # make homogeneous
-        v2 = np.append(self.vp2, 1.0)
+        v1 = np.append(self.vpX, 1.0)
+        v2 = np.append(self.vpZ, 1.0)
+        cx, cy = self.camera.intrinsics.get_main_point()
         c = np.array([cx, cy, 1.0])
 
         term = np.dot(v1 - c, c - v2)
-
         if term <= 0:
-            raise ValueError("Invalid configuration: value under sqrt is non-positive")
+            raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
 
         f = np.sqrt(term)
         return f
 
     def calc_R(self, f):
-        self.camera.calc_K(f)
-        K_inv = np.linalg.inv(self.camera.get_K())
+        self.camera.intrinsics.set_focal_length(f)
+        K_inv = np.linalg.inv(self.camera.intrinsics.get())
 
-        d1 = K_inv @ np.append(self.vp1, 1.0)  # направление X_w
-        d2 = K_inv @ np.append(self.vp2, 1.0)  # направление Y_w
-        d3 = K_inv @ np.append(self.vp3, 1.0)  # направление Z_w
+        dx = K_inv @ np.append(self.vpX, 1.0)
+        dz = K_inv @ np.append(self.vpZ, 1.0)
 
-        d1 /= np.linalg.norm(d1)
-        d2 /= np.linalg.norm(d2)
-        d3 /= np.linalg.norm(d3)
+        dy = None
+        if self.vpY is not None:
+            dy = K_inv @ np.append(self.vpY, 1.0)
 
-        R = np.stack([d1, d2, d3], axis=1)  # колонки — оси в мировых координатах
+        return self._build_rotation(dx, dy, dz)
 
-        self.camera.extrinsics.R = R
+    def _build_rotation(self, dx, dy, dz):
+        # Нормируем
+        x = dx / np.linalg.norm(dx)
+        z = dz / np.linalg.norm(dz)
+
+        # Если есть Y, уточняем систему
+        if dy is not None:
+            y = dy / np.linalg.norm(dy)
+            # Перестроим, чтобы гарантировать правую систему
+            z = np.cross(x, y)
+            z /= np.linalg.norm(z)
+            y = np.cross(z, x)
+        else:
+            # Если Y не был задан — восстановим его
+            y = np.cross(z, x)
+            y /= np.linalg.norm(y)
+
+        # Собираем R: столбцы — оси X, Y, Z в координатах камеры
+        R = np.column_stack((x, y, z))
         return R

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class CameraIntrinsics:
     def __init__(self, width, height):
         self.width = width
@@ -16,3 +17,6 @@ class CameraIntrinsics:
 
     def get(self):
         return self.K
+
+    def get_main_point(self):
+        return self.width / 2, self.height / 2

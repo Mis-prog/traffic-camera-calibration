@@ -138,7 +138,7 @@ plt.imshow(image_rgb)
 plt.xlim(0, image_width)
 plt.ylim(image_height, 0)
 
-draw_coordinate_axes_from_vps(VP, center, scale=150)
+draw_coordinate_axes_from_vps(VP_opt, center, scale=150)
 
 
 # draw_coordinate_axes_from_vps(VP_opt, center, scale=150)

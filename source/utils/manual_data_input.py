@@ -1,205 +1,198 @@
 import cv2
 import numpy as np
-
-# Глобальные переменные для хранения линий, точек и состояния рисования
-lines = []  # Список для хранения линий (каждая линия - пара точек)
-current_line = []  # Текущая создаваемая линия
-dragging_point = None  # (индекс_линии, индекс_точки) для перетаскивания
-selected_line = None  # Индекс выбранной линии для редактирования
-edit_mode = False  # Режим редактирования активен
+import json
+import os
 
 
-# Функция для обработки кликов мышью
-def click_event(event, x, y, flags, param):
-    global lines, current_line, dragging_point, img, img_copy, selected_line, edit_mode
+class LineAnnotationTool:
+    def __init__(self, image_path, save_dir="annotations", save_file="lines.json"):
+        # Загружаем изображение и проверяем его наличие
+        self.image = cv2.imread(image_path)
+        if self.image is None:
+            raise FileNotFoundError(f"Не удалось загрузить изображение: {image_path}")
 
-    # Если нажата левая кнопка мыши
-    if event == cv2.EVENT_LBUTTONDOWN:
-        # Если активен режим редактирования
-        if edit_mode and selected_line is not None:
-            # Проверяем, не начинаем ли мы перетаскивание точки в выбранной линии
-            for point_idx, point in enumerate(lines[selected_line]):
-                if abs(point[0] - x) < 10 and abs(point[1] - y) < 10:
-                    dragging_point = (selected_line, point_idx)
-                    return
-        else:
-            # Проверяем, не начинаем ли мы перетаскивание точки
-            for line_idx, line in enumerate(lines):
+        # Создаем копию изображения для отрисовки
+        self.image_copy = self.image.copy()
+
+        # Инициализация переменных для хранения линий и состояния
+        self.lines = []
+        self.current_line = []
+        self.dragging_point = None
+        self.selected_line = None
+        self.edit_mode = False
+        self.hover_point = None
+        self.window_name = "Calibration scene"
+        self.cursor_position = (0, 0)
+
+        # Папка для сохранения аннотаций
+        self.save_dir = save_dir
+        self.save_file = save_file
+        os.makedirs(self.save_dir, exist_ok=True)
+
+    def run(self):
+        # Создаем окно и настраиваем обработку мыши
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.window_name, self.mouse_callback)
+        print("Нажмите 'q' для выхода | 's' сохранить | 'd' удалить | 'e' редактировать")
+
+        # Основной цикл взаимодействия с пользователем
+        while True:
+            self.redraw()
+            key = cv2.waitKey(1) & 0xFF
+
+            # Выход
+            if key == 27 or key == ord('q'):
+                break
+
+            # Сохранение линий
+            elif key == ord('s'):
+                self.save_lines()
+
+            # Переключение режима редактирования
+            elif key == ord('e'):
+                self.edit_mode = not self.edit_mode
+                if not self.edit_mode:
+                    self.selected_line = None
+                print(f"Режим редактирования {'включен' if self.edit_mode else 'выключен'}")
+
+            # Удаление выбранной линии
+            elif key == ord('d'):
+                self.delete_selected_line()
+
+            # Отмена последней точки или линии
+            elif key == 8:  # Backspace
+                if self.current_line:
+                    self.current_line.pop()
+                elif self.lines:
+                    self.lines.pop()
+
+        # Закрытие всех окон
+        cv2.destroyAllWindows()
+
+    def mouse_callback(self, event, x, y, flags, param):
+        self.cursor_position = (x, y)
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if self.edit_mode and self.selected_line is not None:
+                for point_idx, point in enumerate(self.lines[self.selected_line]):
+                    if self.is_near(point, (x, y)):
+                        self.dragging_point = (self.selected_line, point_idx)
+                        return
+
+            for line_idx, line in enumerate(self.lines):
                 for point_idx, point in enumerate(line):
-                    if abs(point[0] - x) < 10 and abs(point[1] - y) < 10:
-                        dragging_point = (line_idx, point_idx)
+                    if self.is_near(point, (x, y)):
+                        self.dragging_point = (line_idx, point_idx)
                         return
 
-            # Проверяем, не выбираем ли мы линию для редактирования
-            for line_idx, line in enumerate(lines):
-                if len(line) == 2:
-                    # Проверяем, находится ли клик рядом с линией
-                    dist = point_to_line_distance(line[0], line[1], (x, y))
-                    if dist < 10:  # Порог расстояния
-                        selected_line = line_idx
-                        edit_mode = True
-                        print(f"Выбрана линия #{line_idx + 1} для редактирования")
-                        redraw_image()
-                        return
+            for line_idx, line in enumerate(self.lines):
+                if len(line) == 2 and self.point_to_line_distance(line[0], line[1], (x, y)) < 10:
+                    self.selected_line = line_idx
+                    self.edit_mode = True
+                    print(f"Выбрана линия #{line_idx + 1} для редактирования")
+                    return
 
-            # Если не перетаскиваем точку и не выбираем линию, то добавляем новую точку
-            if len(current_line) < 2:
-                current_line.append((x, y))
-                redraw_image()
+            if len(self.current_line) < 2:
+                self.current_line.append((x, y))
+                if len(self.current_line) == 2 and self.current_line[0] != self.current_line[1]:
+                    self.lines.append(self.current_line.copy())
+                    self.current_line.clear()
 
-                # Если линия завершена (две точки), добавляем её в список линий
-                if len(current_line) == 2:
-                    lines.append(current_line.copy())
-                    current_line = []  # Очищаем для создания новой линии
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            if self.edit_mode:
+                self.edit_mode = False
+                self.selected_line = None
+            elif self.current_line:
+                self.current_line.pop()
+            elif self.lines:
+                self.lines.pop()
 
-    # Если нажата правая кнопка мыши (отмена последнего действия или выход из режима редактирования)
-    elif event == cv2.EVENT_RBUTTONDOWN:
-        if edit_mode:
-            edit_mode = False
-            selected_line = None
-            print("Режим редактирования отключен")
-        elif len(current_line) > 0:
-            current_line.pop()
-        elif len(lines) > 0:
-            lines.pop()
-        redraw_image()
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.dragging_point:
+                line_idx, point_idx = self.dragging_point
+                self.lines[line_idx][point_idx] = (x, y)
+            else:
+                self.hover_point = self.get_hover_point(x, y)
 
-    # Если мышь перемещается с зажатой кнопкой мыши
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if dragging_point is not None:
-            line_idx, point_idx = dragging_point
-            lines[line_idx][point_idx] = (x, y)
-            redraw_image()
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.dragging_point = None
 
-    # Если кнопка мыши отпущена
-    elif event == cv2.EVENT_LBUTTONUP:
-        dragging_point = None
+    def redraw(self):
+        img = self.image.copy()
 
+        for idx, line in enumerate(self.lines):
+            color = self.get_color(idx)
+            point_size = 7 if idx == self.selected_line else 5
+            thickness = 3 if idx == self.selected_line else 2
 
-# Функция для расчета расстояния от точки до линии
-def point_to_line_distance(line_point1, line_point2, point):
-    x1, y1 = line_point1
-    x2, y2 = line_point2
-    x0, y0 = point
-
-    # Вычисляем расстояние от точки до прямой
-    numerator = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-    denominator = ((y2 - y1) ** 2 + (x2 - x1) ** 2) ** 0.5
-
-    if denominator == 0:
-        return ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5  # Если точки совпадают, вернуть расстояние до точки
-
-    return numerator / denominator
-
-
-# Функция для перерисовки изображения
-def redraw_image():
-    img[:] = img_copy.copy()
-
-    # Рисуем все сохраненные линии
-    for idx, line in enumerate(lines):
-        # Цвет линии меняется в зависимости от индекса (для различия)
-        color = (255, 0, 0)  # Базовый цвет - синий
-        if idx % 3 == 1:
-            color = (0, 255, 0)  # Зеленый
-        elif idx % 3 == 2:
-            color = (0, 0, 255)  # Красный
-
-        # Если эта линия выбрана для редактирования, выделяем её
-        if edit_mode and idx == selected_line:
-            line_thickness = 3
-            point_size = 7
-            # Добавляем текст "EDIT"
+            for pt in line:
+                cv2.circle(img, pt, point_size, (0, 255, 0), -1)
             if len(line) == 2:
-                mid_x = (line[0][0] + line[1][0]) // 2
-                mid_y = (line[0][1] + line[1][1]) // 2 - 20
-                cv2.putText(img, "EDIT", (mid_x, mid_y), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.8, (0, 255, 255), 2)
-        else:
-            line_thickness = 2
-            point_size = 5
+                cv2.line(img, line[0], line[1], color, thickness)
+                mid = ((line[0][0] + line[1][0]) // 2, (line[0][1] + line[1][1]) // 2)
+                cv2.putText(img, f"Line {idx + 1}", mid, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                if idx == self.selected_line:
+                    cv2.putText(img, "EDIT", (mid[0], mid[1] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-        for point in line:
-            cv2.circle(img, point, point_size, (0, 255, 0), -1)
-        if len(line) == 2:
-            cv2.line(img, line[0], line[1], color, line_thickness)
-            # Добавляем номер линии рядом с ней
-            mid_x = (line[0][0] + line[1][0]) // 2
-            mid_y = (line[0][1] + line[1][1]) // 2
-            cv2.putText(img, str(idx + 1), (mid_x, mid_y), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8, (255, 255, 255), 2)
+        for pt in self.current_line:
+            cv2.circle(img, pt, 5, (0, 255, 0), -1)
+        if len(self.current_line) == 2:
+            cv2.line(img, self.current_line[0], self.current_line[1], (255, 0, 0), 2)
 
-    # Рисуем текущую создаваемую линию
-    for point in current_line:
-        cv2.circle(img, point, 5, (0, 255, 0), -1)
-    if len(current_line) == 2:
-        cv2.line(img, current_line[0], current_line[1], (255, 0, 0), 2)
+        if self.hover_point:
+            line_idx, pt_idx = self.hover_point
+            pt = self.lines[line_idx][pt_idx]
+            cv2.circle(img, pt, 8, (0, 255, 255), 2)
 
-    # Рисуем статус режима редактирования в верхнем левом углу
-    status_text = "Режим: " + ("Редактирование" if edit_mode else "Создание")
-    cv2.putText(img, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                0.8, (255, 255, 255), 2)
+        status = "Редактирование" if self.edit_mode else "Создание"
+        cv2.putText(img, f"Режим: {status}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.imshow(self.window_name, img)
 
-    # Показываем изображение
-    cv2.imshow("Calibration scene", img)
+    def delete_selected_line(self):
+        if self.selected_line is not None and 0 <= self.selected_line < len(self.lines):
+            del self.lines[self.selected_line]
+            print(f"Удалена линия #{self.selected_line + 1}")
+            self.selected_line = None
+            self.edit_mode = False
+
+    def save_lines(self):
+        # Формируем путь и сохраняем в JSON
+        filename = os.path.join(self.save_dir, self.save_file)
+        data = {f"Line {i + 1}": line for i, line in enumerate(self.lines)}
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=2)
+        print(f"Сохранено {len(self.lines)} линий в файл: {filename}")
+
+    @staticmethod
+    def is_near(p1, p2, threshold=10):
+        return abs(p1[0] - p2[0]) < threshold and abs(p1[1] - p2[1]) < threshold
+
+    @staticmethod
+    def point_to_line_distance(p1, p2, p0):
+        x1, y1 = p1
+        x2, y2 = p2
+        x0, y0 = p0
+        num = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+        den = np.hypot(y2 - y1, x2 - x1)
+        return num / den if den else np.hypot(x0 - x1, y0 - y1)
+
+    def get_hover_point(self, x, y):
+        for i, line in enumerate(self.lines):
+            for j, pt in enumerate(line):
+                if self.is_near(pt, (x, y)):
+                    return i, j
+        return None
+
+    @staticmethod
+    def get_color(i):
+        hsv = np.uint8([[[i * 20 % 180, 255, 255]]])
+        bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)[0][0]
+        return int(bgr[0]), int(bgr[1]), int(bgr[2])
 
 
-# Функция для удаления выбранной линии
-def delete_selected_line():
-    global lines, selected_line, edit_mode
-    if selected_line is not None and 0 <= selected_line < len(lines):
-        del lines[selected_line]
-        print(f"Линия #{selected_line + 1} удалена")
-        selected_line = None
-        edit_mode = False
-        redraw_image()
-
-
-# Загружаем изображение
-img = cv2.imread('../../example/pushkin_aksakov/image/crossroads.jpg')
-if img is None:
-    print("Ошибка загрузки изображения. Проверьте путь к файлу.")
-    exit()
-
-img_copy = img.copy()  # Создаем копию для перерисовки
-
-# Отображаем изображение
-cv2.namedWindow('Calibration scene', cv2.WINDOW_NORMAL)
-cv2.imshow("Calibration scene", img)
-
-# Подключаем обработчик событий
-cv2.setMouseCallback("Calibration scene", click_event)
-
-# Выводим инструкции
-print("Инструкции:")
-print("- Левый клик: добавить точку или начать перетаскивание существующей точки")
-print("- Левый клик на линии: выбрать линию для редактирования")
-print("- Правый клик: отменить последнее действие или выйти из режима редактирования")
-print("- Две точки создают линию, после чего можно начать создавать следующую линию")
-print("- Нажмите 'e' для переключения режима редактирования")
-print("- Нажмите 'd' для удаления выбранной линии")
-print("- Нажмите 's' для сохранения координат всех линий в файл")
-print("- Нажмите 'q' или 'Esc' для выхода")
-
-# Основной цикл
-while True:
-    key = cv2.waitKey(1) & 0xFF
-    if key == 27 or key == ord('q'):  # Esc или q для выхода
-        break
-    elif key == ord('s'):  # 's' для сохранения
-        with open('calibration_lines.txt', 'w') as f:
-            for idx, line in enumerate(lines):
-                f.write(f"Line {idx + 1}: {line}\n")
-        print(f"Сохранено {len(lines)} линий в файл 'calibration_lines.txt'")
-        print(lines)
-    elif key == ord('e'):  # 'e' для переключения режима редактирования
-        edit_mode = not edit_mode
-        if not edit_mode:
-            selected_line = None
-        print(f"Режим редактирования {'включен' if edit_mode else 'выключен'}")
-        redraw_image()
-    elif key == ord('d'):  # 'd' для удаления выбранной линии
-        delete_selected_line()
-
-# Закрываем окна
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    # Указываем путь к изображению для разметки
+    image_path = "../../example/pushkin_aksakov/image/pattern_corrected_image.png"
+    dir_path = "../../example/pushkin_aksakov/vp/"
+    tool = LineAnnotationTool(image_path, dir_path, 'vp3.json')
+    tool.run()
