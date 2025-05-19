@@ -157,6 +157,10 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
+        elif len(params) == 4:
+            self.calc_K(params[0])
+            self.calc_T(x=params[1], y=params[2], z=params[3])
+
         T = -self.R @ self.C
         RT = np.hstack([self.R, T[:, np.newaxis]])  # [R | t]
         RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0

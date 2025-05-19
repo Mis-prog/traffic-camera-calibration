@@ -74,7 +74,7 @@ class BackProjectionOptimizer(Calibration):
         with open('dist_calc_log.txt', 'a') as f:
             np.savetxt(f, [dist_calc], newline='\n')
 
-        dist = 41  # в дм
+        dist = 4  # в дм
 
         # if 40 <= dist_calc <= 60:
         #     return np.log(abs(dist_calc - dist))
@@ -140,13 +140,13 @@ class BackProjectionOptimizer(Calibration):
             residuals.append(self._parallel_restrictions(_data, params))
             # residuals.append(self._dist_between_line(_data, dist, params))
 
-        LENGTH = np.array([
-            np.linalg.norm(self._back_project_line_3d(start, end, params)) for (start, end) in data_point_to_point])
-        MEAN_LEN = 70
-        loss = (LENGTH - MEAN_LEN) ** 2
-        residuals.extend(loss)
-        # for _data in data_point_to_point:
-        # residuals.append(self._point_to_point(_data, params))
+        # LENGTH = np.array([
+        #     np.linalg.norm(self._back_project_line_3d(start, end, params)) for (start, end) in data_point_to_point])
+        # MEAN_LEN = 4
+        # loss = (LENGTH - MEAN_LEN) ** 2
+        # residuals.extend(loss)
+        for _data in data_point_to_point:
+            residuals.append(self._point_to_point(_data, params))
 
         for _data in data_point_to_point_2:
             residuals.append(self._point_to_point(_data, params))
@@ -161,9 +161,12 @@ class BackProjectionOptimizer(Calibration):
         return (angle + 180) % 360 - 180
 
     def back_projection(self, data):
-        self.params = [3000, - 180, 0.91236625, -180.6947188, 150]
+        self.params = [1170, -5, 5, 30]
 
-        bounds = ([900, -360, -360, -360, 100], [10000, 360, 360, 360, 600])
+        # self.params = [3000, - 180, 0.91236625, -180.6947188, 150]
+
+        # bounds = ([900, -360, -360, -360, 100], [10000, 360, 360, 360, 600])
+        bounds = ([900, -20, -10, 10], [2000, 20, 10, 40])
         # self.params = np.random.uniform(low=bounds[0], high=bounds[1])
         result = least_squares(self.target_function, self.params, args=(data,), method='trf',
                                verbose=2,
@@ -175,12 +178,13 @@ class BackProjectionOptimizer(Calibration):
         # result = minimize(self.target_function, self.params, args=(data,), method='Nelder-Mead',
         #                   bounds=list(zip(bounds[0], bounds[1])),options={'maxiter': 3000, 'disp': True})
         result_to_numpy = np.array(result.x)
-        np.savetxt('../../example/pushkin_aksakov/marked_data_4/calib_data.txt',
-                   [np.around(result_to_numpy, 2)], fmt='%.2f', delimiter=' ', newline='')
-        print(f'f: {result.x[0]}')
-        print(
-            f'Z: {self.normalize_angle_deg(result.x[1])}, X: {self.normalize_angle_deg(result.x[2])}, Y: {self.normalize_angle_deg(result.x[3])}')
-        print(f'H: {result.x[4]}')
+        print(result.x)
+        # np.savetxt('../../example/pushkin_aksakov/marked_data_4/calib_data.txt',
+        #            [np.around(result_to_numpy, 2)], fmt='%.2f', delimiter=' ', newline='')
+        # print(f'f: {result.x[0]}')
+        # print(
+        #     f'Z: {self.normalize_angle_deg(result.x[1])}, X: {self.normalize_angle_deg(result.x[2])}, Y: {self.normalize_angle_deg(result.x[3])}')
+        # print(f'H: {result.x[4]}')
 
     def print_result(self):
         pass
