@@ -1,14 +1,14 @@
 import numpy as np
 from calibration.base import Calibration
-from source.core import Camera  # поправь путь, если нужно
-
+from source.core import Camera
 
 class VanishingPointCalibration(Calibration):
-    def __init__(self, camera: Camera):
+    def __init__(self, camera: Camera, debug=False):
         super().__init__(camera)
         self.vpX = None  # точка схода по оси X (горизонт)
         self.vpY = None  # точка схода по оси Y (горизонт)
         self.vpZ = None  # точка схода по оси Z (вертикаль)
+        self.debug = debug
 
     def set_vanishing_points(self, vpX, vpY=None, vpZ=None):
         self.vpX = np.array(vpX, dtype=float)
@@ -54,12 +54,12 @@ class VanishingPointCalibration(Calibration):
         # Если есть Y, уточняем систему
         if dy is not None:
             y = dy / np.linalg.norm(dy)
-            # Перестроим, чтобы гарантировать правую систему
-            z = np.cross(x, y)
-            z /= np.linalg.norm(z)
+
+            x = np.cross(y, z)
+            x /= np.linalg.norm(x)
             y = np.cross(z, x)
+            y /= np.linalg.norm(y)
         else:
-            # Если Y не был задан — восстановим его
             y = np.cross(z, x)
             y /= np.linalg.norm(y)
 
@@ -77,11 +77,14 @@ class VanishingPointCalibration(Calibration):
         f = self.calc_f()
         print(f"[VP Init] Focal lenght: {f}")
         R = self.calc_R(f)
-        print(f"[VP Init] Matrix rot:\n{R}")
 
-        self.camera.intrinsics.set_focal_length(f)
         self.camera.extrinsics.set_rotation(R, from_type='vp')
+        angle = self.camera.extrinsics.get_angles()
+        print(f"[VP Init] Angles ZXY : {angle}")
 
         print("[VP Init] Done")
 
+        if self.debug:
+            from calibration.debug import visualize_vanishing_point_debug
+            visualize_vanishing_point_debug(self.camera)
         return self.camera

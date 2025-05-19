@@ -20,11 +20,15 @@ class DirectProjectionOptimizer(Calibration):
 
         x0 = kwargs.get("x0", self.camera.get_params())
         solver = kwargs.get("solver", least_squares)
+        method = kwargs.get("method", "lm")
 
-        result = solver(target_residuals_lsq, x0, args=(self.camera, data,),
-                        method='lm',
+        def residuals(params):
+            return target_residuals_lsq(self.camera, data, params)
+
+        result = solver(residuals, x0,
+                        method=method,
                         verbose=2,
                         max_nfev=10000)
-        self.camera.set_params(result.x)
+        self.camera.set_params_from_list(result.x)
 
         return self.camera

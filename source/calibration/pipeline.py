@@ -30,6 +30,6 @@ class CalibrationPipeline:
         if self.refine_stage:
             print("[INFO] Refinement calibration...")
             self.refine_stage.camera = camera
-            camera = self.refine_stage.run(lines)
+            camera = self.refine_stage.run(lines, **kwargs)
 
         return camera

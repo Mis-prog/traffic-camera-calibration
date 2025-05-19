@@ -53,6 +53,22 @@ class Camera:
         z = params.get("z", 0)
         self.extrinsics.set_position(x, y, z)
 
+    def set_params_from_list(self, param_list: list):
+        """
+        Устанавливает параметры камеры из плоского списка.
+        Ожидается формат: [f, rz, rx, ry, x, y, z]
+        """
+        if len(param_list) != 7:
+            raise ValueError("Ожидается 7 параметров: f, rz, rx, ry, x, y, z")
+
+        f = param_list[0]
+        rz, rx, ry = param_list[1:4]
+        x, y, z = param_list[4:7]
+
+        self.intrinsics.set_focal_length(f)
+        self.extrinsics.set_rotation([rz, rx, ry], from_type="euler")
+        self.extrinsics.set_position(x, y, z)
+
     def get_params(self) -> list:
         params = []
 

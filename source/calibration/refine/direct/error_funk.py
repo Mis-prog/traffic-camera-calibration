@@ -4,7 +4,7 @@ from core import Camera, PointND
 
 
 def target_residuals_lsq(camera: Camera, data: dict, params) -> np.ndarray:
-    camera.set_params(params)
+    camera.set_params_from_list(params)
     residuals = []
     if "point" in data:
         for pair in data["point"]:
