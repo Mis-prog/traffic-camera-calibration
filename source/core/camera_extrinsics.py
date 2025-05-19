@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation
 class CameraExtrinsics:
     def __init__(self):
         self.R = np.eye(3)
-        self.C = np.zeros((3, 1))
+        self.C = np.array([0, 0, 0])
 
     def set_rotation(self, data, from_type='euler'):
         if from_type == 'euler':
@@ -19,7 +19,7 @@ class CameraExtrinsics:
             raise ValueError("Неверный тип ориентации")
 
     def set_position(self, x=0, y=0, z=0):
-        self.C = np.array([[x], [y], [z]])
+        self.C = np.array([x, y, z])
 
     def get_rotation(self):
         return self.R
@@ -31,7 +31,7 @@ class CameraExtrinsics:
         return Rotation.from_matrix(self.R).as_euler(order, degrees=degrees)
 
     def get_position(self):
-        return self.C
+        return tuple(float(c) for c in np.ravel(self.C))
 
     def get(self):
         t = -self.R @ self.C

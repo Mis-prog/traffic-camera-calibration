@@ -9,3 +9,6 @@ __all__ = [
     "CameraIntrinsics",
     "CameraExtrinsics"
 ]
+
+__version__ = "0.1.0"
+__author__ = "Акмурзин Миша"

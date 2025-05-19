@@ -1,6 +1,9 @@
 import numpy as np
 
-class VanishingPointEstimator:
+from .base import Detector
+
+
+class VanishingPointEstimatorManual(Detector):
     def __init__(self):
         pass
 

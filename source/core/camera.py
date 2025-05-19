@@ -66,6 +66,7 @@ class Camera:
         params.extend([rz, rx, ry])
 
         x, y, z = self.extrinsics.get_position()
+        assert isinstance(x, float)
         params.extend([x, y, z])
 
         return params

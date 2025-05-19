@@ -1,14 +1,15 @@
-from vp_detection.vanishing_point_estimator import VanishingPointEstimator
-from calibration.refine.direct.direct_optimization import DirectProjectionOptimizer
-from calibration.refine.back.back_optimization import BackProjectionOptimizer
 from .base import Calibration
+from .pipeline import CalibrationPipeline
+from .refine.direct.optimizer import DirectProjectionOptimizer
+from .refine.back.optimizer import BackProjectionOptimizer
+from .init.from_vp import VanishingPointCalibration
 
 __all__ = [
-    "VanishingPointEstimator",
-    "VanishingPointCalibration",
+    "Calibration",
+    "CalibrationPipeline",
     "DirectProjectionOptimizer",
     "BackProjectionOptimizer",
-    "Calibration"
+    "VanishingPointCalibration"
 ]
 
 __version__ = "0.1.0"

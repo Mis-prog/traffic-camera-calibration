@@ -74,10 +74,14 @@ class VanishingPointCalibration(Calibration):
         """
         print("[VP Init] Start init ...")
 
-        f = f = self.calc_f()
+        f = self.calc_f()
+        print(f"[VP Init] Focal lenght: {f}")
         R = self.calc_R(f)
+        print(f"[VP Init] Matrix rot:\n{R}")
 
         self.camera.intrinsics.set_focal_length(f)
         self.camera.extrinsics.set_rotation(R, from_type='vp')
+
+        print("[VP Init] Done")
 
         return self.camera

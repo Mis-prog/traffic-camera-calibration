@@ -18,7 +18,7 @@ class CalibrationPipeline:
         Выполняет последовательную калибровку камеры.
 
         :param camera: объект камеры
-        :param lines: данные разметки (напр. {'angle': [...], 'parallel-1': [...]})
+        :param data: данные разметки (напр. {'angle': [...], 'parallel-1': [...]})
         :param kwargs: дополнительные аргументы (например, error_func или solver)
         """
 
