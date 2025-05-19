@@ -10,9 +10,12 @@ class CameraExtrinsics:
     def set_rotation(self, data, from_type='euler'):
         if from_type == 'euler':
             self.R = Rotation.from_euler('zxy', data, degrees=True).as_matrix()
-        elif from_type == 'vp': # надо умножить на K_inv перед этим
-            vx, vy, vz = map(lambda v: v / np.linalg.norm(v), data)
-            self.R = np.stack([vx, vy, vz], axis=1)
+        elif from_type == 'vp':
+            # data — это уже матрица поворота R, которую НЕ нужно пересобирать
+            if data.shape == (3, 3):
+                self.R = data
+            else:
+                raise ValueError("Ожидается матрица 3x3 для from_type='vp'")
         else:
             raise ValueError("Неверный тип ориентации")
 
