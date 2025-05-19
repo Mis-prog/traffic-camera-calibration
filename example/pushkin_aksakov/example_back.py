@@ -1,11 +1,8 @@
 from core.camera_model import Camera
-from source.utils.data_preparation import load_data, load_params, fun_lines, prep_data_parallel
-from core.pointND import PointND
-from calibration.back_optimization import BackProjectionOptimizer
+from source.utils.data_preparation import load_data, prep_data_parallel
+from calibration.refine.back.back_optimization import BackProjectionOptimizer
 
 import numpy as np
-import cv2
-import matplotlib.pyplot as plt
 
 # matplotlib.use("TkAgg")
 

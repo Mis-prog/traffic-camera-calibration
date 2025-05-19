@@ -1,6 +1,7 @@
 import numpy as np
-from .base import Calibration
+from calibration.base import Calibration
 from source.core import Camera  # поправь путь, если нужно
+
 
 class VanishingPointCalibration(Calibration):
     def __init__(self, camera: Camera):
@@ -65,3 +66,18 @@ class VanishingPointCalibration(Calibration):
         # Собираем R: столбцы — оси X, Y, Z в координатах камеры
         R = np.column_stack((x, y, z))
         return R
+
+    def run(self, data=None):
+        """
+        Выполняет инициализацию параметров камеры по точкам схода.
+        :return: обновлённая камера
+        """
+        print("[VP Init] Start init ...")
+
+        f = f = self.calc_f()
+        R = self.calc_R(f)
+
+        self.camera.intrinsics.set_focal_length(f)
+        self.camera.extrinsics.set_rotation(R, from_type='vp')
+
+        return self.camera

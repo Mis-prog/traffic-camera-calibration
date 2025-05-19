@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
+from core.camera import Camera
 
 
 class Calibration(ABC):
-    def __init__(self, camera):
+    def __init__(self, camera: Camera = None):
         self.camera = camera
 
-    # @abstractmethod
-    # def calibration(self, data):
-    #     pass
-
-    def __call__(self, data):
-        return self.calibration(data)
+    @abstractmethod
+    def run(self, data: dict) -> Camera:
+        pass
