@@ -7,5 +7,5 @@ class Calibration(ABC):
         self.camera = camera
 
     @abstractmethod
-    def run(self, data: dict) -> Camera:
+    def run(self, data: dict, **kwargs) -> Camera:
         pass

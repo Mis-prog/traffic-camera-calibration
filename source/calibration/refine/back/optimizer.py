@@ -10,7 +10,7 @@ class BackProjectionOptimizer(Calibration):
     def __init__(self, camera: Camera):
         super().__init__(camera)
 
-    def run(self, data) -> Camera:
+    def run(self, data, **kwargs) -> Camera:
         """
         :param data: данные
         :return: обновлённая камера

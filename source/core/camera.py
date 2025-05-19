@@ -53,6 +53,23 @@ class Camera:
         z = params.get("z", 0)
         self.extrinsics.set_position(x, y, z)
 
+    def get_params(self) -> list:
+        params = []
+
+        f = self.intrinsics.get_focal_length()
+        if isinstance(f, tuple):  # fx, fy
+            params.extend(f)
+        else:
+            params.append(f)
+
+        rz, rx, ry = self.extrinsics.get_angles()
+        params.extend([rz, rx, ry])
+
+        x, y, z = self.extrinsics.get_position()
+        params.extend([x, y, z])
+
+        return params
+
     def get_image(self):
         return self.image
 

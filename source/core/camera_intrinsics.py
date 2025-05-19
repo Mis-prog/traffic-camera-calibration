@@ -20,3 +20,9 @@ class CameraIntrinsics:
 
     def get_main_point(self):
         return self.width / 2, self.height / 2
+
+    def get_focal_length(self):
+        if self.fx == self.fy:
+            return self.fx
+        else:
+            return (self.fx, self.fy)

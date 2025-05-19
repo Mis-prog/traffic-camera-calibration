@@ -11,7 +11,6 @@ class CameraExtrinsics:
         if from_type == 'euler':
             self.R = Rotation.from_euler('zxy', data, degrees=True).as_matrix()
         elif from_type == 'vp':
-            # data — это уже матрица поворота R, которую НЕ нужно пересобирать
             if data.shape == (3, 3):
                 self.R = data
             else:
@@ -24,6 +23,12 @@ class CameraExtrinsics:
 
     def get_rotation(self):
         return self.R
+
+    def get_angles(self, order='zxy', degrees=True):
+        """
+        :return: (rz, rx, ry)
+        """
+        return Rotation.from_matrix(self.R).as_euler(order, degrees=degrees)
 
     def get_position(self):
         return self.C

@@ -67,7 +67,7 @@ class VanishingPointCalibration(Calibration):
         R = np.column_stack((x, y, z))
         return R
 
-    def run(self, data=None):
+    def run(self, data=None, **kwargs):
         """
         Выполняет инициализацию параметров камеры по точкам схода.
         :return: обновлённая камера
