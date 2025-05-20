@@ -8,7 +8,8 @@ from .pointND import PointND
 
 class Camera:
     def __init__(self, path_image):
-        self.image = cv2.imread(path_image)
+        self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
+
         self.size = self.image.shape[:2]
         self.path = path_image
 
@@ -97,24 +98,43 @@ class Camera:
         RT = self.extrinsics.get()
         K = self.intrinsics.get()
         P = K @ RT
-        point2D = PointND(P @ point3D.get(out_homogeneous=True), add_weight=True)
+        point2D = PointND(P @ point3D.get(out_homogeneous=True), add_weight=False)
         return point2D
 
-    def project_back(self, point2D: PointND) -> PointND:
-        pass
+    def project_back(self, point2D: PointND, plane_z: float = 0.0) -> PointND:
+        K = self.intrinsics.get()
+        R = self.extrinsics.get_rotation()
+        C = np.array(self.extrinsics.get_position())
 
-    def homography(self, point: PointND, direction='direct') -> PointND:
-        RT = self.extrinsics.get()
-        RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
-        H = self.intrinsics.get() @ RT  # Гомография
+        x = point2D.get(out_homogeneous=True)
 
-        p = point.get(out_homogeneous=True)
-        if direction == 'direct':
-            transformed = H @ p
-        elif direction == 'back':
-            H_inv = np.linalg.inv(H)
-            transformed = H_inv @ p
-        else:
-            raise ValueError("Аргумент direction должен быть 'direct' или 'back'.")
+        # Направление луча в системе мира
+        K_inv = np.linalg.inv(K)
+        ray_cam = K_inv @ x  # направление в системе камеры
+        ray_world = R.T @ ray_cam  # в мировой системе координат
 
-        return PointND(transformed, add_weight=False)
+        # Нормализуем направление (не обязательно, но можно)
+        ray_world = ray_world / np.linalg.norm(ray_world)
+
+        # Параметрическое пересечение с плоскостью Z = plane_z
+        t = (plane_z - C[2]) / ray_world[2]  # ищем такой t, чтобы Z == plane_z
+        point3D = C + t * ray_world  # точка на плоскости
+
+        return PointND(point3D, add_weight=True)
+
+
+def homography(self, point: PointND, direction='direct') -> PointND:
+    RT = self.extrinsics.get()
+    RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
+    H = self.intrinsics.get() @ RT  # Гомография
+
+    p = point.get(out_homogeneous=True)
+    if direction == 'direct':
+        transformed = H @ p
+    elif direction == 'back':
+        H_inv = np.linalg.inv(H)
+        transformed = H_inv @ p
+    else:
+        raise ValueError("Аргумент direction должен быть 'direct' или 'back'.")
+
+    return PointND(transformed, add_weight=False)

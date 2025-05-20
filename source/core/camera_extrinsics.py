@@ -35,5 +35,5 @@ class CameraExtrinsics:
 
     def get(self):
         t = -self.R @ self.C
-        RT = np.hstack([self.R, t])
+        RT = np.hstack([self.R, t.reshape(3, 1)])
         return RT

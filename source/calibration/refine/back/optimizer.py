@@ -16,5 +16,3 @@ class BackProjectionOptimizer(Calibration):
         :return: обновлённая камера
         """
         print("[Back] Start refine ...")
-
-

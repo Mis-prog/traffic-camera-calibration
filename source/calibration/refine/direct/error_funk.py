@@ -3,7 +3,7 @@ import numpy as np
 from core import Camera, PointND
 
 
-def target_residuals_lsq(camera: Camera, data: dict, params) -> np.ndarray:
+def target_residuals_lsq(camera: Camera, data: dict, params:list) -> np.ndarray:
     camera.set_params_from_list(params)
     residuals = []
     if "point" in data:

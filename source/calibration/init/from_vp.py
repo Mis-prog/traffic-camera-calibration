@@ -1,6 +1,7 @@
 import numpy as np
 from calibration.base import Calibration
-from source.core import Camera
+from source.core import Camera, PointND
+
 
 class VanishingPointCalibration(Calibration):
     def __init__(self, camera: Camera, debug=False):
@@ -85,6 +86,10 @@ class VanishingPointCalibration(Calibration):
         print("[VP Init] Done")
 
         if self.debug:
-            from calibration.debug import visualize_vanishing_point_debug
-            visualize_vanishing_point_debug(self.camera)
+            from calibration.debug import visualize_vps_debug, visualize_grid_debug
+            self.camera.extrinsics.set_rotation([-158.07642684, 49.78161572, 173.91438536])
+            visualize_vps_debug(self.camera)
+            visualize_grid_debug(self.camera, PointND([960, 540]), grid_range=10)
+
+            print(self.camera.get_params())
         return self.camera

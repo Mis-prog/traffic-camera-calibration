@@ -13,7 +13,7 @@ class CalibrationPipeline:
         self.init_stage = init_stage
         self.refine_stage = refine_stage
 
-    def run(self, camera: Camera, lines: dict, **kwargs) -> Camera:
+    def run(self, camera: Camera, data: dict, **kwargs) -> Camera:
         """
         Выполняет последовательную калибровку камеры.
 
@@ -25,11 +25,11 @@ class CalibrationPipeline:
         if self.init_stage:
             print("[INFO] Initial calibration...")
             self.init_stage.camera = camera
-            camera = self.init_stage.run(lines)
+            camera = self.init_stage.run(None)
 
         if self.refine_stage:
             print("[INFO] Refinement calibration...")
             self.refine_stage.camera = camera
-            camera = self.refine_stage.run(lines, **kwargs)
+            camera = self.refine_stage.run(data, **kwargs)
 
         return camera
