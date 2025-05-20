@@ -4,12 +4,11 @@ from source.core import Camera, PointND
 
 
 class VanishingPointCalibration(Calibration):
-    def __init__(self, camera: Camera, debug=False):
-        super().__init__(camera)
+    def __init__(self, camera: Camera, debug_save_path: str = None):
+        super().__init__(camera, debug_save_path)
         self.vpX = None  # точка схода по оси X (горизонт)
         self.vpY = None  # точка схода по оси Y (горизонт)
         self.vpZ = None  # точка схода по оси Z (вертикаль)
-        self.debug = debug
 
     def set_vanishing_points(self, vpX, vpY=None, vpZ=None):
         self.vpX = np.array(vpX, dtype=float)
@@ -85,11 +84,8 @@ class VanishingPointCalibration(Calibration):
 
         print("[VP Init] Done")
 
-        if self.debug:
-            from calibration.debug import visualize_vps_debug, visualize_grid_debug
-            self.camera.extrinsics.set_rotation([-158.07642684, 49.78161572, 173.91438536])
-            visualize_vps_debug(self.camera)
-            visualize_grid_debug(self.camera, PointND([960, 540]), grid_range=10)
+        if self.debug_save_path is not None:
+            from calibration.debug import visualize_vps_debug
+            visualize_vps_debug(self.camera, save_path=self.debug_save_path)
 
-            print(self.camera.get_params())
         return self.camera

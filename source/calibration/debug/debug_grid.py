@@ -9,7 +9,9 @@ def visualize_grid_debug(
         point_start: PointND,
         grid_range: float = 10.0,  # диапазон в метрах от центра
         grid_step: float = 1.0,  # размер клетки
-        plane_z: float = 0.0  # плоскость, на которую кладём сетку
+        arrow_len: float = 5.0,  # длина вектора "вверх"
+        plane_z: float = 0.0,  # плоскость, на которую кладём сетку
+        save_path=None
 ):
     image = camera.get_image()
     height, width = image.shape[:2]
@@ -49,8 +51,6 @@ def visualize_grid_debug(
             p2_proj = camera.project_direct(p2).get()
             ax.plot([p1_proj[0], p2_proj[0]], [p1_proj[1], p2_proj[1]], color='blue', linewidth=1)
 
-    arrow_len = 5  # длина вектора "вверх"
-
     def draw_arrow_from_3D(p3D):
         base = camera.project_direct(p3D).get()
         tip_point = PointND(p3D.get() + np.array([0, 0, arrow_len]))
@@ -66,7 +66,6 @@ def visualize_grid_debug(
             annotation_clip=False, label=f'Высота: {arrow_len}'
         )
 
-
     top_left = world_points[0]
     top_right = world_points[count - 1]
     bottom_left = world_points[(count - 1) * count]
@@ -78,4 +77,6 @@ def visualize_grid_debug(
     arrow_legend = mlines.Line2D([], [], color='black', marker=r'$\uparrow$', linestyle='None',
                                  markersize=10, label=f'Вектор вверх ({arrow_len} м)')
     ax.legend(handles=[arrow_legend])
+
+    plt.savefig(save_path)
     plt.show()

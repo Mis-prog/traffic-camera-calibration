@@ -8,8 +8,8 @@ from .error_funk import target_residuals_lsq
 
 
 class DirectProjectionOptimizer(Calibration):
-    def __init__(self, camera: Camera):
-        super().__init__(camera)
+    def __init__(self, camera: Camera, debug_save_path: str = None):
+        super().__init__(camera, debug_save_path)
 
     def run(self, data, **kwargs) -> Camera:
         """
@@ -30,5 +30,10 @@ class DirectProjectionOptimizer(Calibration):
                         verbose=2,
                         max_nfev=10000)
         self.camera.set_params_from_list(result.x)
+
+        if self.debug_save_path is not None:
+            from calibration.debug import visualize_grid_debug
+            point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path)
 
         return self.camera

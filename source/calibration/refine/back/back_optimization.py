@@ -21,8 +21,8 @@ def pseudo_huber_loss(error, delta=5.0):
 
 
 class BackProjectionOptimizer(Calibration):
-    def __init__(self, camera: Camera):
-        super().__init__(camera)
+    def __init__(self, camera: Camera, debug_save_path: str = None):
+        super().__init__(camera, debug_save_path)
 
     def _back_project_line_3d(self, start2d: PointND, end2d: PointND, params):
         # print(start2d.get(out_homogeneous=True))
