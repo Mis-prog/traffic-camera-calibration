@@ -24,7 +24,7 @@ def visualize_grid_debug(
 
     anchor_3D = camera.project_back(point_start, plane_z=plane_z)
     anchor_x, anchor_y, anchor_z = anchor_3D.get()
-    print(anchor_x, anchor_y, anchor_z)
+    # print(anchor_x, anchor_y, anchor_z)
 
     # Считаем количество узлов в сетке
     count = int(2 * grid_range / grid_step) + 1
@@ -83,19 +83,37 @@ def visualize_grid_debug(
     plt.show()
 
 
-def visualize_coordinate_system(
-        camera: Camera,
-        save_path
-):
+def visualize_coordinate_system(camera: Camera, save_path: str):
     image = camera.get_image()
+    scale = 10  # длина осей в условных единицах
 
-    scale = 1
-
-    O = PointND([0, 0, 0, 1])
+    # Точки в мировой системе координат
+    origin = PointND([0, 0, 0, 1])
     X = PointND([scale, 0, 0, 1])
     Y = PointND([0, scale, 0, 1])
     Z = PointND([0, 0, scale, 1])
 
-    x = camera.project_direct(X).get()
-    y = camera.project_direct(Y).get()
-    z = camera.project_direct(Z).get()
+    # Проекция на изображение
+    p0 = camera.project_direct(origin).get()
+    px = camera.project_direct(X).get()
+    py = camera.project_direct(Y).get()
+    pz = camera.project_direct(Z).get()
+
+    # Отрисовка через matplotlib
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(image)
+    ax.axis('off')
+
+    def draw_arrow(p_start, p_end, color, label):
+        ax.annotate(
+            '', xy=p_end[:2], xytext=p_start[:2],
+            arrowprops=dict(arrowstyle='->', linewidth=2, color=color)
+        )
+        ax.text(p_end[0], p_end[1], label, color=color,
+                fontsize=12, fontweight='bold', ha='center', va='center')
+
+    draw_arrow(p0, px, 'red', 'X')
+    draw_arrow(p0, py, 'green', 'Y')
+    draw_arrow(p0, pz, 'blue', 'Z')
+
+    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)

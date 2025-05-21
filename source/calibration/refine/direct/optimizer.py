@@ -32,8 +32,9 @@ class DirectProjectionOptimizer(Calibration):
         self.camera.set_params_from_list(result.x)
 
         if self.debug_save_path is not None:
-            from calibration.debug import visualize_grid_debug
+            from calibration.debug import visualize_grid_debug, visualize_coordinate_system
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path)
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png")
+            visualize_coordinate_system(self.camera, self.debug_save_path + "axes.png")
 
         return self.camera
