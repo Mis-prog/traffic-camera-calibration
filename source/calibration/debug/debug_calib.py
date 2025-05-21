@@ -23,7 +23,8 @@ def visualize_grid_debug(
     plt.imshow(image)
 
     anchor_3D = camera.project_back(point_start, plane_z=plane_z)
-    anchor_x, anchor_y, _ = anchor_3D.get()
+    anchor_x, anchor_y, anchor_z = anchor_3D.get()
+    print(anchor_x, anchor_y, anchor_z)
 
     # Считаем количество узлов в сетке
     count = int(2 * grid_range / grid_step) + 1
@@ -80,3 +81,21 @@ def visualize_grid_debug(
 
     plt.savefig(save_path)
     plt.show()
+
+
+def visualize_coordinate_system(
+        camera: Camera,
+        save_path
+):
+    image = camera.get_image()
+
+    scale = 1
+
+    O = PointND([0, 0, 0, 1])
+    X = PointND([scale, 0, 0, 1])
+    Y = PointND([0, scale, 0, 1])
+    Z = PointND([0, 0, scale, 1])
+
+    x = camera.project_direct(X).get()
+    y = camera.project_direct(Y).get()
+    z = camera.project_direct(Z).get()
