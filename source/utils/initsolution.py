@@ -41,8 +41,8 @@ def _search_vanishing_points(lines):
 
 # вычисление нормализованный точек схода    
 def _calc_norm_vanishing_points(vx, vy, camera):
-    px = np.linalg.inv(camera.get_A().transpose()) @ np.transpose(np.hstack([vx, 1]))
-    py = np.linalg.inv(camera.get_A().transpose()) @ np.transpose(np.hstack([vy, 1]))
+    px = np.linalg.inv(camera.get_K().transpose()) @ np.transpose(np.hstack([vx, 1]))
+    py = np.linalg.inv(camera.get_K().transpose()) @ np.transpose(np.hstack([vy, 1]))
     pz = px * py
     return px, py, pz
 

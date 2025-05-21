@@ -110,7 +110,7 @@ cx, cy = image_width // 2, image_height // 2
 camera = Camera('image/pattern_corrected_image.png')
 camera.set_params([1419.59, -142.56, 49.5, -185.62, -12.82, -18.38, 30.63])
 
-K = camera.get_A()
+K = camera.get_K()
 print(f'Matrix intrinsics:\n{K}')
 R = camera.get_R()
 print(f'Matrix rot:\n{R}')
@@ -138,7 +138,7 @@ plt.imshow(image_rgb)
 plt.xlim(0, image_width)
 plt.ylim(image_height, 0)
 
-draw_coordinate_axes_from_vps(VP, center, scale=150)
+draw_coordinate_axes_from_vps(VP_opt, center, scale=150)
 
 
 # draw_coordinate_axes_from_vps(VP_opt, center, scale=150)

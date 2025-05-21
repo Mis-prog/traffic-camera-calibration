@@ -28,9 +28,31 @@ class Camera:
     def get_f(self):
         return self.fx, self.fy
 
-    def calc_R(self, euler_angles):
-        rot = Rotation.from_euler('zxy', euler_angles, degrees=True)
-        self.R = rot.as_matrix()
+    def calc_R(self, data, from_type='euler'):
+        """
+        Вычисляет матрицу вращения.
+
+        :param data: список углов Эйлера (если from_type='euler') или список из 3-х точек схода [(vx), (vy), (vz)].
+        :param from_type: 'euler' или 'vp'
+        """
+        if from_type == 'euler':
+            rot = Rotation.from_euler('zxy', data, degrees=True)
+            self.R = rot.as_matrix()
+
+        elif from_type == 'vp':
+            assert len(data) == 3, "Для восстановления R нужно 3 точки схода"
+            vx, vy, vz = map(np.asarray, data)
+
+            # Нормализуем направления
+            vx /= np.linalg.norm(vx)
+            vy /= np.linalg.norm(vy)
+            vz /= np.linalg.norm(vz)
+
+            # Собираем матрицу вращения: каждый столбец — это направление оси в проективных координатах
+            self.R = np.stack([vx, vy, vz], axis=1)
+
+        else:
+            raise ValueError(f"Неизвестный тип from_type: {from_type}")
 
     def get_R(self, angle_output=False, output=False):
         if angle_output:
@@ -39,8 +61,12 @@ class Camera:
         if output:
             print(f'Матрица поворота:\n{self.R}')
         return self.R
-    
+
     def calc_T(self, x=0, y=0, z=0):
+        """
+        Вычисляем вектор трансляции
+        :param x, y, z - положение камеры в мировой системе координат
+        """
         self.C = np.array([x, y, z])
 
     def get_T(self, output=False):
@@ -59,12 +85,19 @@ class Camera:
                            [0, self.fy, self.size[0] / 2],
                            [0, 0, 1]])
 
-    def get_A(self, output=False):
+    def get_K(self, output=False):
         if output:
             print(f'Внутренние параметры камеры:\n{self.K}')
         return self.K
 
     def direct(self, point_real: PointND, params=[]) -> PointND:
+        """
+        Преобразование точки через прямую проекцию между 3D и изображением.
+
+        :param point: PointND — входная точка (в изображении или на плоскости)
+        :param params: параметры [f, rz, rx, ry, tx, ty, tz] или другие допустимые форматы
+        :return: PointND
+        """
         if len(params) == 5:
             self.calc_K(params[0])
             self.calc_R(params[1:4])
@@ -79,10 +112,27 @@ class Camera:
         _AT = self.K @ _RT
         _new_point = PointND(_AT @ point_real.get(out_homogeneous=True), add_weight=False)
         return _new_point
-    
-    def back(self, point_image:PointND, params=[]) -> PointND:
-        pass
-    
+
+    def back(self, point_image: PointND, params=[]) -> PointND:
+        """
+        Преобразование точки на плоскости изображение в точку на 3D плоскости,
+        через  проецирования луча из плоскости изображения в мир и пересечения с  осью Z=0.
+
+        :param point: PointND — входная точка (в изображении или на плоскости)
+        :param params: параметры [f, rz, rx, ry, tx, ty, tz] или другие допустимые форматы
+        :return: PointND
+        """
+        if len(params) == 5:
+            self.calc_K(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(z=params[4])
+        elif len(params) == 7:
+            self.calc_K(params[0])
+            self.calc_R(params[1:4])
+            self.calc_T(x=params[4], y=params[5], z=params[6])
+
+        # todo переписать код из скрипта example/pushkin_aksakov/example_direct.py
+
     def homography(self, point: PointND, params=[], direction='direct') -> PointND:
         """
         Преобразование точки через гомографию между 3D плоскостью (Z=0) и изображением.
@@ -107,10 +157,14 @@ class Camera:
             self.calc_R(params[1:4])
             self.calc_T(x=params[4], y=params[5], z=params[6])
 
+        elif len(params) == 4:
+            self.calc_K(params[0])
+            self.calc_T(x=params[1], y=params[2], z=params[3])
+
         T = -self.R @ self.C
-        RT = np.hstack([self.R, T[:, np.newaxis]])      # [R | t]
-        RT = np.delete(RT, 2, axis=1)                   # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
-        H = self.K @ RT                                 # Гомография
+        RT = np.hstack([self.R, T[:, np.newaxis]])  # [R | t]
+        RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
+        H = self.K @ RT  # Гомография
 
         p = point.get(out_homogeneous=True)
 

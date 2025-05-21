@@ -3,7 +3,7 @@ from scipy.optimize import least_squares
 
 from core.camera_model import Camera
 from core.pointND import PointND
-from .base import Calibration
+from calibration.base import Calibration
 
 
 class DirectProjectionOptimizer:
