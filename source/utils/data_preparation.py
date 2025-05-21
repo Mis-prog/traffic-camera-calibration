@@ -1,6 +1,8 @@
-from core.pointND import PointND
-
 import numpy as np
+import os
+import json
+
+from core.pointND import PointND
 
 
 def load_data(path):
@@ -53,3 +55,16 @@ def fun_lines(x, start: PointND, end: PointND, orthogonal=False):
     else:
         m = (y2 - y1) / (x2 - x1)
         return (-1 / m) * (x - x1) + y1
+
+
+def load_lines(filename):
+    if not os.path.exists(filename):
+        print("Файл аннотаций не найден.")
+        return
+
+    with open(filename, "r") as f:
+        data = json.load(f)
+
+    # Преобразуем строки ключей обратно в список линий
+    lines = [[tuple(point) for point in line] for line in data.values()]
+    return lines

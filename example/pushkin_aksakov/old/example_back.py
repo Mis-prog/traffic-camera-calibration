@@ -6,7 +6,7 @@ import numpy as np
 
 # matplotlib.use("TkAgg")
 
-camera = Camera('image/pattern_corrected_image.png')
+camera = Camera('../image/pattern_corrected_image.png')
 
 # Отрисовка исходных линий
 # plot = Plot(camera)
@@ -19,10 +19,10 @@ camera = Camera('image/pattern_corrected_image.png')
 
 data = {
     # 'angle': prep_data_angle(load_data(('marked_data_3/angle_lines.txt'))),
-    'parallel-1': prep_data_parallel(load_data('marked_data_4/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('marked_data_4/point_to_point.txt')),
-    'parallel-2': prep_data_parallel(load_data('marked_data_4/parallel_lines_2.txt')),
-    'parallel-3': prep_data_parallel(load_data('marked_data_4/parallel_lines_3.txt')),
+    'parallel-1': prep_data_parallel(load_data('../marked_data_4/parallel_lines_1.txt')),
+    'point_to_point': np.array(load_data('../marked_data_4/point_to_point.txt')),
+    'parallel-2': prep_data_parallel(load_data('../marked_data_4/parallel_lines_2.txt')),
+    'parallel-3': prep_data_parallel(load_data('../marked_data_4/parallel_lines_3.txt')),
     # 'parallel-4': prep_data_parallel(load_data('marked_data_4/parallel_lines_4.txt')),
     # 'parallel-4': prep_data_parallel(load_data('marked_data/parallel_lines_1.txt')),
     # 'parallel-5': prep_data_parallel(load_data('marked_data/parallel_lines_2.txt')),

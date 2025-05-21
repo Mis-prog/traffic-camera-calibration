@@ -99,7 +99,7 @@ def draw_coordinate_axes_from_vps(vanishing_points, center, scale=100, labels=No
                   color=colors[i], width=1.2, head_width=10, length_includes_head=True)
 
 
-image = cv2.imread('image/pattern_corrected_image.png')
+image = cv2.imread('../image/pattern_corrected_image.png')
 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 image_width = 1920
@@ -107,7 +107,7 @@ image_height = 1080
 
 cx, cy = image_width // 2, image_height // 2
 
-camera = Camera('image/pattern_corrected_image.png')
+camera = Camera('../image/pattern_corrected_image.png')
 camera.set_params([1419.59, -142.56, 49.5, -185.62, -12.82, -18.38, 30.63])
 
 K = camera.get_K()
