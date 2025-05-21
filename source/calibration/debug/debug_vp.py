@@ -76,7 +76,6 @@ def visualize_vps_debug(
     :param dpi: разрешение сохранённого изображения
     """
     image = camera.get_image()
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     K = camera.intrinsics.get()
     R = camera.extrinsics.get_rotation()
@@ -100,7 +99,7 @@ def visualize_vps_debug(
     ]
 
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.imshow(image_rgb)
+    ax.imshow(image)
 
     for center in centers:
         draw_coordinate_axes_from_vps(

@@ -46,25 +46,61 @@ class VanishingPointCalibration(Calibration):
 
         return self._build_rotation(dx, dy, dz)
 
+    # def _build_rotation(self, dx, dy, dz):
+    #     # Нормируем
+    #     x = dx / np.linalg.norm(dx)
+    #     z = dz / np.linalg.norm(dz)
+    #
+    #     # Если есть Y, уточняем систему
+    #     if dy is not None:
+    #         y = dy / np.linalg.norm(dy)
+    #         # Перестроим, чтобы гарантировать правую систему
+    #         z = np.cross(x, y)
+    #         z /= np.linalg.norm(z)
+    #         y = np.cross(z, x)
+    #     else:
+    #         # Если Y не был задан — восстановим его
+    #         y = np.cross(z, x)
+    #         y /= np.linalg.norm(y)
+    #
+    #     # Собираем R: столбцы — оси X, Y, Z в координатах камеры
+    #     R = np.column_stack((x, y, z))
+    #     return R
+
     def _build_rotation(self, dx, dy, dz):
-        # Нормируем
+        # Нормализуем исходные направления
         x = dx / np.linalg.norm(dx)
         z = dz / np.linalg.norm(dz)
 
-        # Если есть Y, уточняем систему
         if dy is not None:
             y = dy / np.linalg.norm(dy)
-            # Перестроим, чтобы гарантировать правую систему
-            z = np.cross(x, y)
-            z /= np.linalg.norm(z)
+
+            # Корректируем y, чтобы она была ортогональна x и z
+            # Сначала получаем "правильную" y из x и z
+            y_proj = np.cross(z, x)
+            y_proj /= np.linalg.norm(y_proj)
+
+            # Уточняем x, чтобы он был ортогонален y_proj и z
+            x = np.cross(y_proj, z)
+            x /= np.linalg.norm(x)
+
+            # Пересобираем y ещё раз — теперь она точно ортогональна x и z
             y = np.cross(z, x)
+            y /= np.linalg.norm(y)
         else:
-            # Если Y не был задан — восстановим его
+            # Если Y не задан, достраиваем правую тройку
             y = np.cross(z, x)
             y /= np.linalg.norm(y)
 
-        # Собираем R: столбцы — оси X, Y, Z в координатах камеры
+        # Собираем матрицу поворота R: [x_cam, y_cam, z_cam]
         R = np.column_stack((x, y, z))
+
+        # Проверим, что R правая: det ≈ +1
+        if np.linalg.det(R) < 0:
+            # Например, инвертируем y (или x), чтобы восстановить ориентацию
+            y = -y
+            R = np.column_stack((x, y, z))
+
         return R
 
     def run(self, data=None, **kwargs):
