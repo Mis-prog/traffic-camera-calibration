@@ -10,7 +10,7 @@ vp1 = [3974.185, -248.69977]
 vp2 = [768.4042, 2362.912]
 vp3 = [-24.940735, -669.0249]
 vps_auto = np.array([vp1, vp3, vp2])
-vp_init = VanishingPointCalibration(camera)
+vp_init = VanishingPointCalibration(camera,debug_save_path='vp.png')
 vp_init.set_vanishing_points(*vps_auto)
 
 refiner = DirectProjectionOptimizer(camera,debug_save_path='grid.png')

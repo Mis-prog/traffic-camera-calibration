@@ -54,12 +54,12 @@ class VanishingPointCalibration(Calibration):
         # Если есть Y, уточняем систему
         if dy is not None:
             y = dy / np.linalg.norm(dy)
-
-            x = np.cross(y, z)
-            x /= np.linalg.norm(x)
+            # Перестроим, чтобы гарантировать правую систему
+            z = np.cross(x, y)
+            z /= np.linalg.norm(z)
             y = np.cross(z, x)
-            y /= np.linalg.norm(y)
         else:
+            # Если Y не был задан — восстановим его
             y = np.cross(z, x)
             y /= np.linalg.norm(y)
 
