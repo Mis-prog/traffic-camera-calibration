@@ -17,3 +17,6 @@ class BackProjectionOptimizer(Calibration):
         :return: обновлённая камера
         """
         print("[Back] Start refine ...")
+
+        params = self.camera.get_params()
+        target_residuals_lsq(self.camera, data, params)

@@ -6,6 +6,7 @@ import numpy as np
 
 camera = Camera('image/pattern_corrected_image.png')
 camera.extrinsics.set_position(-12.82, -18.38, 30.63)
+camera.intrinsics.set_focal_length(1400)
 
 vp1 = [3974.185, -248.69977]
 vp2 = [768.4042, 2362.912]
@@ -21,8 +22,6 @@ data = []
 # camera = pipeline.run(camera, data, method="trf")
 
 lines = load_lines('back_marked/dist_between_line.json')
-data = {
-    "dist_between_line": lines,
-}
+data = {"dist_between_line": lines}
 
 refiner.run(data)
