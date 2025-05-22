@@ -110,20 +110,24 @@ class VanishingPointCalibration(Calibration):
         Выполняет инициализацию параметров камеры по точкам схода.
         :return: обновлённая камера
         """
-        print("[VP Init] Start init ...")
+        print("=" * 50)
+        print("🎯 [VP Init] Инициализация параметров по точкам схода")
+        print("=" * 50)
 
         f = self.calc_f()
-        print(f"[VP Init] Focal lenght: {f}")
+        print(f"🔬 Вычислено фокусное расстояние: f = {f:.4f}")
+
         R = self.calc_R(f)
 
         self.camera.extrinsics.set_rotation(R, from_type='vp')
-        angle = self.camera.extrinsics.get_angles()
-        print(f"[VP Init] Angles ZXY : {angle}")
-
-        print("[VP Init] Done")
+        angles = self.camera.extrinsics.get_angles()
+        print(f"🧭 Углы ориентации (ZXY, град): {np.round(angles, 2)}")
+        print("✅ [VP Init] Инициализация завершена")
 
         if self.debug_save_path is not None:
             from calibration.debug import visualize_vps_debug
+            print(f"💾 Сохраняю визуализацию в: {self.debug_save_path}")
             visualize_vps_debug(self.camera, save_path=self.debug_save_path)
 
+        print("=" * 50)
         return self.camera

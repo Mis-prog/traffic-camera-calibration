@@ -3,16 +3,24 @@ import numpy as np
 from core import Camera, PointND
 
 
-def target_residuals_lsq(camera: Camera, data: dict, params: list) -> np.ndarray:
+def compute_total_residuals(camera, data, params, residual_blocks):
     camera.set_params_from_list(params)
     residuals = []
-    if "dist_between_line" in data:
-        for i in range(len(data["dist_between_line"]) - 1):
-            line1 = data["dist_between_line"][i]
-            line2 = data["dist_between_line"][i + 1]
-            dist = compute_interline_distance(camera, line1, line2)
+
+    for block in residual_blocks:
+        res = block(camera, data)
+        residuals.extend(res)
 
     return np.array(residuals)
+
+
+def residual_interline_distance(camera, data, group, expected):
+    residuals = []
+    lines = data.get(group, [])
+    for i in range(len(lines) - 1):
+        d = compute_interline_distance(camera, lines[i], lines[i + 1])
+        residuals.append(d - expected)
+    return residuals
 
 
 def compute_interline_distance(camera: Camera, line1, line2, plane_z=0):

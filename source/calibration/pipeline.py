@@ -23,13 +23,21 @@ class CalibrationPipeline:
         """
 
         if self.init_stage:
-            print("[INFO] Initial calibration...")
+            print("=" * 60)
+            print("🔧 [Pipeline] Этап 1: Инициализация камеры (Initial Calibration)")
+            print("=" * 60)
             self.init_stage.camera = camera
             camera = self.init_stage.run(None)
+            print("✅ [Pipeline] Инициализация завершена\n")
 
         if self.refine_stage:
-            print("[INFO] Refinement calibration...")
+            print("=" * 60)
+            print("🔧 [Pipeline] Этап 2: Дооптимизация параметров (Refinement)")
+            print("=" * 60)
             self.refine_stage.camera = camera
             camera = self.refine_stage.run(data, **kwargs)
+            print("✅ [Pipeline] Дооптимизация завершена\n")
 
+        print("🎯 [Pipeline] Калибровка камеры завершена")
         return camera
+
