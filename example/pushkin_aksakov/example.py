@@ -20,7 +20,7 @@ vps_auto = np.array([vp1, vp3, vp2])
 # vps_auto_new = np.array([vp1_new, vp2_new])
 
 vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
-vp_init.set_vanishing_points(vps_auto[0], vpZ=vps_auto[2])
+vp_init.set_vanishing_points(*vps_auto)
 
 refiner = BackProjectionOptimizer(camera, debug_save_path='image/')
 
@@ -37,10 +37,9 @@ resualds_blocks = [
 ]
 
 pipeline = CalibrationPipeline(vp_init, refiner)
-mask = [0, 4, 5, 6]
-bounds = ([900, -35, -35, 4], [2000, 35, 35, 35])
+mask = [0, 6]
+bounds = ([900, 4], [2000, 35])
 camera = pipeline.run(camera, data, method="trf", resuals_blocks=resualds_blocks, mask=mask, bounds=bounds)
-
 
 # Визуализация данных
 # visualize_source(data, camera.get_image())

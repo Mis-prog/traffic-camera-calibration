@@ -4,7 +4,6 @@ from scipy.optimize import least_squares
 from calibration.base import Calibration
 from core.camera import Camera
 from core.pointND import PointND
-from .error_funk import target_residuals_lsq
 
 
 class DirectProjectionOptimizer(Calibration):

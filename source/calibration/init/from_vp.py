@@ -85,6 +85,14 @@ class VanishingPointCalibration(Calibration):
         # Собираем R: столбцы — оси X, Y, Z в координатах камеры
         R = np.column_stack((x, y, z))
 
+        z = R[:, 2]
+
+        if z[2] > 0:  # например, камера "смотрит вверх" — это неправильно
+            print("[VP Init] ⚠️ Камера смотрит назад — инвертируем ориентацию")
+            R[:, 2] *= -1
+            R[:, 1] = np.cross(R[:, 2], R[:, 0])
+            R[:, 1] /= np.linalg.norm(R[:, 1])
+
         print(f' [VP Init] Determinant(R): {np.linalg.det(R)}')
         return R
 
