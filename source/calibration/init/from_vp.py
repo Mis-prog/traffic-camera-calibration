@@ -18,41 +18,48 @@ class VanishingPointCalibration(Calibration):
             self.vpZ = np.array(vpZ, dtype=float)
 
     def calc_f(self):
-        if self.vpX is None or self.vpZ is None:
-            raise ValueError("vpX и vpZ обязательны для расчета фокусного расстояния.")
-
-        v1 = np.append(self.vpX, 1.0)
-        v2 = np.append(self.vpZ, 1.0)
         cx, cy = self.camera.intrinsics.get_main_point()
         c = np.array([cx, cy, 1.0])
 
-        term = np.dot(v1 - c, c - v2)
-        if term <= 0:
-            raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
+        if self.vpX is not None and self.vpZ is not None:
+            v1 = np.append(self.vpX, 1.0)
+            v2 = np.append(self.vpZ, 1.0)
 
-        f = np.sqrt(term)
-        return f
+            term = np.dot(v1 - c, c - v2)
+            if term <= 0:
+                raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
+
+            f = np.sqrt(term)
+            return f
+
+        elif self.vpX is not None and self.vpY is not None:
+            v1 = np.append(self.vpX, 1.0)
+            v2 = np.append(self.vpY, 1.0)
+
+            term = np.dot(v1 - c, c - v2)
+            if term <= 0:
+                raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
+
+            f = np.sqrt(term)
+            return f
 
     def calc_R(self, f):
         self.camera.intrinsics.set_focal_length(f)
         K_inv = np.linalg.inv(self.camera.intrinsics.get())
 
         dx = K_inv @ np.append(self.vpX, 1.0)
-        dz = K_inv @ np.append(self.vpZ, 1.0)
-
-        dy = None
-        if self.vpY is not None:
-            dy = K_inv @ np.append(self.vpY, 1.0)
+        dy = K_inv @ np.append(self.vpY, 1.0) if self.vpY is not None else None
+        dz = K_inv @ np.append(self.vpZ, 1.0) if self.vpZ is not None else None
 
         return self._build_rotation(dx, dy, dz)
 
     def _build_rotation(self, dx, dy, dz):
         # Нормируем
         x = dx / np.linalg.norm(dx)
-        z = dz / np.linalg.norm(dz)
 
-        if dy is not None:
+        if dy is not None and dz is not None:
             y = dy / np.linalg.norm(dy)
+            z = dz / np.linalg.norm(dz)
 
             # Ортонормализация: перестроим Y и Z так, чтобы система была ортогональна
             z = z - np.dot(z, x) * x - np.dot(z, y) * y
@@ -60,13 +67,25 @@ class VanishingPointCalibration(Calibration):
 
             y = np.cross(z, x)
             y /= np.linalg.norm(y)
-        else:
+        elif dy is None:
+            z = dz / np.linalg.norm(dz)
             # Если Y не был задан — восстановим его
             y = np.cross(z, x)
             y /= np.linalg.norm(y)
 
+        elif dz is None:
+            y = dy / np.linalg.norm(dy)
+            # Если Z не был задан — восстановим его
+            z = np.cross(x, y)
+            z /= np.linalg.norm(z)
+
+        else:
+            raise ValueError("В сцене только одна точка схода. Проверь точки схода.")
+
         # Собираем R: столбцы — оси X, Y, Z в координатах камеры
         R = np.column_stack((x, y, z))
+
+        print(f' [VP Init] Determinant(R): {np.linalg.det(R)}')
         return R
 
     # def _build_rotation(self, dx, dy, dz):

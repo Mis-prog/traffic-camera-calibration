@@ -21,7 +21,8 @@ class BackProjectionOptimizer(Calibration):
         x0 = kwargs.get("x0", self.camera.get_params())
         solver = kwargs.get("solver", least_squares)
         method = kwargs.get("method", "trf")
-        bounds = kwargs.get("bounds", ([900, -30, -30, 5], [2000, 30, 30, 30]))
+        bounds = kwargs.get("bounds", ([900, -360, -360, -360, -30, -30, 5], [2000, 360, 360, 360, 30, 30, 30]))
+        mask = kwargs.get("mask", [0, 1, 2, 3, 4, 5, 6])
 
         print("=" * 50)
         print("🔧 [BackProjectionOptimizer] Запуск дооптимизации параметров камеры")
@@ -29,22 +30,19 @@ class BackProjectionOptimizer(Calibration):
 
         print(f"📌 Начальные параметры: {np.round(x0, 2).tolist()}")
 
-        # res_fn = lambda p: compute_total_residuals(self.camera, data, p, residual_blocks)
-
         full_params = np.array(self.camera.get_params(), dtype=float)
-        mask_indices = [0, 4, 5, 6]
-        x0 = full_params[mask_indices]
+        x0 = full_params[mask]
 
         def loss_fn(masked_params):
             current_params = full_params.copy()
-            current_params[mask_indices] = masked_params
+            current_params[mask] = masked_params
             return compute_total_residuals(self.camera, data, current_params, residual_blocks)
 
         result = solver(loss_fn, x0,
                         method=method,
                         bounds=bounds,
                         verbose=2,
-                        loss='linear'
+                        loss='soft_l1'
                         )
 
         print("-" * 50)
@@ -52,7 +50,7 @@ class BackProjectionOptimizer(Calibration):
         print(f"🔁 Итераций: {result.nfev}")
         print(f"🎯 Финальная ошибка (cost): {result.cost:.6f}")
         print("📍 Обновлённые параметры:", np.round(result.x, 2).tolist())
-        full_params[mask_indices] = result.x
+        full_params[mask] = result.x
 
         self.camera.set_params_from_list(full_params)
 
