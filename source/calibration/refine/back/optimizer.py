@@ -4,7 +4,6 @@ from scipy.optimize import least_squares
 from calibration.base import Calibration
 from core.camera import Camera
 from core.pointND import PointND
-from .error_funk import compute_total_residuals
 
 
 class BackProjectionOptimizer(Calibration):
@@ -36,7 +35,7 @@ class BackProjectionOptimizer(Calibration):
         def loss_fn(masked_params):
             current_params = full_params.copy()
             current_params[mask] = masked_params
-            return compute_total_residuals(self.camera, data, current_params, residual_blocks)
+            return self.compute_total_residuals(self.camera, data, current_params, residual_blocks)
 
         result = solver(loss_fn, x0,
                         method=method,

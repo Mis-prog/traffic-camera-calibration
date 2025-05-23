@@ -3,17 +3,6 @@ import numpy as np
 from core import Camera, PointND
 
 
-def compute_total_residuals(camera, data, params, residual_blocks):
-    camera.set_params_from_list(params)
-    residuals = []
-
-    for block in residual_blocks:
-        res = block(camera, data)
-        residuals.extend(res)
-
-    return np.array(residuals)
-
-
 def residual_interline_distance(camera, data, group, expected):
     residuals = []
     lines = data.get(group, [])

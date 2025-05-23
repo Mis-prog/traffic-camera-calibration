@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import numpy as np
+
 from core.camera import Camera
 
 
@@ -10,3 +12,13 @@ class Calibration(ABC):
     @abstractmethod
     def run(self, data: dict, **kwargs) -> Camera:
         pass
+
+    def compute_total_residuals(self, camera, data, params, residual_blocks):
+        camera.set_params_from_list(params)
+        residuals = []
+
+        for block in residual_blocks:
+            res = block(camera, data)
+            residuals.extend(res)
+
+        return np.array(residuals)

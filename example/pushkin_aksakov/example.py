@@ -41,6 +41,7 @@ mask = [0, 4, 5, 6]
 bounds = ([900, -35, -35, 4], [2000, 35, 35, 35])
 camera = pipeline.run(camera, data, method="trf", resuals_blocks=resualds_blocks, mask=mask, bounds=bounds)
 
+
 # Визуализация данных
 # visualize_source(data, camera.get_image())
 
