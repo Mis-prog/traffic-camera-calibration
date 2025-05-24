@@ -2,8 +2,13 @@ import numpy as np
 
 from core import Camera, PointND
 
+
 def residual_reprojection_line(camera, data, group):
-    pass
+    residuals = []
+    lines = data.get(group, [])
+    for line in lines:
+        pass
+
 
 def point_projection_error(camera: Camera, point) -> float:
     point2D, point3D = point

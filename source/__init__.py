@@ -1,13 +1,11 @@
 from .calibration import CalibrationPipeline
-from .calibration import DirectProjectionOptimizer
-from .calibration import BackProjectionOptimizer
+from .calibration import RefineOptimizer
 from .core import Camera
 from .calibration import VanishingPointCalibration
 
 __all__ = [
     "CalibrationPipeline",
-    "DirectProjectionOptimizer",
-    "BackProjectionOptimizer",
+    "RefineOptimizer",
     "Camera",
     "VanishingPointCalibration"
 ]

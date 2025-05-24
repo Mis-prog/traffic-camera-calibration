@@ -6,7 +6,7 @@ from core.camera import Camera
 from core.pointND import PointND
 
 
-class BackProjectionOptimizer(Calibration):
+class RefineOptimizer(Calibration):
     def __init__(self, camera: Camera, debug_save_path: str = None):
         super().__init__(camera, debug_save_path)
 
@@ -24,7 +24,7 @@ class BackProjectionOptimizer(Calibration):
         mask = kwargs.get("mask", [0, 1, 2, 3, 4, 5, 6])
 
         print("=" * 50)
-        print("🔧 [BackProjectionOptimizer] Запуск дооптимизации параметров камеры")
+        print("🔧 [RefineOptimizer] Запуск дооптимизации параметров камеры")
         print("=" * 50)
 
         print(f"📌 Начальные параметры: {np.round(x0, 2).tolist()}")
