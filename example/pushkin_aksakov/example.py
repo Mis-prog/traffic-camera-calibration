@@ -34,7 +34,7 @@ def back_projection():
         lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=5.5),
         lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
     ]
-    pipeline = CalibrationPipeline(vp_init, refiner)
+    pipeline = CalibrationPipeline([vp_init, refiner])
     mask = [0, 6]
     bounds = ([900, 4], [2000, 35])
     camera = pipeline.run(camera, data, method="trf", resuals_blocks=resualds_blocks, mask=mask, bounds=bounds)
@@ -44,4 +44,4 @@ back_projection() # Дооптимизация через обратную пр�
 
 def direct_projection():
     global camera
-    refiner = DirectProjectionOptimizer(camera, debug_save_path='image/')
+    refiner = RefineOptimizer(camera, debug_save_path='image/')
