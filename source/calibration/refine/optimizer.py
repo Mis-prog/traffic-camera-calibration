@@ -47,10 +47,10 @@ class RefineOptimizer(Calibration):
 
         result = self.solver(loss_fn,
                              x0,
-                             method=self.method,
+                             method= self.method,
                              bounds=self.bounds,
                              verbose=2,
-                             loss='soft_l1'
+                             max_nfev= 10000
                              )
 
         print("-" * 50)

@@ -1,7 +1,8 @@
 from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer
 from source.utils import load_lines, load_lines_from_json
-from calibration.refine import residual_interline_distance, residual_parallel_group
+from calibration.refine import residual_interline_distance, residual_parallel_group, \
+    residual_reprojection_line
 from calibration.debug import load_scene_gps
 
 import numpy as np
@@ -34,27 +35,34 @@ def back_refine():
         lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=5.5),
         lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
     ]
-    refiner = RefineOptimizer(camera=camera,
-                              residual_blocks=resualds_blocks,
-                              mask=[0, 6],
-                              bounds=([900, 5], [2000, 30]),
-                              debug_save_path='image/')
-    pipeline = CalibrationPipeline([vp_init, refiner])
-    mask = [0, 6]
-    bounds = ([900, 4], [2000, 35])
+    refiner_first = RefineOptimizer(camera=camera,
+                                    residual_blocks=resualds_blocks,
+                                    mask=[0, 6],
+                                    bounds=([900, 5], [2000, 30]),
+                                    debug_save_path='image/')
+
+    pipeline = CalibrationPipeline([vp_init, refiner_first])
     camera = pipeline.run(camera, data)
 
 
-back_refine()  # Дооптимизация через обратную проекцию
+# back_refine()  # Дооптимизация через обратную проекцию
 
 
 def direct_refine():
     global camera
-    refiner = RefineOptimizer(camera, debug_save_path='image/')
-    print(load_lines_from_json('marked/lines_gps_to_pixel.json'))
+    data = {"lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json')
+            }
+
+    resualds_blocks = [
+        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel", gps_origin=(54.723767, 55.933369)),
+    ]
+
+    refiner_first = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks,debug_save_path='image/')
+    pipeline = CalibrationPipeline([vp_init, refiner_first])
+    camera = pipeline.run(camera, data)
 
 
-# direct_refine() # Дооптимизация через прямую проекцию
+direct_refine()  # Дооптимизация через прямую проекцию
 
 
 def debug_gps():
@@ -67,4 +75,4 @@ def debug_gps():
     plt.scatter(650 / 2, 450 / 2)
     plt.show()
 
-# debug_gps()
+# debug_gps() #
