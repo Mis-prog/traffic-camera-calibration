@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from pyproj import Proj, transform
+import requests
+from PIL import Image
+from io import BytesIO
+
 from core import Camera, PointND
 
 
@@ -117,3 +122,19 @@ def visualize_coordinate_system(camera: Camera, save_path: str):
     draw_arrow(p0, pz, 'blue', 'Z')
 
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+
+
+def load_scene_gps(lon, lat, save_path=None, zoom=19, size=(650, 450)):
+    # Скачиваем изображение
+    url = f"https://static-maps.yandex.ru/1.x/?ll={lon},{lat}&z={zoom}&l=sat&size={size[0]},{size[1]}"
+    response = requests.get(url)
+    image = Image.open(BytesIO(response.content))
+
+    if save_path is not None:
+        image.save(save_path)
+
+    return image
+
+
+def visualize_scene(camera: Camera, save_path: str):
+    image = camera.get_image()

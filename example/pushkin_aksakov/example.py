@@ -48,4 +48,4 @@ def direct_refine():
     print(load_lines_from_json('marked/lines_gps_to_pixel.json'))
 
 
-direct_refine()
+# direct_refine()
