@@ -29,17 +29,9 @@ def visualize_grid_debug(
 
     anchor_3D = camera.project_back(point_start, plane_z=plane_z)
     anchor_x, anchor_y, anchor_z = anchor_3D.get()
-    # print(anchor_x, anchor_y, anchor_z)
 
     # Считаем количество узлов в сетке
-    count = int(2 * grid_range / grid_step) + 1
-
-    world_points = []
-    for i in range(count):
-        for j in range(count):
-            x = anchor_x - grid_range + i * grid_step
-            y = anchor_y - grid_range + j * grid_step
-            world_points.append(PointND(np.array([x, y, plane_z])))
+    count, world_points = set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z)
 
     for i in range(count):
         for j in range(count - 1):
@@ -86,6 +78,17 @@ def visualize_grid_debug(
 
     plt.savefig(save_path)
     plt.show()
+
+
+def set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z):
+    count = int(2 * grid_range / grid_step) + 1
+    world_points = []
+    for i in range(count):
+        for j in range(count):
+            x = anchor_x - grid_range + i * grid_step
+            y = anchor_y - grid_range + j * grid_step
+            world_points.append(PointND(np.array([x, y, plane_z])))
+    return count, world_points
 
 
 def visualize_coordinate_system(camera: Camera, save_path: str):
@@ -136,5 +139,13 @@ def load_scene_gps(lon, lat, save_path=None, zoom=19, size=(650, 450)):
     return image
 
 
-def visualize_scene(camera: Camera, save_path: str):
-    image = camera.get_image()
+def visualize_grid_gps_debug(
+        camera: Camera,
+        point_start: PointND,
+        grid_range: float = 10.0,  # диапазон в метрах от центра
+        grid_step: float = 1.0,  # размер клетки
+        arrow_len: float = 5.0,  # длина вектора "вверх"
+        plane_z: float = 0.0,  # плоскость, на которую кладём сетку
+        save_path=None
+):
+    pass
