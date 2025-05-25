@@ -1,4 +1,5 @@
 import numpy as np
+from pandas.core.methods.selectn import SelectNSeries
 from scipy.optimize import least_squares
 
 from calibration.base import Calibration
@@ -9,7 +10,7 @@ from core.pointND import PointND
 class RefineOptimizer(Calibration):
     def __init__(self, camera: Camera,
                  residual_blocks: list,
-                 bounds: tuple  = None,
+                 bounds: tuple = None,
                  solver=least_squares,
                  method: str = "trf",
                  mask: list = None,
@@ -45,13 +46,25 @@ class RefineOptimizer(Calibration):
             current_params[self.mask] = masked_params
             return self.compute_total_residuals(self.camera, data, current_params, self.residual_blocks)
 
-        result = self.solver(loss_fn,
-                             x0,
-                             method= self.method,
-                             bounds=self.bounds,
-                             verbose=2,
-                             max_nfev= 10000
-                             )
+        if self.method == "lm":
+            result = self.solver(loss_fn,
+                                 x0,
+                                 method=self.method,
+                                 verbose=2,
+                                 loss='soft_l1',
+                                 f_scale=10.0,
+                                 max_nfev=10000
+                                 )
+        else:
+            result = self.solver(loss_fn,
+                                 x0,
+                                 method=self.method,
+                                 bounds=self.bounds,
+                                 loss='soft_l1',
+                                 f_scale=10.0,
+                                 verbose=2,
+                                 max_nfev=10000
+                                 )
 
         print("-" * 50)
         print(f"✅ Оптимизация завершена")

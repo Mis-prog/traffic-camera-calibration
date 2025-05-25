@@ -45,7 +45,7 @@ def back_refine():
     camera = pipeline.run(camera, data)
 
 
-# back_refine()  # Дооптимизация через обратную проекцию
+back_refine()  # Дооптимизация через обратную проекцию
 
 
 def direct_refine():
@@ -54,15 +54,48 @@ def direct_refine():
             }
 
     resualds_blocks = [
-        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel", gps_origin=(54.723767, 55.933369)),
+        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel",
+                                                     gps_origin=(54.723767, 55.933369)),
     ]
 
-    refiner_first = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks,debug_save_path='image/')
+    refiner_first = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks, debug_save_path='image/')
     pipeline = CalibrationPipeline([vp_init, refiner_first])
     camera = pipeline.run(camera, data)
 
 
-direct_refine()  # Дооптимизация через прямую проекцию
+# direct_refine()  # Дооптимизация через прямую проекцию
+
+
+def gibrid():
+    global camera
+    data = {
+        "dist_between_line_1": load_lines('marked/dist_between_line_1.json'),
+        "dist_between_line_2": load_lines('marked/dist_between_line_2.json'),
+        "lane_lines": load_lines('marked/parallel_line_1.json'),
+        "lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json')
+    }
+    resualds_blocks_first = [
+        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=8),
+        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=5.5),
+        lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
+    ]
+    refiner_first = RefineOptimizer(camera=camera,
+                                    residual_blocks=resualds_blocks_first,
+                                    mask=[0, 6],
+                                    bounds=([900, 5], [2000, 30]),
+                                    debug_save_path='image/')
+
+    resualds_blocks_second = [
+        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel",
+                                                     gps_origin=(54.723767, 55.933369)),
+    ]
+
+    refiner_second = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks_second, debug_save_path='image/')
+
+    pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
+    camera = pipeline.run(camera, data)
+
+# gibrid()
 
 
 def debug_gps():
