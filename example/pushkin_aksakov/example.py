@@ -1,6 +1,6 @@
 from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer
-from source.utils import load_lines
+from source.utils import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group
 
 import numpy as np
@@ -21,7 +21,7 @@ vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
 vp_init.set_vanishing_points(*vps_auto)
 
 
-def back_projection():
+def back_refine():
     global camera
     refiner = RefineOptimizer(camera, debug_save_path='image/')
     data = {
@@ -40,8 +40,12 @@ def back_projection():
     camera = pipeline.run(camera, data, method="trf", resuals_blocks=resualds_blocks, mask=mask, bounds=bounds)
 
 
-back_projection() # Дооптимизация через обратную проекцию
+# back_refine() # Дооптимизация через обратную проекцию
 
-def direct_projection():
+def direct_refine():
     global camera
     refiner = RefineOptimizer(camera, debug_save_path='image/')
+    print(load_lines_from_json('marked/lines_gps_to_pixel.json'))
+
+
+direct_refine()

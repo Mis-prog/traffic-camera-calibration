@@ -68,3 +68,26 @@ def load_lines(filename):
     # Преобразуем строки ключей обратно в список линий
     lines = [[tuple(point) for point in line] for line in data.values()]
     return lines
+
+
+import json
+
+
+def load_lines_from_json(filepath: str):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    lines = []
+    for item in data:
+        gps_start = item['start']['gps']
+        gps_end = item['end']['gps']
+        pix_start = item['start']['pixel']
+        pix_end = item['end']['pixel']
+
+        line = {
+            'gps': [gps_start, gps_end],  # [[lat1, lon1], [lat2, lon2]]
+            'pixel': [pix_start, pix_end],  # [[x1, y1], [x2, y2]]
+        }
+        lines.append(line)
+
+    return lines
