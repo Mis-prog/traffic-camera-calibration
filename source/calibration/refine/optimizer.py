@@ -51,8 +51,6 @@ class RefineOptimizer(Calibration):
                                  x0,
                                  method=self.method,
                                  verbose=2,
-                                 loss='soft_l1',
-                                 f_scale=10.0,
                                  max_nfev=10000
                                  )
         else:
@@ -60,10 +58,11 @@ class RefineOptimizer(Calibration):
                                  x0,
                                  method=self.method,
                                  bounds=self.bounds,
-                                 loss='soft_l1',
-                                 f_scale=10.0,
                                  verbose=2,
-                                 max_nfev=10000
+                                 max_nfev=3000,
+                                 gtol=1e-8,
+                                 xtol=1e-8,
+                                 ftol=1e-8
                                  )
 
         print("-" * 50)
@@ -76,9 +75,10 @@ class RefineOptimizer(Calibration):
         self.camera.set_params_from_list(full_params)
 
         if self.debug_save_path is not None:
-            from calibration.debug import visualize_grid_debug, visualize_coordinate_system
+            from calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
             visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png")
+            # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:
                 pass
 

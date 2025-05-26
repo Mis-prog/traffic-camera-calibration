@@ -28,4 +28,7 @@ class CalibrationPipeline:
             print(f"✅ [Pipeline] Этап {idx} завершён\n")
 
         print("🎯 [Pipeline] Калибровка камеры завершена")
+        print("=" * 60)
+        print(f" [Pipeline] Конечные значения {[round(float(p), 2) for p in camera.get_params()]}")
+
         return camera

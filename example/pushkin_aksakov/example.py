@@ -3,7 +3,7 @@ from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
 from source.utils import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group, \
     residual_reprojection_line
-from calibration.debug import load_scene_gps
+from calibration.debug import load_scene_gps, visualize_source
 
 import numpy as np
 
@@ -29,23 +29,26 @@ def back_refine():
         "dist_between_line_1": load_lines('marked/dist_between_line_1.json'),
         "dist_between_line_2": load_lines('marked/dist_between_line_2.json'),
         "lane_lines": load_lines('marked/parallel_line_1.json'),
+        "vertical_lines": load_lines('marked/vertical_lines.json'),
     }
     resualds_blocks = [
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=8),
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=5.5),
+        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=9),
+        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=7),
         lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
     ]
     refiner_first = RefineOptimizer(camera=camera,
                                     residual_blocks=resualds_blocks,
                                     mask=[0, 6],
                                     bounds=([900, 5], [2000, 30]),
-                                    debug_save_path='image/')
+                                    debug_save_path='image/',
+                                    gps_origin=(54.723767, 55.933369),
+                                    )
 
     pipeline = CalibrationPipeline([vp_init, refiner_first])
     camera = pipeline.run(camera, data)
 
 
-back_refine()  # Дооптимизация через обратную проекцию
+# back_refine()  # Дооптимизация через обратную проекцию
 
 
 def direct_refine():
@@ -58,12 +61,15 @@ def direct_refine():
                                                      gps_origin=(54.723767, 55.933369)),
     ]
 
-    refiner_first = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks, debug_save_path='image/')
+    refiner_first = RefineOptimizer(camera=camera,
+                                    residual_blocks=resualds_blocks,
+                                    debug_save_path='image/',
+                                    )
     pipeline = CalibrationPipeline([vp_init, refiner_first])
     camera = pipeline.run(camera, data)
 
 
-# direct_refine()  # Дооптимизация через прямую проекцию
+direct_refine()  # Дооптимизация через прямую проекцию
 
 
 def gibrid():
@@ -95,17 +101,28 @@ def gibrid():
     pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
     camera = pipeline.run(camera, data)
 
+
 # gibrid()
 
 
-def debug_gps():
-    import matplotlib.pyplot as plt
-    ref_lat, ref_lon = 54.723767, 55.933369
-    image = load_scene_gps(ref_lon, ref_lat, zoom=19)
-    image_np = np.array(image)  # вот здесь преобразование
-    print(image_np.shape)
-    plt.imshow(image)
-    plt.scatter(650 / 2, 450 / 2)
-    plt.show()
+# Разметка данных
+# from utils.data_markup_tool import LineAnnotationTool
+#
+# line_tool = LineAnnotationTool("image/pattern_corrected_image.png","marked","vertical_lines.json")
+# line_tool.run()
 
-# debug_gps() #
+
+# Тесты
+# from source.calibration.debug import visualize_grid_debug
+# from source.core import PointND
+# from utils.gps_connection_world import gps_to_enu, enu_to_gps
+#
+# gps_origin = (54.723767, 55.933369)
+# camera.set_params_from_list([1263.28, -142.97, 51.84, 172.31, 0.0, 0.0, 28.88])
+# visualize_grid_debug(camera, PointND(camera.intrinsics.get_main_point()))
+#
+# point = - camera.project_back(PointND([775.49946776, 886.09295195])).get()
+# print(point)
+# # point = [ -9.72, -15.13]
+# enu = enu_to_gps(*point[:2], gps_origin[0], gps_origin[1])
+# print(enu)

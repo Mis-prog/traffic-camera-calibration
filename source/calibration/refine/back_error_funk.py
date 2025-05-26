@@ -70,3 +70,13 @@ def residual_parallel_group(camera, data, group, plane_z=0):
         residuals.append(cross)
 
     return residuals
+
+
+def residual_vertical_lines_directional(camera, data, group):
+    residuals = []
+
+    lines = data.get(group, [])
+    for p1, p2 in lines:
+        X1 = camera.project_back(PointND(p1), 0).get()
+        X2 = camera.project_back(PointND(p2), 1).get()
+
