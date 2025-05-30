@@ -19,7 +19,7 @@ class RefineOptimizer(Calibration):
                  ):
         super().__init__(camera, debug_save_path)
         self.residual_blocks = residual_blocks
-        self.bounds = bounds if bounds is not None else ([900, -360, -360, -360, -30, -30, 5],
+        self.bounds = bounds if bounds is not None else ([800, -360, -360, -360, -30, -30, 5],
                                                          [2000, 360, 360, 360, 30, 30, 30])
         self.mask = mask if mask is not None else [0, 1, 2, 3, 4, 5, 6]
         self.solver = solver

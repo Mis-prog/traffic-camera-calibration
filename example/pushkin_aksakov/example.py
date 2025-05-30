@@ -48,7 +48,7 @@ def back_refine():
     camera = pipeline.run(camera, data)
 
 
-# back_refine()  # Дооптимизация через обратную проекцию
+back_refine()  # Дооптимизация через обратную проекцию
 
 
 def direct_refine():
@@ -69,7 +69,7 @@ def direct_refine():
     camera = pipeline.run(camera, data)
 
 
-direct_refine()  # Дооптимизация через прямую проекцию
+#direct_refine()  # Дооптимизация через прямую проекцию
 
 
 def gibrid():

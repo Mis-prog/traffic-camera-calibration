@@ -80,6 +80,6 @@ def visualize_camera_and_world_axes(
 
 
 camera = Camera("../../../example/pushkin_aksakov/image/pattern_corrected_image.png")
-# camera.set_params_from_list([1230, -158.11, 51.84, 172.31, 0, 0, 23.79])
-camera.set_params_from_list([1246.66, -142.93, 49.25, 173.98, -10.02, -15.42, 27.31])
+camera.set_params_from_list([1230, -13.46, 48.12, -164.54, 0, 0, 10])
+# camera.set_params_from_list([1246.66, -142.93, 49.25, 173.98, -10.02, -15.42, 27.31])
 visualize_camera_and_world_axes(camera)

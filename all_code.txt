@@ -1,0 +1,1431 @@
+# ==== __init__.py ====
+from .calibration import CalibrationPipeline
+from .calibration import RefineOptimizer
+from .core import Camera
+from .calibration import VanishingPointCalibration
+__all__ = [
+    "CalibrationPipeline",
+    "RefineOptimizer",
+    "Camera",
+    "VanishingPointCalibration"
+]
+__version__ = "0.1.0"
+__author__ = "Акмурзин Миша"
+# ==== __init__.py ====
+from .base import Calibration
+from .pipeline import CalibrationPipeline
+from calibration.refine.optimizer import RefineOptimizer
+from .init.from_vp import VanishingPointCalibration
+__all__ = [
+    "Calibration",
+    "CalibrationPipeline",
+    "RefineOptimizer",
+    "VanishingPointCalibration"
+]
+__version__ = "0.1.0"
+__author__ = "Акмурзин Миша"
+# ==== base.py ====
+from abc import ABC, abstractmethod
+import numpy as np
+from core.camera import Camera
+class Calibration(ABC):
+    def __init__(self, camera: Camera = None, debug_save_path: str = None):
+        self.camera = camera
+        self.debug_save_path = debug_save_path
+    @abstractmethod
+    def run(self, data: dict, **kwargs) -> Camera:
+        pass
+    def compute_total_residuals(self, camera, data, params, residual_blocks):
+        camera.set_params_from_list(params)
+        residuals = []
+        for block in residual_blocks:
+            res = block(camera, data)
+            residuals.extend(res)
+        return np.array(residuals)
+# ==== pipeline.py ====
+from core.camera import Camera
+from calibration.base import Calibration
+class CalibrationPipeline:
+    def __init__(self, stages: list[Calibration]):
+        """
+        :param init_stage: этап начальной калибровки  по точкам схода
+        :param refine_stage: этап уточнения (например, прямая/обратная оптимизация)
+        """
+        self.stages = stages
+    def run(self, camera: Camera, data: dict, **kwargs) -> Camera:
+        """
+        Выполняет последовательную калибровку камеры.
+        :param camera: объект камеры
+        :param data: данные разметки (напр. {'angle': [...], 'parallel-1': [...]})
+        :param kwargs: дополнительные аргументы (например, error_func или solver)
+        """
+        for idx, stage in enumerate(self.stages, 1):
+            stage.camera = camera
+            print("=" * 60)
+            print(f"🔧 [Pipeline] Этап {idx}: {stage.__class__.__name__}")
+            print("=" * 60)
+            camera = stage.run(data, **kwargs)
+            print(f"✅ [Pipeline] Этап {idx} завершён\n")
+        print("🎯 [Pipeline] Калибровка камеры завершена")
+        print("=" * 60)
+        print(f" [Pipeline] Конечные значения {[round(float(p), 2) for p in camera.get_params()]}")
+        return camera
+# ==== __init__.py ====
+from .debug_vp import visualize_vps_debug
+from .debug_scene import visualize_grid_debug, load_scene_gps, visualize_grid_gps_debug
+from .debug_source import visualize_source
+__all__ = [
+    "visualize_vps_debug",
+    "visualize_grid_debug",
+    "visualize_grid_gps_debug",
+    "visualize_source",
+    "load_scene_gps"
+]
+# ==== debug_position_camera.py ====
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+from sympy.physics.units import length
+from core import Camera, PointND
+def visualize_camera_and_world_axes(
+        camera: Camera
+):
+    """
+    Отрисовка системы координат камеры относительно мировой системы координат
+    """
+    R = camera.extrinsics.get_rotation().T
+    C = camera.extrinsics.get_position()
+    x_cam = R[:, 0]  # вправо
+    y_cam = R[:, 1]  # вверх
+    z_cam = R[:, 2]  # взгляд
+    scale = 10
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    # Оси мира из начала координат
+    ax.quiver(0, 0, 0, 1, 0, 0, length=scale, color='red', label='World X')
+    ax.quiver(0, 0, 0, 0, 1, 0, length=scale, color='green', label='World Y')
+    ax.quiver(0, 0, 0, 0, 0, 1, length=scale, color='blue', label='World Z')
+    ax.quiver(*C, *x_cam, length=scale, color='r', linestyle='dashed', label='Camera X')
+    ax.quiver(*C, *y_cam, length=scale, color='g', linestyle='dashed', label='Camera Y')
+    ax.quiver(*C, *z_cam, length=scale, color='b', linestyle='dashed', label='Camera Z')
+    ax.scatter(*C, label='C')
+    ax.scatter(*-R @ C, label='- R @ C')
+    point_start = PointND([960, 540])
+    plane_z = 0
+    grid_range = 10
+    grid_step = 1
+    anchor_3D = camera.project_back(point_start, plane_z=plane_z)
+    anchor_x, anchor_y, anchor_z = anchor_3D.get()
+    to_scene = anchor_3D.get() - C
+    if np.dot(R[:, 2], to_scene) < 0:
+        print("Камера смотрит в обратную сторону — Z нужно инвертировать")
+    # Считаем количество узлов в сетке
+    count = int(2 * grid_range / grid_step) + 1
+    world_points = []
+    for i in range(count):
+        for j in range(count):
+            x = anchor_x - grid_range + i * grid_step
+            y = anchor_y - grid_range + j * grid_step
+            world_points.append(PointND(np.array([x, y, plane_z])))
+    for i in range(count):
+        for j in range(count - 1):
+            p1 = world_points[i * count + j].get()
+            p2 = world_points[i * count + (j + 1)].get()
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='blue', linewidth=1)
+    for j in range(count):
+        for i in range(count - 1):
+            p1 = world_points[i * count + j].get()
+            p2 = world_points[(i + 1) * count + j].get()
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='blue', linewidth=1)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Камера и мировая система координат')
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+camera = Camera("../../../example/pushkin_aksakov/image/pattern_corrected_image.png")
+camera.set_params_from_list([1230, -158.11, 51.84, 172.31, 0, 0, 23.79])
+# camera.set_params_from_list([1246.66, -142.93, 49.25, 173.98, -10.02, -15.42, 27.31])
+visualize_camera_and_world_axes(camera)
+# ==== debug_scene.py ====
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from pyproj import Proj, transform
+import requests
+from PIL import Image
+from io import BytesIO
+from core import Camera, PointND
+from utils import enu_to_gps
+def visualize_grid_debug(
+        camera: Camera,
+        point_start: PointND,
+        grid_range: float = 10.0,  # диапазон в метрах от центра
+        grid_step: float = 1.0,  # размер клетки
+        arrow_len: float = 5.0,  # длина вектора "вверх"
+        plane_z: float = 0.0,  # плоскость, на которую кладём сетку
+        save_path=None
+):
+    image = camera.get_image()
+    height, width = image.shape[:2]
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.set_title("Калибровочная сетка (1×1 м) в проекции")
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    plt.imshow(image)
+    anchor_3D = camera.project_back(point_start, plane_z=plane_z)
+    anchor_x, anchor_y, anchor_z = anchor_3D.get()
+    # Считаем количество узлов в сетке
+    count, world_points = set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z)
+    for i in range(count):
+        for j in range(count - 1):
+            p1 = world_points[i * count + j]
+            p2 = world_points[i * count + (j + 1)]
+            p1_proj = camera.project_direct(p1).get()
+            p2_proj = camera.project_direct(p2).get()
+            ax.plot([p1_proj[0], p2_proj[0]], [p1_proj[1], p2_proj[1]], color='blue', linewidth=1)
+    for j in range(count):
+        for i in range(count - 1):
+            p1 = world_points[i * count + j]
+            p2 = world_points[(i + 1) * count + j]
+            p1_proj = camera.project_direct(p1).get()
+            p2_proj = camera.project_direct(p2).get()
+            ax.plot([p1_proj[0], p2_proj[0]], [p1_proj[1], p2_proj[1]], color='blue', linewidth=1)
+    def draw_arrow_from_3D(p3D):
+        base = camera.project_direct(p3D).get()
+        tip_point = PointND(p3D.get() + np.array([0, 0, arrow_len]))
+        tip = camera.project_direct(tip_point).get()
+        # красная точка — основание
+        ax.scatter(base[0], base[1], color='red', s=10, zorder=3)
+        # чёрная стрелка — вверх
+        ax.annotate(
+            '', xy=(tip[0], tip[1]), xytext=(base[0], base[1]),
+            arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
+            annotation_clip=False, label=f'Высота: {arrow_len}'
+        )
+    top_left = world_points[0]
+    top_right = world_points[count - 1]
+    bottom_left = world_points[(count - 1) * count]
+    bottom_right = world_points[-1]
+    for corner in [top_left, top_right, bottom_left, bottom_right]:
+        draw_arrow_from_3D(corner)
+    draw_coordinate_system_overlay(camera, ax, scale=10)
+    arrow_legend = mlines.Line2D([], [], color='black', marker=r'$\uparrow$', linestyle='None',
+                                 markersize=10, label=f'Вектор вверх ({arrow_len} м)')
+    ax.legend(handles=[arrow_legend])
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
+def set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z):
+    count = int(2 * grid_range / grid_step) + 1
+    world_points = []
+    for i in range(count):
+        for j in range(count):
+            x = anchor_x - grid_range + i * grid_step
+            y = anchor_y - grid_range + j * grid_step
+            world_points.append(PointND(np.array([x, y, plane_z])))
+    return count, world_points
+def draw_coordinate_system_overlay(camera: Camera, ax, scale=10):
+    origin = PointND([0, 0, 0, 1])
+    X = PointND([scale, 0, 0, 1])
+    Y = PointND([0, scale, 0, 1])
+    Z = PointND([0, 0, scale, 1])
+    p0 = camera.project_direct(origin).get()
+    print(f'Пиксель мировой системы координат: {p0}')
+    px = camera.project_direct(X).get()
+    py = camera.project_direct(Y).get()
+    pz = camera.project_direct(Z).get()
+    def draw_arrow(p_start, p_end, color, label):
+        ax.annotate('', xy=p_end[:2], xytext=p_start[:2],
+                    arrowprops=dict(arrowstyle='->', linewidth=2, color=color))
+        ax.text(p_end[0], p_end[1], label, color=color,
+                fontsize=12, fontweight='bold', ha='center', va='center')
+    draw_arrow(p0, px, 'red', 'X')
+    draw_arrow(p0, py, 'green', 'Y')
+    draw_arrow(p0, pz, 'blue', 'Z')
+def visualize_coordinate_system(camera: Camera, save_path: str):
+    image = camera.get_image()
+    scale = 10  # длина осей в условных единицах
+    # Точки в мировой системе координат
+    origin = PointND([0, 0, 0, 1])
+    X = PointND([scale, 0, 0, 1])
+    Y = PointND([0, scale, 0, 1])
+    Z = PointND([0, 0, scale, 1])
+    # Проекция на изображение
+    p0 = camera.project_direct(origin).get()
+    px = camera.project_direct(X).get()
+    py = camera.project_direct(Y).get()
+    pz = camera.project_direct(Z).get()
+    # Отрисовка через matplotlib
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(image)
+    ax.axis('off')
+    def draw_arrow(p_start, p_end, color, label):
+        ax.annotate(
+            '', xy=p_end[:2], xytext=p_start[:2],
+            arrowprops=dict(arrowstyle='->', linewidth=2, color=color)
+        )
+        ax.text(p_end[0], p_end[1], label, color=color,
+                fontsize=12, fontweight='bold', ha='center', va='center')
+    draw_arrow(p0, px, 'red', 'X')
+    draw_arrow(p0, py, 'green', 'Y')
+    draw_arrow(p0, pz, 'blue', 'Z')
+    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+def load_scene_gps(lon, lat, save_path=None, zoom=19, size=(650, 450)):
+    # Скачиваем изображение
+    url = f"https://static-maps.yandex.ru/1.x/?ll={lon},{lat}&z={zoom}&l=sat&size={size[0]},{size[1]}"
+    response = requests.get(url)
+    image = Image.open(BytesIO(response.content))
+    if save_path is not None:
+        image.save(save_path)
+    return image
+# todo передалать
+def gps_to_pixel(lat, lon, ref_lat, ref_lon, img_width, img_height, meters_per_pixel=0.3):
+    """
+    Преобразует GPS в пиксели, предполагая, что ref_lat/lon находится в центре.
+    """
+    from pyproj import Geod
+    geod = Geod(ellps="WGS84")
+    def meters_per_pixel(zoom, lat):
+        return 156543.03392 * np.cos(np.deg2rad(lat)) / (2 ** zoom)
+    # Смещение на восток и север (в метрах)
+    az_east, _, east = geod.inv(ref_lon, ref_lat, lon, ref_lat)
+    az_north, _, north = geod.inv(ref_lon, ref_lat, ref_lon, lat)
+    if lat < ref_lat:
+        north = -north
+    if lon < ref_lon:
+        east = -east
+    x = img_width / 2 + east / meters_per_pixel
+    y = img_height / 2 - north / meters_per_pixel  # сверху вниз
+    return x, y
+def visualize_grid_gps_debug(
+        camera: Camera,
+        point_start: PointND,
+        gps_origin: tuple,
+        grid_range: float = 10.0,  # диапазон в метрах от центра
+        grid_step: float = 1.0,  # размер клетки
+        plane_z: float = 0.0,  # плоскость, на которую кладём сетку
+        save_path=None
+):
+    ref_lat, ref_lon = gps_origin
+    image = load_scene_gps(ref_lon, ref_lat, zoom=19)
+    image_np = np.array(image)
+    height, width = image_np.shape[:2]
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(image_np)
+    ax.set_title("ENU-сетка на спутнике")
+    anchor_3D = camera.project_back(point_start, plane_z=plane_z)
+    anchor_x, anchor_y, anchor_z = anchor_3D.get()
+    count, world_points = set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z)  # enu
+    for i in range(count):
+        for j in range(count - 1):
+            world_point_1 = world_points[i * count + j]
+            world_point_2 = world_points[i * count + j + 1]
+            east1, north1 = world_point_1.get()[:2]
+            east2, north2 = world_point_2.get()[:2]
+            lat1, lon1 = enu_to_gps(east1, north1, ref_lat, ref_lon)
+            lat2, lon2 = enu_to_gps(east2, north2, ref_lat, ref_lon)
+            px1, py1 = gps_to_pixel(lat1, lon1, ref_lat, ref_lon, width, height)
+            px2, py2 = gps_to_pixel(lat2, lon2, ref_lat, ref_lon, width, height)
+            ax.plot([px1, px2], [py1, py2], color='red')
+    for j in range(count):
+        for i in range(count - 1):
+            world_point_1 = world_points[i * count + j]
+            world_point_2 = world_points[(i + 1) * count + j]
+            east1, north1 = world_point_1.get()[:2]
+            east2, north2 = world_point_2.get()[:2]
+            lat1, lon1 = enu_to_gps(east1, north1, ref_lat, ref_lon)
+            lat2, lon2 = enu_to_gps(east2, north2, ref_lat, ref_lon)
+            px1, py1 = gps_to_pixel(lat1, lon1, ref_lat, ref_lon, width, height)
+            px2, py2 = gps_to_pixel(lat2, lon2, ref_lat, ref_lon, width, height)
+            ax.plot([px1, px2], [py1, py2], color='red')
+    plt.show()
+# ==== debug_source.py ====
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import hashlib
+def visualize_source(data: dict, image=None):
+    """
+    data: {
+        "group1": [ [(x1,y1), (x2,y2)], ... ],
+        "group2": [ [(x1,y1), (x2,y2)], ... ],
+    }
+    image: optional background image (e.g. from camera.get_image())
+    """
+    fig, ax = plt.subplots()
+    if image is not None:
+        ax.imshow(image)
+    for key, lines in data.items():
+        color = get_color_by_key(key)
+        for i, (p1, p2) in enumerate(lines):
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=2)
+            ax.scatter(*p1, color=color, s=10)
+            ax.scatter(*p2, color=color, s=10)
+        # добавим линию в легенду один раз
+        ax.plot([], [], color=color, label=key)
+    ax.legend(loc='upper right')
+    ax.axis('equal')
+    plt.tight_layout()
+    plt.show()
+def get_color_by_key(key):
+    """Уникальный цвет по имени группы"""
+    cmap = cm.get_cmap('tab10')
+    hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16)
+    return cmap(hash_val % 10)# ==== debug_vp.py ====
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+def draw_coordinate_axes_from_vps(
+        vanishing_points,
+        center,
+        scale=100,
+        labels=None,
+        colors=None,
+        flip_z=True,
+        image=None,
+        save_path=None,
+        ax=None
+):
+    if labels is None:
+        labels = ['X', 'Y', 'Z']
+    if colors is None:
+        colors = ['red', 'green', 'blue']
+    cx, cy = center
+    # Подготовка осей
+    if ax is None:
+        fig, ax = plt.subplots()
+    # Отображаем фоновое изображение
+    if image is not None:
+        ax.imshow(image)
+    # Рисуем координатные оси
+    for i, (x, y) in enumerate(vanishing_points):
+        dx = x - cx
+        dy = y - cy
+        norm = np.hypot(dx, dy)
+        dx_scaled = dx / norm * scale
+        dy_scaled = dy / norm * scale
+        if flip_z and labels[i].upper() == 'Z':
+            dx_scaled *= -1
+            dy_scaled *= -1
+        ax.arrow(cx, cy, dx_scaled, dy_scaled,
+                 color=colors[i], width=1.2, head_width=10, length_includes_head=True)
+        ax.text(cx + dx_scaled * 1.1, cy + dy_scaled * 1.1,
+                labels[i], fontsize=12, color=colors[i], weight='bold')
+    ax.set_title("Coordinate Axes from Vanishing Points")
+    ax.axis('off')
+    if save_path:
+        plt.savefig(save_path, dpi=150)
+def visualize_vps_debug(
+        camera,
+        step_x=400,
+        step_y=300,
+        scale=100,
+        save_path=None,
+        show=False,
+        flip_z=True,
+        dpi=200
+):
+    """
+    Визуализирует координатные оси на изображении камеры по точкам схода.
+    :param camera: объект камеры с методом get_image(), intrinsics.get(), extrinsics.get_rotation()
+    :param step_x: шаг сетки по оси X (в пикселях)
+    :param step_y: шаг сетки по оси Y (в пикселях)
+    :param scale: длина координатных стрелок
+    :param save_path: путь для сохранения изображения
+    :param show: показывать ли окно с результатом
+    :param flip_z: отражать ли ось Z
+    :param dpi: разрешение сохранённого изображения
+    """
+    image = camera.get_image()
+    K = camera.intrinsics.get()
+    R = camera.extrinsics.get_rotation()
+    # Восстановим точки схода из R и K
+    vp1 = K @ R[:, 0]
+    vp2 = K @ R[:, 1]
+    vp3 = K @ R[:, 2]
+    vp1 = vp1[:2] / vp1[2]
+    vp2 = vp2[:2] / vp2[2]
+    vp3 = vp3[:2] / vp3[2]
+    vps = np.array([vp1, vp2, vp3])
+    h, w = image.shape[:2]
+    centers = [
+        (int(x), int(y))
+        for y in np.arange(step_y, h, step_y)
+        for x in np.arange(step_x, w, step_x)
+    ]
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.imshow(image)
+    for center in centers:
+        draw_coordinate_axes_from_vps(
+            vanishing_points=vps,
+            center=center,
+            scale=scale,
+            flip_z=flip_z,
+            ax=ax
+        )
+    ax.set_title("Vanishing Point Coordinate Axes")
+    ax.axis('off')
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+        print(f"[DEBUG] Saved visualization to {save_path}")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+# ==== __init__.py ====
+from .from_vp import VanishingPointCalibration
+__all__ = [
+    "VanishingPointCalibration"
+]# ==== from_vp.py ====
+import numpy as np
+from calibration.base import Calibration
+from source.core import Camera, PointND
+class VanishingPointCalibration(Calibration):
+    def __init__(self, camera: Camera, debug_save_path: str = None):
+        super().__init__(camera, debug_save_path)
+        self.vpX = None  # точка схода по оси X (горизонт)
+        self.vpY = None  # точка схода по оси Y (горизонт)
+        self.vpZ = None  # точка схода по оси Z (вертикаль)
+    def set_vanishing_points(self, vpX, vpY=None, vpZ=None):
+        self.vpX = np.array(vpX, dtype=float)
+        if vpY is not None:
+            self.vpY = np.array(vpY, dtype=float)
+        if vpZ is not None:
+            self.vpZ = np.array(vpZ, dtype=float)
+    def calc_f(self):
+        cx, cy = self.camera.intrinsics.get_main_point()
+        c = np.array([cx, cy, 1.0])
+        if self.vpX is not None and self.vpZ is not None:
+            v1 = np.append(self.vpX, 1.0)
+            v2 = np.append(self.vpZ, 1.0)
+            term = np.dot(v1 - c, c - v2)
+            if term <= 0:
+                raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
+            f = np.sqrt(term)
+            return f
+        elif self.vpX is not None and self.vpY is not None:
+            v1 = np.append(self.vpX, 1.0)
+            v2 = np.append(self.vpY, 1.0)
+            term = np.dot(v1 - c, c - v2)
+            if term <= 0:
+                raise ValueError("Подкоренное выражение отрицательно. Проверь точки схода.")
+            f = np.sqrt(term)
+            return f
+    def calc_R(self, f):
+        self.camera.intrinsics.set_focal_length(f)
+        K_inv = np.linalg.inv(self.camera.intrinsics.get())
+        dx = K_inv @ np.append(self.vpX, 1.0)
+        dy = K_inv @ np.append(self.vpY, 1.0) if self.vpY is not None else None
+        dz = K_inv @ np.append(self.vpZ, 1.0) if self.vpZ is not None else None
+        return self._build_rotation(dx, dy, dz)
+    def _build_rotation(self, dx, dy, dz):
+        # Нормируем
+        x = dx / np.linalg.norm(dx)
+        if dy is not None and dz is not None:
+            y = dy / np.linalg.norm(dy)
+            z = dz / np.linalg.norm(dz)
+            # Ортонормализация: перестроим Y и Z так, чтобы система была ортогональна
+            z = z - np.dot(z, x) * x - np.dot(z, y) * y
+            z /= np.linalg.norm(z)
+            y = np.cross(z, x)
+            y /= np.linalg.norm(y)
+        elif dy is None:
+            z = dz / np.linalg.norm(dz)
+            # Если Y не был задан — восстановим его
+            y = np.cross(z, x)
+            y /= np.linalg.norm(y)
+        elif dz is None:
+            y = dy / np.linalg.norm(dy)
+            # Если Z не был задан — восстановим его
+            z = np.cross(x, y)
+            z /= np.linalg.norm(z)
+        else:
+            raise ValueError("В сцене только одна точка схода. Проверь точки схода.")
+        # Собираем R: столбцы — оси X, Y, Z в координатах камеры
+        R = np.column_stack((x, y, z))
+        z = R[:, 2]
+        if z[2] > 0:  # например, камера "смотрит вверх" — это неправильно
+            print("[VP Init] ⚠️ Камера смотрит назад — инвертируем ориентацию")
+            R[:, 2] *= -1
+            R[:, 1] = np.cross(R[:, 2], R[:, 0])
+            R[:, 1] /= np.linalg.norm(R[:, 1])
+        print(f' [VP Init] Determinant(R): {np.linalg.det(R)}')
+        return R
+    # def _build_rotation(self, dx, dy, dz):
+    #     # Нормализуем исходные направления
+    #     x = dx / np.linalg.norm(dx)
+    #     z = dz / np.linalg.norm(dz)
+    #
+    #     if dy is not None:
+    #         y = dy / np.linalg.norm(dy)
+    #
+    #         # Корректируем y, чтобы она была ортогональна x и z
+    #         # Сначала получаем "правильную" y из x и z
+    #         y_proj = np.cross(z, x)
+    #         y_proj /= np.linalg.norm(y_proj)
+    #
+    #         # Уточняем x, чтобы он был ортогонален y_proj и z
+    #         x = np.cross(y_proj, z)
+    #         x /= np.linalg.norm(x)
+    #
+    #         # Пересобираем y ещё раз — теперь она точно ортогональна x и z
+    #         y = np.cross(z, x)
+    #         y /= np.linalg.norm(y)
+    #     else:
+    #         # Если Y не задан, достраиваем правую тройку
+    #         y = np.cross(z, x)
+    #         y /= np.linalg.norm(y)
+    #
+    #     # Собираем матрицу поворота R: [x_cam, y_cam, z_cam]
+    #     R = np.column_stack((x, y, z))
+    # Проверим, что R правая: det ≈ +1
+    # if np.linalg.det(R) < 0:
+    #     # Например, инвертируем y (или x), чтобы восстановить ориентацию
+    #     y = -y
+    #     R = np.column_stack((x, y, z))
+    #
+    # return R
+    def run(self, data=None, **kwargs):
+        """
+        Выполняет инициализацию параметров камеры по точкам схода.
+        :return: обновлённая камера
+        """
+        print("=" * 50)
+        print("🎯 [VP Init] Инициализация параметров по точкам схода")
+        print("=" * 50)
+        f = self.calc_f()
+        print(f"🔬 Вычислено фокусное расстояние: f = {f:.4f}")
+        R = self.calc_R(f)
+        self.camera.extrinsics.set_rotation(R, from_type='vp')
+        angles = self.camera.extrinsics.get_angles()
+        print(f"🧭 Углы ориентации (ZXY, град): {np.round(angles, 2)}")
+        print("✅ [VP Init] Инициализация завершена")
+        if self.debug_save_path is not None:
+            from calibration.debug import visualize_vps_debug
+            print(f"💾 Сохраняю визуализацию в: {self.debug_save_path}")
+            visualize_vps_debug(self.camera, save_path=self.debug_save_path)
+        print("=" * 50)
+        return self.camera
+# ==== __init__.py ====
+from .optimizer import RefineOptimizer
+from .back_error_funk import residual_interline_distance, residual_parallel_group, residual_vertical_lines_directional
+from .direct_error_funk import residual_reprojection_line
+__all__ = [
+    "RefineOptimizer",
+    "residual_interline_distance",
+    "residual_parallel_group",
+    "residual_reprojection_line",
+    "residual_vertical_lines_directional"
+]
+# ==== back_error_funk.py ====
+import numpy as np
+from core import Camera, PointND
+def residual_interline_distance(camera, data, group, expected):
+    residuals = []
+    lines = data.get(group, [])
+    for i in range(len(lines) - 1):
+        d = compute_interline_distance(camera, lines[i], lines[i + 1])
+        residuals.append(d - expected)
+    return residuals
+def compute_interline_distance(camera: Camera, line1, line2, plane_z=0):
+    c1 = PointND(np.mean(line1, axis=0))
+    c2 = PointND(np.mean(line2, axis=0))
+    X1 = camera.project_back(c1, plane_z).get()
+    X2 = camera.project_back(c2, plane_z).get()
+    # аппроксимируем направление по первой линии
+    P1a = camera.project_back(PointND(line1[0]), plane_z).get()
+    P1b = camera.project_back(PointND(line1[1]), plane_z).get()
+    direction = P1b - P1a
+    direction = direction[:2] / np.linalg.norm(direction[:2])
+    normal = np.array([-direction[1], direction[0]])  # ортогонально в 2D
+    # проецируем разность точек на нормаль
+    delta = (X2 - X1)[:2]
+    dist = np.abs(np.dot(delta, normal))
+    return dist
+def residual_parallel_group(camera, data, group, plane_z=0):
+    """
+    Резидуал: проверяет, что все линии в группе параллельны в мировой системе координат.
+    Ошибка = косое произведение направляющих векторов.
+    :param camera: модель камеры
+    :param data: словарь с линиями
+    :param group: имя ключа в data
+    :param plane_z: плоскость обратной проекции
+    :return: список residuals
+    """
+    residuals = []
+    lines = data.get(group, [])
+    if len(lines) < 2:
+        return residuals  # нечего сравнивать
+    # вычисляем 3D-направляющие
+    directions = []
+    for p1, p2 in lines:
+        X1 = camera.project_back(PointND(p1), plane_z).get()
+        X2 = camera.project_back(PointND(p2), plane_z).get()
+        d = X2 - X1
+        norm = np.linalg.norm(d)
+        if norm < 1e-6:
+            continue  # вырожденная
+        directions.append(d[:2] / norm)  # только XY-плоскость
+    if len(directions) < 2:
+        return residuals  # не хватает направлений
+    # сравниваем каждую с первой
+    ref = directions[0]
+    for d in directions[1:]:
+        cross = np.cross(ref, d)  # → 0, если параллельны
+        residuals.append(cross)
+    return residuals
+def residual_vertical_lines_directional(camera, data, group):
+    residuals = []
+    lines = data.get(group, [])
+    for p1, p2 in lines:
+        X1 = camera.project_back(PointND(p1), 0).get()
+        X2 = camera.project_back(PointND(p2), 1).get()
+# ==== direct_error_funk.py ====
+import numpy as np
+from core import Camera, PointND
+from utils import gps_to_enu
+def residual_reprojection_line(camera, data, group, gps_origin):
+    residuals = []
+    lines = data.get(group, [])
+    for line in lines:
+        p1, p2 = line['pixel']
+        P1, P2 = line['gps']
+        _p1 = camera.project_direct(PointND([*gps_to_enu(*P1, *gps_origin), 0])).get()
+        _p2 = camera.project_direct(PointND([*gps_to_enu(*P2, *gps_origin), 0])).get()
+        error1 = np.sum((np.array(_p2) - np.array(p2)) ** 2)
+        error2 = np.sum((np.array(_p1) - np.array(p1)) ** 2)
+        error = np.sqrt(error1 + error2)
+        residuals.append(error)
+    return residuals
+def line_projection_error(camera: Camera, line, gps_origin):
+    p1, p2 = line['pixel']
+    P1, P2 = line['gps']
+    P1, P2 = gps_to_enu(*gps_origin, *P1)
+    return 0
+def point_projection_error(camera: Camera, point) -> float:
+    point2D, point3D = point
+    proj2D = camera.project_direct(point3D)
+    return np.linalg.norm(point2D.get() - proj2D.get())
+# ==== optimizer.py ====
+import numpy as np
+from pandas.core.methods.selectn import SelectNSeries
+from scipy.optimize import least_squares
+from calibration.base import Calibration
+from core.camera import Camera
+from core.pointND import PointND
+class RefineOptimizer(Calibration):
+    def __init__(self, camera: Camera,
+                 residual_blocks: list,
+                 bounds: tuple = None,
+                 solver=least_squares,
+                 method: str = "trf",
+                 mask: list = None,
+                 debug_save_path: str = None,
+                 gps_origin: tuple = None,
+                 ):
+        super().__init__(camera, debug_save_path)
+        self.residual_blocks = residual_blocks
+        self.bounds = bounds if bounds is not None else ([900, -360, -360, -360, -30, -30, 5],
+                                                         [2000, 360, 360, 360, 30, 30, 30])
+        self.mask = mask if mask is not None else [0, 1, 2, 3, 4, 5, 6]
+        self.solver = solver
+        self.method = method
+        self.gps_origin = gps_origin
+    def run(self, data, **kwargs) -> Camera:
+        """
+        :param data: ограничения
+        :return: обновлённая камера
+        """
+        print("=" * 50)
+        print("🔧 [RefineOptimizer] Запуск дооптимизации параметров камеры")
+        print("=" * 50)
+        full_params = np.array(self.camera.get_params(), dtype=float)
+        print(f"📌 Начальные параметры: {np.round(full_params, 2).tolist()}")
+        x0 = full_params[self.mask]
+        def loss_fn(masked_params):
+            current_params = full_params.copy()
+            current_params[self.mask] = masked_params
+            return self.compute_total_residuals(self.camera, data, current_params, self.residual_blocks)
+        if self.method == "lm":
+            result = self.solver(loss_fn,
+                                 x0,
+                                 method=self.method,
+                                 verbose=2,
+                                 max_nfev=10000
+                                 )
+        else:
+            result = self.solver(loss_fn,
+                                 x0,
+                                 method=self.method,
+                                 bounds=self.bounds,
+                                 verbose=2,
+                                 max_nfev=3000,
+                                 gtol=1e-8,
+                                 xtol=1e-8,
+                                 ftol=1e-8
+                                 )
+        print("-" * 50)
+        print(f"✅ Оптимизация завершена")
+        print(f"🔁 Итераций: {result.nfev}")
+        print(f"🎯 Финальная ошибка (cost): {result.cost:.6f}")
+        print("📍 Обновлённые параметры:", np.round(result.x, 2).tolist())
+        full_params[self.mask] = result.x
+        self.camera.set_params_from_list(full_params)
+        if self.debug_save_path is not None:
+            from calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
+            point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png")
+            # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
+            if self.gps_origin is not None:
+                pass
+        return self.camera
+# ==== __init__.py ====
+from .camera import Camera
+from .pointND import PointND
+from .camera_intrinsics import CameraIntrinsics
+from .camera_extrinsics import CameraExtrinsics
+__all__ = [
+    "Camera",
+    "PointND",
+    "CameraIntrinsics",
+    "CameraExtrinsics"
+]
+__version__ = "0.1.0"
+__author__ = "Акмурзин Миша"# ==== camera.py ====
+import cv2
+import numpy as np
+from .camera_intrinsics import CameraIntrinsics
+from .camera_extrinsics import CameraExtrinsics
+from .pointND import PointND
+class Camera:
+    def __init__(self, path_image):
+        self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
+        self.size = self.image.shape[:2]
+        self.path = path_image
+        self.intrinsics = CameraIntrinsics(self.size[1], self.size[0])
+        self.extrinsics = CameraExtrinsics()
+    def set_params(self, params: dict):
+        """
+        Устанавливает параметры камеры из словаря.
+        Ожидаемые ключи:
+            - f или (fx, fy): фокусное расстояние (одно или два)
+            - rz, rx, ry: углы Эйлера в градусах (если from_type='euler')
+            - vp: список из трёх направлений (если from_type='vp')
+            - x, y, z: координаты положения камеры
+            - from_type: 'euler' или 'vp'
+        """
+        # --- фокус ---
+        if "f" in params:
+            self.intrinsics.set_focal_length(params["f"])
+        elif "fx" in params and "fy" in params:
+            self.intrinsics.set_focal_length((params["fx"], params["fy"]))
+        else:
+            raise ValueError("Отсутствует фокусное расстояние (f или fx/fy)")
+        # --- ориентация ---
+        from_type = params.get("from_type", "euler")
+        if from_type == "euler":
+            angles = [params.get("rz", 0), params.get("rx", 0), params.get("ry", 0)]
+            self.extrinsics.set_rotation(angles, from_type="euler")
+        elif from_type == "vp":
+            vp_list = params.get("vp")
+            if vp_list is None or len(vp_list) != 3:
+                raise ValueError("Для from_type='vp' нужно три вектора vp")
+            self.extrinsics.set_rotation(vp_list, from_type="vp")
+        else:
+            raise ValueError(f"Неизвестный тип from_type: {from_type}")
+        # --- позиция ---
+        x = params.get("x", 0)
+        y = params.get("y", 0)
+        z = params.get("z", 0)
+        self.extrinsics.set_position(x, y, z)
+    def set_params_from_list(self, param_list: list):
+        """
+        Устанавливает параметры камеры из плоского списка.
+        Ожидается формат: [f, rz, rx, ry, x, y, z]
+        """
+        if len(param_list) != 7:
+            raise ValueError("Ожидается 7 параметров: f, rz, rx, ry, x, y, z")
+        f = param_list[0]
+        rz, rx, ry = param_list[1:4]
+        x, y, z = param_list[4:7]
+        self.intrinsics.set_focal_length(f)
+        self.extrinsics.set_rotation([rz, rx, ry], from_type="euler")
+        self.extrinsics.set_position(x, y, z)
+    def get_params(self) -> list:
+        params = []
+        f = self.intrinsics.get_focal_length()
+        if isinstance(f, tuple):  # fx, fy
+            params.extend(f)
+        else:
+            params.append(f)
+        rz, rx, ry = self.extrinsics.get_angles()
+        params.extend([rz, rx, ry])
+        x, y, z = self.extrinsics.get_position()
+        assert isinstance(x, float)
+        params.extend([x, y, z])
+        return params
+    def get_image(self):
+        return self.image
+    def get_size(self):
+        return self.size
+    def project_direct(self, point3D: PointND) -> PointND:
+        RT = self.extrinsics.get()
+        K = self.intrinsics.get()
+        P = K @ RT
+        point2D = PointND(P @ point3D.get(out_homogeneous=True), add_weight=False)
+        return point2D
+    def project_back(self, point2D: PointND, plane_z: float = 0.0) -> PointND:
+        K = self.intrinsics.get()
+        R = self.extrinsics.get_rotation()
+        C = np.array(self.extrinsics.get_position())
+        x = point2D.get(out_homogeneous=True)
+        # Направление луча в системе мира
+        K_inv = np.linalg.inv(K)
+        ray_cam = K_inv @ x  # направление в системе камеры
+        ray_world = R.T @ ray_cam  # в мировой системе координат
+        # Нормализуем направление (не обязательно, но можно)
+        ray_world = ray_world / np.linalg.norm(ray_world)
+        # Параметрическое пересечение с плоскостью Z = plane_z
+        t = (plane_z - C[2]) / ray_world[2]  # ищем такой t, чтобы Z == plane_z
+        point3D = C + t * ray_world  # точка на плоскости
+        return PointND(point3D, add_weight=True)
+def homography(self, point: PointND, direction='direct') -> PointND:
+    RT = self.extrinsics.get()
+    RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
+    H = self.intrinsics.get() @ RT  # Гомография
+    p = point.get(out_homogeneous=True)
+    if direction == 'direct':
+        transformed = H @ p
+    elif direction == 'back':
+        H_inv = np.linalg.inv(H)
+        transformed = H_inv @ p
+    else:
+        raise ValueError("Аргумент direction должен быть 'direct' или 'back'.")
+    return PointND(transformed, add_weight=False)
+# ==== camera_extrinsics.py ====
+import numpy as np
+from scipy.spatial.transform import Rotation
+class CameraExtrinsics:
+    def __init__(self):
+        self.R = np.eye(3)
+        self.C = np.array([0, 0, 10])
+    def set_rotation(self, data, from_type='euler'):
+        if from_type == 'euler':
+            self.R = Rotation.from_euler('zxy', data, degrees=True).as_matrix()
+        elif from_type == 'vp':
+            if data.shape == (3, 3):
+                self.R = data
+            else:
+                raise ValueError("Ожидается матрица 3x3 для from_type='vp'")
+        else:
+            raise ValueError("Неверный тип ориентации")
+    def set_position(self, x=0, y=0, z=10):
+        self.C = np.array([x, y, z])
+    def get_rotation(self):
+        return self.R
+    def get_angles(self, order='zxy', degrees=True):
+        """
+        :return: (rz, rx, ry)
+        """
+        return Rotation.from_matrix(self.R).as_euler(order, degrees=degrees)
+    def get_position(self):
+        return tuple(float(c) for c in np.ravel(self.C))
+    def get(self):
+        t = -self.R @ self.C
+        RT = np.hstack([self.R, t.reshape(3, 1)])
+        return RT
+# ==== camera_intrinsics.py ====
+import numpy as np
+class CameraIntrinsics:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.fx = None
+        self.fy = None
+        self.K = np.eye(3)
+    def set_focal_length(self, f):
+        self.fx, self.fy = (f, f) if not isinstance(f, (tuple, list)) else f
+        self.K = np.array([[self.fx, 0, self.width / 2],
+                           [0, self.fy, self.height / 2],
+                           [0, 0, 1]])
+    def get(self):
+        return self.K
+    def get_main_point(self):
+        return self.width / 2, self.height / 2
+    def get_focal_length(self):
+        if self.fx == self.fy:
+            return self.fx
+        else:
+            return (self.fx, self.fy)
+# ==== pointND.py ====
+import numpy as np
+class PointND:
+    def __init__(self, coord, add_weight=True):
+        coord = np.asarray(coord)
+        if len(coord) + 1 in [3, 4] and add_weight:
+            coord = np.append(coord, 1)
+        self.coord = coord
+    def set(self, coord):
+        self.coord = np.append(coord, 1) if len(coord) + 1 == len(self.coord) else coord
+    def get(self, out_homogeneous=False):
+        return self.coord if out_homogeneous else self.coord[:-1] / self.coord[-1]
+    def get_type(self):
+        dim = len(self.coord) - 1
+        return f"{dim}D"
+    def set_Z(self, z):
+        if len(self.coord) > 3:
+            self.coord[2] = z
+        else:
+            raise ValueError("Объект не является 3D точкой")
+# ==== __init__.py ====
+# ==== base.py ====
+from abc import ABC
+# ==== manual_line_distortion_correction.py ====
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+def linear_interpolation(x, line):
+    (x1, y1), (x2, y2) = line
+    if x1 <= x <= x2 or x2 <= x <= x1:
+        m = (y2 - y1) / (x2 - x1)
+        b = y1 - m * x1
+        y = m * x + b
+        return y
+    else:
+        raise ValueError("x is out of bounds of the line segment")
+def undistort_image(image, K, dist_coeffs):
+    return cv2.undistort(image, K, dist_coeffs)
+def set_params(params):
+    """
+    fx, fy, cx, cy, k1, k2, p1, p2, k3 = params
+    """
+    if len(params) == 9:
+        optimized_K = np.array([[params[0], 0, params[2]],
+                                [0, params[1], params[3]],
+                                [0, 0, 1]], dtype=np.float32)
+        optimized_dist_coeffs = np.array([params[4], params[5], params[6], params[7], params[8]], dtype=np.float32)
+        return optimized_K, optimized_dist_coeffs
+    else:
+        raise ValueError("Длина вектора параметров не равняется 9")
+def undistort_point(point, K, dist_coeffs):
+    point = np.array(point, dtype=np.float32).reshape(-1, 1, 2)  # Передаем точку как массив
+    undistorted_point = cv2.undistortPoints(point, K, dist_coeffs)
+    # Преобразуем нормализованные координаты в пиксельные
+    undistorted_point_pixels = cv2.convertPointsToHomogeneous(undistorted_point)
+    undistorted_point_pixels = np.dot(undistorted_point_pixels, K.T)
+    pixel_coords = undistorted_point_pixels[0, 0]
+    return pixel_coords[:2]  # Возвращаем только пиксельные координаты
+def distortion_error(params, x_vals, y_vals, line):
+    optimized_K, optimized_dist_coeffs = set_params(params)
+    undistorted_points = []
+    for x, y in zip(x_vals, y_vals):
+        undistorted_point = undistort_point([x, y], optimized_K, optimized_dist_coeffs)
+        undistorted_points.append(undistorted_point)
+    error = []
+    for undistorted_point, x in zip(undistorted_points, x_vals):
+        predicted_y = linear_interpolation(x, line)  # Линейная интерполяция для синих точек
+        error.append((undistorted_point[1] - predicted_y) ** 2)  # Ошибка по оси Y
+    return np.sum(error) / len(error)
+def target_error(params, data):
+    error = 0
+    for x_vals, y_vals, line in data:
+        error = distortion_error(params, x_vals, y_vals, line) + error
+    return error
+# Данные для синих и красных линий
+line1 = [(2, 822), (1916, 302)]  # Синие линии
+line2 = [(1077, 344), (1390, 671)]  # Красные линии
+image = cv2.imread('screenshot_1747025981351.png')
+size = list(image.shape[:2])
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+# # Интерполяция для синих и красных линий
+# x_line1 = np.linspace(line1[0][0], line1[1][0], 100)
+# y_line1 = [linear_interpolation(x, line1) for x in x_line1]
+# x_line2 = np.linspace(line2[0][0], line2[1][0], 100)
+# y_line2 = [linear_interpolation(x, line2) for x in x_line2]
+#
+# # Подготовка к оптимизации
+# points = np.loadtxt('points_line1.csv', delimiter=',')
+# x = points[:, 0]
+# y = points[:, 1]
+#
+# degree = 4
+# coefficients = np.polyfit(x, y, degree)
+# poly = np.poly1d(coefficients)
+# y_fit_line1 = poly(x_line1)
+#
+# points = np.loadtxt('points_line2.csv', delimiter=',')
+# x = points[:, 0]
+# y = points[:, 1]
+#
+# coefficients = np.polyfit(x, y, degree)
+# poly = np.poly1d(coefficients)
+# y_fit_line2 = poly(x_line2)
+#
+# # Минимизация ошибки с помощью least_squares
+# initial_params = [1419, 1419, size[1] / 2, size[0] / 2, -0.1, 0.1, 0, 0, 0]  # Начальные коэффициенты для оптимизации
+# print(f'Начальные параметры:\n{initial_params}')
+# data = [
+#     (x_line1, y_fit_line1, line1),
+#     (x_line2, y_fit_line2, line2)
+# ]
+# result = minimize(target_error, initial_params, args=(data), method='Nelder-Mead')
+# print(result)
+# print(f'Конечные параметры:\n{result.x}')
+optimized_K, optimized_dist_coeffs = set_params([1400, 1400, size[1] / 2, size[0] / 2, -0.43, 0, 0, 0, 0])
+image_optim = undistort_image(image_rgb, optimized_K, optimized_dist_coeffs)
+scaled = cv2.resize(image_optim, None, fx=0.5, fy=0.5)
+cv2.imshow("Undistorted Image", scaled)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+# ==== __init__.py ====
+from .data_preparation import load_lines, load_lines_from_json
+from .data_markup_tool import LineAnnotationTool
+from .gps_connection_world import gps_to_enu, enu_to_gps
+__all__ = [
+    "load_lines",
+    "LineAnnotationTool",
+    "gps_to_enu",
+    "enu_to_gps",
+    "load_lines_from_json"
+]
+# ==== data_markup_tool.py ====
+import cv2
+import numpy as np
+import json
+import os
+class LineAnnotationTool:
+    def __init__(self, image_path, save_dir="annotations", save_file="lines.json"):
+        # Загружаем изображение и проверяем его наличие
+        self.image = cv2.imread(image_path)
+        if self.image is None:
+            raise FileNotFoundError(f"Не удалось загрузить изображение: {image_path}")
+        # Создаем копию изображения для отрисовки
+        self.image_copy = self.image.copy()
+        # Инициализация переменных для хранения линий и состояния
+        self.lines = []
+        self.current_line = []
+        self.dragging_point = None
+        self.selected_line = None
+        self.edit_mode = False
+        self.hover_point = None
+        self.window_name = "Calibration scene"
+        self.cursor_position = (0, 0)
+        # Папка для сохранения аннотаций
+        self.save_dir = save_dir
+        self.save_file = save_file
+        os.makedirs(self.save_dir, exist_ok=True)
+    def run(self):
+        # Создаем окно и настраиваем обработку мыши
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.window_name, self.mouse_callback)
+        print("Нажмите 'q' для выхода | 's' сохранить | 'd' удалить | 'e' редактировать")
+        # Основной цикл взаимодействия с пользователем
+        while True:
+            self.redraw()
+            key = cv2.waitKey(1) & 0xFF
+            # Выход
+            if key == 27 or key == ord('q'):
+                break
+            # Сохранение линий
+            elif key == ord('s'):
+                self.save_lines()
+            # Переключение режима редактирования
+            elif key == ord('e'):
+                self.edit_mode = not self.edit_mode
+                if not self.edit_mode:
+                    self.selected_line = None
+                print(f"Режим редактирования {'включен' if self.edit_mode else 'выключен'}")
+            # Удаление выбранной линии
+            elif key == ord('d'):
+                self.delete_selected_line()
+            # Отмена последней точки или линии
+            elif key == 8:  # Backspace
+                if self.current_line:
+                    self.current_line.pop()
+                elif self.lines:
+                    self.lines.pop()
+        # Закрытие всех окон
+        cv2.destroyAllWindows()
+    def mouse_callback(self, event, x, y, flags, param):
+        self.cursor_position = (x, y)
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if self.edit_mode and self.selected_line is not None:
+                for point_idx, point in enumerate(self.lines[self.selected_line]):
+                    if self.is_near(point, (x, y)):
+                        self.dragging_point = (self.selected_line, point_idx)
+                        return
+            for line_idx, line in enumerate(self.lines):
+                for point_idx, point in enumerate(line):
+                    if self.is_near(point, (x, y)):
+                        self.dragging_point = (line_idx, point_idx)
+                        return
+            for line_idx, line in enumerate(self.lines):
+                if len(line) == 2 and self.point_to_line_distance(line[0], line[1], (x, y)) < 10:
+                    self.selected_line = line_idx
+                    self.edit_mode = True
+                    print(f"Выбрана линия #{line_idx + 1} для редактирования")
+                    return
+            if len(self.current_line) < 2:
+                self.current_line.append((x, y))
+                if len(self.current_line) == 2 and self.current_line[0] != self.current_line[1]:
+                    self.lines.append(self.current_line.copy())
+                    self.current_line.clear()
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            if self.edit_mode:
+                self.edit_mode = False
+                self.selected_line = None
+            elif self.current_line:
+                self.current_line.pop()
+            elif self.lines:
+                self.lines.pop()
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.dragging_point:
+                line_idx, point_idx = self.dragging_point
+                self.lines[line_idx][point_idx] = (x, y)
+            else:
+                self.hover_point = self.get_hover_point(x, y)
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.dragging_point = None
+    def redraw(self):
+        img = self.image.copy()
+        for idx, line in enumerate(self.lines):
+            color = self.get_color(idx)
+            point_size = 7 if idx == self.selected_line else 5
+            thickness = 3 if idx == self.selected_line else 2
+            for pt in line:
+                cv2.circle(img, pt, point_size, (0, 255, 0), -1)
+            if len(line) == 2:
+                cv2.line(img, line[0], line[1], color, thickness)
+                mid = ((line[0][0] + line[1][0]) // 2, (line[0][1] + line[1][1]) // 2)
+                cv2.putText(img, f"Line {idx + 1}", mid, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                if idx == self.selected_line:
+                    cv2.putText(img, "EDIT", (mid[0], mid[1] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+        for pt in self.current_line:
+            cv2.circle(img, pt, 5, (0, 255, 0), -1)
+        if len(self.current_line) == 2:
+            cv2.line(img, self.current_line[0], self.current_line[1], (255, 0, 0), 2)
+        if self.hover_point:
+            line_idx, pt_idx = self.hover_point
+            pt = self.lines[line_idx][pt_idx]
+            cv2.circle(img, pt, 8, (0, 255, 255), 2)
+        status = "Редактирование" if self.edit_mode else "Создание"
+        cv2.putText(img, f"Режим: {status}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.imshow(self.window_name, img)
+    def delete_selected_line(self):
+        if self.selected_line is not None and 0 <= self.selected_line < len(self.lines):
+            del self.lines[self.selected_line]
+            print(f"Удалена линия #{self.selected_line + 1}")
+            self.selected_line = None
+            self.edit_mode = False
+    def save_lines(self):
+        # Формируем путь и сохраняем в JSON
+        filename = os.path.join(self.save_dir, self.save_file)
+        data = {f"Line {i + 1}": line for i, line in enumerate(self.lines)}
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=2)
+        print(f"Сохранено {len(self.lines)} линий в файл: {filename}")
+    @staticmethod
+    def is_near(p1, p2, threshold=10):
+        return abs(p1[0] - p2[0]) < threshold and abs(p1[1] - p2[1]) < threshold
+    @staticmethod
+    def point_to_line_distance(p1, p2, p0):
+        x1, y1 = p1
+        x2, y2 = p2
+        x0, y0 = p0
+        num = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+        den = np.hypot(y2 - y1, x2 - x1)
+        return num / den if den else np.hypot(x0 - x1, y0 - y1)
+    def get_hover_point(self, x, y):
+        for i, line in enumerate(self.lines):
+            for j, pt in enumerate(line):
+                if self.is_near(pt, (x, y)):
+                    return i, j
+        return None
+    @staticmethod
+    def get_color(i):
+        hsv = np.uint8([[[i * 20 % 180, 255, 255]]])
+        bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)[0][0]
+        return int(bgr[0]), int(bgr[1]), int(bgr[2])
+if __name__ == "__main__":
+    # Указываем путь к изображению для разметки
+    image_path = "../../example/pushkin_aksakov/image/pattern_corrected_image.png"
+    dir_path = "../../example/pushkin_aksakov/vp/"
+    tool = LineAnnotationTool(image_path, dir_path, 'vp3.json')
+    tool.run()
+# ==== data_preparation.py ====
+import numpy as np
+import os
+import json
+from core.pointND import PointND
+def load_data(path):
+    lines = []
+    with open(path, 'r') as file:
+        for line in file:
+            name, cords = line.split(':')
+            points = eval(cords.strip())
+            lines.append([PointND([x, y]) for x, y in points])
+    return lines
+def prep_data_angle(data):
+    _data = []
+    if len(data) % 2 == 0:
+        for i in range(0, len(data), 2):
+            _data.append(data[i] + data[i + 1])
+        return np.array(_data)
+    else:
+        raise ValueError("Кол-во линий не четное число")
+def prep_data_parallel(data):
+    _data = []
+    for i in range(0, len(data) - 1):
+        _data.append(data[i] + data[i + 1])
+    return np.array(_data)
+def load_params(path):
+    with open(path, 'r') as file:
+        return [float(value) for value in file.readline().split()]
+def prep_data_back_to_reverse(camera, data):
+    data = np.array(data)
+    data_calc = []
+    for start, end in data:
+        start_3d = camera.back_crop(start)
+        end_3d = camera.back_crop(end)
+        data_calc.append([camera.direct_crop(start_3d), camera.direct_crop(end_3d)])
+    return np.array(data_calc)
+def fun_lines(x, start: PointND, end: PointND, orthogonal=False):
+    x1, y1 = start.get()
+    x2, y2 = end.get()
+    if not orthogonal:
+        return (x - x1) * (y2 - y1) / (x2 - x1) + y1
+    else:
+        m = (y2 - y1) / (x2 - x1)
+        return (-1 / m) * (x - x1) + y1
+def load_lines(filename):
+    if not os.path.exists(filename):
+        print("Файл аннотаций не найден.")
+        return
+    with open(filename, "r") as f:
+        data = json.load(f)
+    # Преобразуем строки ключей обратно в список линий
+    lines = [[tuple(point) for point in line] for line in data.values()]
+    return lines
+import json
+def load_lines_from_json(filepath: str):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    lines = []
+    for item in data:
+        gps_start = item['start']['gps']
+        gps_end = item['end']['gps']
+        pix_start = item['start']['pixel']
+        pix_end = item['end']['pixel']
+        line = {
+            'gps': [gps_start, gps_end],  # [[lat1, lon1], [lat2, lon2]]
+            'pixel': [pix_start, pix_end],  # [[x1, y1], [x2, y2]]
+        }
+        lines.append(line)
+    return lines
+# ==== gps_connection_world.py ====
+import numpy as np
+from pyproj import Geod
+def gps_to_enu(lat, lon, ref_lat, ref_lon):
+    """
+    Перевод GPS (широта, долгота) в локальные координаты ENU (в метрах)
+    """
+    geod = Geod(ellps="WGS84")
+    # Вычисляем расстояние и азимут до точки
+    azimuth, _, distance = geod.inv(ref_lon, ref_lat, lon, lat)
+    # Преобразуем в координаты ENU
+    east = distance * np.sin(np.deg2rad(azimuth))
+    north = distance * np.cos(np.deg2rad(azimuth))
+    return east, north
+def enu_to_gps(east, north, ref_lat, ref_lon):
+    """
+    Преобразует локальные координаты ENU (в метрах)
+    обратно в GPS-координаты (широта, долгота).
+    Parameters:
+    -----------
+    east : float
+        Смещение на восток (в метрах)
+    north : float
+        Смещение на север (в метрах)
+    ref_lat : float
+        Начальная широта (градусы)
+    ref_lon : float
+        Начальная долгота (градусы)
+    Returns:
+    --------
+    lat : float
+        Новая широта
+    lon : float
+        Новая долгота
+    """
+    geod = Geod(ellps="WGS84")
+    # Вычисляем азимут и расстояние
+    distance = np.hypot(east, north)
+    azimuth = np.rad2deg(np.arctan2(east, north))
+    # Прямая геодезическая задача
+    lon, lat, _ = geod.fwd(ref_lon, ref_lat, azimuth, distance)
+    return lat, lon
+# ==== poke_dots.py ====
+import cv2
+import numpy as np
+# Список для хранения координат точек
+points = []
+# Функция для захвата кликов по изображению
+def click_event(event, x, y, flags, param):
+    global points
+    # Если нажата левая кнопка мыши, сохраняем координаты точки
+    if event == cv2.EVENT_LBUTTONDOWN:
+        points.append((x, y))
+        # Рисуем точку на изображении
+        cv2.circle(image, (x, y), 5, (0, 0, 255), -1)
+        cv2.imshow("Image with Points", image)
+# Загрузка изображения
+image = cv2.imread('../../example/pushkin_aksakov/image/crossroads.jpg')  # Укажи путь к своему изображению
+image_copy = image.copy()
+# Отображаем изображение
+cv2.imshow("Image with Points", image)
+# Подключаем функцию для захвата кликов
+cv2.setMouseCallback("Image with Points", click_event)
+# Ждем, пока пользователь не нажмет клавишу 'q' для выхода
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+# Сохраняем координаты точек в файл (например, в формате CSV)
+with open("points.csv", "w") as f:
+    for point in points:
+        f.write(f"{point[0]},{point[1]}\n")
+# Выводим сохраненные точки
+print("Points saved to points.csv:")
+for point in points:
+    print(point)
+# ==== __init__.py ====
+# ==== base.py ====
+from abc import ABC, abstractmethod
+class Detector(ABC):
+    @abstractmethod
+    def run(self, **kwargs):
+        pass
+# ==== vanishing_point_estimator.py ====
+import numpy as np
+from .base import Detector
+class VanishingPointEstimatorManual(Detector):
+    def __init__(self):
+        pass
+    @staticmethod
+    def _normal_vector(x1, y1, x2, y2):
+        dx = x2 - x1
+        dy = y2 - y1
+        normal = np.array([-dy, dx]) / np.hypot(dx, dy)
+        return normal
+    def estimate(self, lines):
+        A = []
+        b = []
+        for (x1, y1), (x2, y2) in lines:
+            n = self._normal_vector(x1, y1, x2, y2)
+            A.append(n)
+            b.append(np.dot(n, [x1, y1]))
+        A = np.array(A)
+        b = np.array(b)
+        vp = np.linalg.lstsq(A, b, rcond=None)[0]
+        return vp
