@@ -2,35 +2,11 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-
-
-def linear_interpolation(x, line):
-    (x1, y1), (x2, y2) = line
-    if x1 <= x <= x2 or x2 <= x <= x1:
-        m = (y2 - y1) / (x2 - x1)
-        b = y1 - m * x1
-        y = m * x + b
-        return y
-    else:
-        raise ValueError("x is out of bounds of the line segment")
+from core import Camera
 
 
 def undistort_image(image, K, dist_coeffs):
     return cv2.undistort(image, K, dist_coeffs)
-
-
-def set_params(params):
-    """
-    fx, fy, cx, cy, k1, k2, p1, p2, k3 = params
-    """
-    if len(params) == 9:
-        optimized_K = np.array([[params[0], 0, params[2]],
-                                [0, params[1], params[3]],
-                                [0, 0, 1]], dtype=np.float32)
-        optimized_dist_coeffs = np.array([params[4], params[5], params[6], params[7], params[8]], dtype=np.float32)
-        return optimized_K, optimized_dist_coeffs
-    else:
-        raise ValueError("Длина вектора параметров не равняется 9")
 
 
 def undistort_point(point, K, dist_coeffs):
@@ -45,75 +21,79 @@ def undistort_point(point, K, dist_coeffs):
     return pixel_coords[:2]  # Возвращаем только пиксельные координаты
 
 
-def distortion_error(params, x_vals, y_vals, line):
-    optimized_K, optimized_dist_coeffs = set_params(params)
+def curve_residuals(curves_undistorted):
+    """
+    Вычисляет ошибку прямолинейности для каждой кривой (сумма расстояний до наилучшей прямой).
+    """
+    total_error = 0
+    for curve in curves_undistorted:
+        if len(curve) < 2:
+            continue
+        curve = np.array(curve)
 
-    undistorted_points = []
-    for x, y in zip(x_vals, y_vals):
-        undistorted_point = undistort_point([x, y], optimized_K, optimized_dist_coeffs)
-        undistorted_points.append(undistorted_point)
-
-    error = []
-    for undistorted_point, x in zip(undistorted_points, x_vals):
-        predicted_y = linear_interpolation(x, line)  # Линейная интерполяция для синих точек
-        error.append((undistorted_point[1] - predicted_y) ** 2)  # Ошибка по оси Y
-
-    return np.sum(error) / len(error)
-
-
-def target_error(params, data):
-    error = 0
-    for x_vals, y_vals, line in data:
-        error = distortion_error(params, x_vals, y_vals, line) + error
-    return error
+        # Подгоняем прямую через полиномиальную регрессию 1-й степени
+        fit = np.polyfit(curve[:, 0], curve[:, 1], 1)
+        y_fit = np.polyval(fit, curve[:, 0])
+        error = np.mean((curve[:, 1] - y_fit) ** 2)
+        total_error += error
+    return total_error
 
 
-# Данные для синих и красных линий
-line1 = [(2, 822), (1916, 302)]  # Синие линии
-line2 = [(1077, 344), (1390, 671)]  # Красные линии
+def objective(k, curves):
+    """
+    k — это массив [k1], параметр радиальной дисторсии
+    """
+    dist_coeffs = np.array([k[1], k[2], 0, 0, 0], dtype=np.float32)  # только k1
+    K = np.array([
+        [k[0], 0, 960],
+        [0, k[0], 540],
+        [0, 0, 1]
+    ], dtype=np.float32)
+    undistorted_curves = []
 
-image = cv2.imread('screenshot_1747025981351.png')
-size = list(image.shape[:2])
-image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    for curve in curves:
+        undist = []
+        for pt in curve:
+            new_pt = undistort_point(pt, K, dist_coeffs)
+            undist.append(new_pt)
+        undistorted_curves.append(undist)
 
-# # Интерполяция для синих и красных линий
-# x_line1 = np.linspace(line1[0][0], line1[1][0], 100)
-# y_line1 = [linear_interpolation(x, line1) for x in x_line1]
-# x_line2 = np.linspace(line2[0][0], line2[1][0], 100)
-# y_line2 = [linear_interpolation(x, line2) for x in x_line2]
-#
-# # Подготовка к оптимизации
-# points = np.loadtxt('points_line1.csv', delimiter=',')
-# x = points[:, 0]
-# y = points[:, 1]
-#
-# degree = 4
-# coefficients = np.polyfit(x, y, degree)
-# poly = np.poly1d(coefficients)
-# y_fit_line1 = poly(x_line1)
-#
-# points = np.loadtxt('points_line2.csv', delimiter=',')
-# x = points[:, 0]
-# y = points[:, 1]
-#
-# coefficients = np.polyfit(x, y, degree)
-# poly = np.poly1d(coefficients)
-# y_fit_line2 = poly(x_line2)
-#
-# # Минимизация ошибки с помощью least_squares
-# initial_params = [1419, 1419, size[1] / 2, size[0] / 2, -0.1, 0.1, 0, 0, 0]  # Начальные коэффициенты для оптимизации
-# print(f'Начальные параметры:\n{initial_params}')
-# data = [
-#     (x_line1, y_fit_line1, line1),
-#     (x_line2, y_fit_line2, line2)
-# ]
-# result = minimize(target_error, initial_params, args=(data), method='Nelder-Mead')
-# print(result)
-# print(f'Конечные параметры:\n{result.x}')
+    return curve_residuals(undistorted_curves)
 
-optimized_K, optimized_dist_coeffs = set_params([1400, 1400, size[1] / 2, size[0] / 2, -0.43, 0, 0, 0, 0])
-image_optim = undistort_image(image_rgb, optimized_K, optimized_dist_coeffs)
-scaled = cv2.resize(image_optim, None, fx=0.5, fy=0.5)
-cv2.imshow("Undistorted Image", scaled)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+
+from scipy.optimize import minimize
+
+# Загрузка
+curves = np.load("clicked_curves.npy", allow_pickle=True)
+
+# Оптимизация
+result = minimize(
+    fun=objective,
+    x0=np.array([1200, 0.0, 0.0]),  # начальное значение k1
+    args=(curves,),
+    method="Powell",  # работает лучше без градиентов
+    bounds=[(800, 2000), (-1.0, 1.0), (-1.0, 1.0)]
+)
+
+f_opt, k1_opt, k2_opt = result.x
+print(f"📷 Оптимизированное фокусное расстояние f = {f_opt:.2f}")
+print(f"🔧 Оптимизированное значение k1 = {k1_opt:.6f}")
+print(f"🔧 Оптимизированное значение k2 = {k2_opt:.6f}")
+
+camera = Camera("../../example/pushkin_aksakov/image/crossroads.jpg")
+camera.intrinsics.set_focal_length(f_opt)
+K = camera.intrinsics.get()
+
+image = undistort_image(camera.get_image(), K, np.array([k1_opt, k2_opt, 0, 0, 0], dtype=np.float32))
+
+import matplotlib.pyplot as plt
+
+# Получаем выпрямленное изображение
+image = undistort_image(
+    camera.get_image(),
+    K,
+    np.array([k1_opt, k2_opt, 0, 0, 0], dtype=np.float32)
+)
+
+image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+cv2.imwrite("../../example/pushkin_aksakov/image/undistort_opencv.png", image_bgr)

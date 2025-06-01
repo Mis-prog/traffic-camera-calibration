@@ -35,14 +35,14 @@ data = {
 }
 
 resualds_blocks = [
-    lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=3.5),
+    lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=4),
     lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=4),
 ]
 
 refiner_first = RefineOptimizer(camera=camera,
                                     residual_blocks=resualds_blocks,
                                     mask=[0, 6],
-                                    bounds=([800, 5], [2000, 30]),
+                                    bounds=([700, 1], [2000, 30]),
                                     debug_save_path='image/',
                                     )
 
