@@ -31,16 +31,25 @@ py::array_t<float> hough_transform_with_orientation(
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
+            int window = 3;  // сколько шагов вокруг ориентации
             if (buf_edges(y, x)) {
-                float theta = buf_orient(y, x);
-                for (int t = 0; t < num_thetas; t++) {
+                float ori_rad = buf_orient(y, x);
+                float ori_deg = ori_rad * 180.0f / M_PI;
+                int t_center = static_cast<int>(ori_deg / angle_resolution_deg);
+
+                for (int dt = -window; dt <= window; dt++) {
+                    int t = t_center + dt;
+                    if (t < 0 || t >= num_thetas) continue;
+
                     double angle = t * angle_resolution_deg * deg2rad;
                     double rho = x * std::cos(angle) + y * std::sin(angle);
                     int r_idx = static_cast<int>((rho + diag_len) / rho_resolution);
+
                     if (r_idx >= 0 && r_idx < num_rhos)
                         acc(r_idx, t) += 1.0f;
                 }
             }
+
         }
     }
 

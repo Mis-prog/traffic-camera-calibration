@@ -7,7 +7,7 @@ from PIL import Image
 from io import BytesIO
 
 from core import Camera, PointND
-from utils import enu_to_gps
+from calibration.utils import enu_to_gps
 
 
 def visualize_grid_debug(
@@ -28,6 +28,7 @@ def visualize_grid_debug(
     ax.set_ylim(height, 0)
     plt.imshow(image)
 
+    plt.scatter(*point_start.get(),c='red')
     anchor_3D = camera.project_back(point_start, plane_z=plane_z)
     anchor_x, anchor_y, anchor_z = anchor_3D.get()
 

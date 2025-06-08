@@ -6,7 +6,9 @@ from core import Camera
 
 
 def undistort_image(image, K, dist_coeffs):
-    return cv2.undistort(image, K, dist_coeffs)
+    h, w = image.shape[:2]
+    new_K, _ = cv2.getOptimalNewCameraMatrix(K, dist_coeffs, (w, h), alpha=1.0)
+    return cv2.undistort(image, K, dist_coeffs, None, K)
 
 
 def undistort_point(point, K, dist_coeffs):
@@ -89,11 +91,11 @@ image = undistort_image(camera.get_image(), K, np.array([k1_opt, k2_opt, 0, 0, 0
 import matplotlib.pyplot as plt
 
 # Получаем выпрямленное изображение
-image = undistort_image(
-    camera.get_image(),
-    K,
-    np.array([k1_opt, k2_opt, 0, 0, 0], dtype=np.float32)
-)
-
-image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-cv2.imwrite("../../example/pushkin_aksakov/image/undistort_opencv.png", image_bgr)
+# image = undistort_image(
+#     camera.get_image(),
+#     K,
+#     np.array([k1_opt, k2_opt, 0, 0, 0], dtype=np.float32)
+# )
+#
+# image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+# cv2.imwrite("../../example/pushkin_aksakov/image/undistort_opencv.png", image_bgr)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import hashlib
-
+import numpy as np
 
 def visualize_source(data: dict, image=None):
     """
@@ -38,3 +38,4 @@ def get_color_by_key(key):
     cmap = cm.get_cmap('tab10')
     hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16)
     return cmap(hash_val % 10)
+

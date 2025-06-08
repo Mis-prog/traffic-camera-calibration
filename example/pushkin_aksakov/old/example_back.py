@@ -1,5 +1,5 @@
 from core.camera_model import Camera
-from source.utils.data_preparation import load_data, prep_data_parallel
+from calibration.utils.data_preparation import load_data, prep_data_parallel
 from calibration.refine.back.back_optimization import BackProjectionOptimizer
 
 import numpy as np

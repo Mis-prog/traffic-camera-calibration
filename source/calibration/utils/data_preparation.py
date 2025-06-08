@@ -91,3 +91,18 @@ def load_lines_from_json(filepath: str):
         lines.append(line)
 
     return lines
+
+def extract_direction_vectors_from_lines(lines):
+    """
+    Преобразует список линий, заданных парами точек [(x1, y1), (x2, y2)],
+    в нормированные направляющие векторы [dx, dy].
+    """
+    direction_vectors = []
+    for (x1, y1), (x2, y2) in lines:
+        dx = x2 - x1
+        dy = y2 - y1
+        direction = np.array([dx, dy], dtype=np.float64)
+        norm = np.linalg.norm(direction)
+        if norm > 1e-6:  # проверка на нулевую длину
+            direction_vectors.append(direction / norm)
+    return direction_vectors

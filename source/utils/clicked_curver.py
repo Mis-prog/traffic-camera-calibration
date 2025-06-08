@@ -97,7 +97,7 @@ while True:
     if key == 27:
         break
     elif key == ord("s"):
-        np.save("clicked_curves.npy", np.array(curves, dtype=object))
+        np.save("../distortion/clicked_curves.npy", np.array(curves, dtype=object))
         print("Сохранено в 'clicked_curves.npy'")
     elif key == ord("c"):
         curves.clear()
