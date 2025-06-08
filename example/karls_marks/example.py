@@ -25,19 +25,20 @@ vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
 vp_init.set_vanishing_points(vpX=vps_manual[0], vpZ=vps_manual[1])
 
 from utils import AnnotationParser
+
 annotation_parser = AnnotationParser("marked/data_full.json")
 
 data = {
-    "pedestrian crossing": annotation_parser.get_points_by_class("pedestrian crossing"),
-    "pedestrian crossing 2": annotation_parser.get_points_by_class("pedestrian crossing 2"),
-    "pedestrian crossing 3": annotation_parser.get_points_by_class("pedestrian crossing 3"),
-    "distance between line": annotation_parser.get_points_by_class("distance between line"),
+    "pedestrian crossing": annotation_parser.get_lines_by_class("pedestrian crossing"),
+    "pedestrian crossing 2": annotation_parser.get_lines_by_class("pedestrian crossing 2"),
+    "pedestrian crossing 3": annotation_parser.get_lines_by_class("pedestrian crossing 3"),
+    "distance between line": annotation_parser.get_lines_by_class("distance between line"),
 }
 
 resualds_blocks_first = [
     lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=4),
     lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=4),
-    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=4),
+    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=4),
     lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3.5),
 ]
 
@@ -45,7 +46,7 @@ refiner_first = RefineOptimizer(camera=camera,
                                 residual_blocks=resualds_blocks_first,
                                 mask=[0, 6],
                                 bounds=([800, 5], [2000, 30]),
-                                debug_save_path='image/',
+                                # debug_save_path='image/',
                                 )
 
 pipeline = CalibrationPipeline([vp_init, refiner_first])
@@ -148,43 +149,62 @@ camera = pipeline.run(camera, data)
 # from calibration.debug import visualize_vps_debug
 # visualize_vps_debug(camera, show=True)
 
-v_scene_all = camera.project_back(PointND([1228, 982], add_weight=True)).get()[:2]
+v_scene_all = camera.project_back(PointND([492, 769], add_weight=True)).get()[:2]
+print(v_scene_all)
 v_scene = v_scene_all / np.linalg.norm(v_scene_all)
 
 from calibration.utils import gps_to_enu, enu_to_gps
 
-lat0, lon0 = 54.725380, 55.941035
-lat1, lon1 = 54.725398, 55.940914
-v_enu = gps_to_enu(lat1, lon1, lat0, lon0)
-v_enu = v_enu / np.linalg.norm(v_enu)
+lat0, lon0 = 54.725377, 55.941040
+lat1, lon1 = 54.725211, 55.940847
+v_enu_all = gps_to_enu(lat1, lon1, lat0, lon0)
+v_enu = v_enu_all / np.linalg.norm(v_enu_all)
 
 cos_theta = np.dot(v_scene, v_enu)
 sin_theta = v_scene[0] * v_enu[1] - v_scene[1] * v_enu[0]
 
 theta = np.arctan2(sin_theta, cos_theta)
-
 R = np.array([
     [np.cos(theta), -np.sin(theta)],
     [np.sin(theta), np.cos(theta)]
 ])
 print(enu_to_gps(*R @ v_scene_all, lat0, lon0))
 
-# point_enu = []
-# for point in point_test_gps:
-#     _point_world = camera.project_back(PointND(point, add_weight=True)).get()[:2]
-#     _point_enu = enu_to_gps(*R @ _point_world, lat0, lon0)
-#     point_enu.append(_point_enu)
-#
-# point_enu.append((lat0, lon0))
-#
-#
-# def generate_yandex_maps_url(points):
-#     base_url = "https://yandex.ru/maps/?pt="
-#     coords = ["{:.6f},{:.6f}".format(lon, lat) for lat, lon in points]
-#     return base_url + "~".join(coords)
-#
-#
-# # Пример использования:
-# url = generate_yandex_maps_url(point_enu)
-# print("Ссылка для просмотра в Яндекс.Картах:")
-# print(url)
+point_test_gps = annotation_parser.get_points_by_class("gps_test")
+point_gps = []
+for point in point_test_gps:
+    _point_world = camera.project_back(PointND(point, add_weight=True)).get()[:2]
+    _point_enu = enu_to_gps(*R @ _point_world, lat0, lon0)
+    point_gps.append(_point_enu)
+
+
+def generate_yandex_maps_url(points):
+    base_url = "https://yandex.ru/maps/?pt="
+    coords = ["{:.6f},{:.6f}".format(lon, lat) for lat, lon in points]
+    return base_url + "~".join(coords)
+
+url = generate_yandex_maps_url(point_gps)
+print("Ссылка для просмотра в Яндекс.Картах:")
+print(url)
+
+point_gps_ideal = [(54.725194, 55.940845),
+                   (54.725242, 55.940414),
+                   (54.725295, 55.940380),
+                   (54.725469, 55.940450)]
+
+
+
+error = []
+for _point_gps, _point_gps_ideal in zip(point_gps, point_gps_ideal):
+    # print(_point_gps, _point_gps_ideal)
+    _point_enu = np.array(gps_to_enu(*_point_gps, lat0, lon0))
+    _point_enu_ideal = np.array(gps_to_enu(*_point_gps_ideal, lat0, lon0))
+    dist = np.linalg.norm(_point_enu_ideal - _point_enu)
+    error.append(dist)
+
+print(f"📊 Статистика ошибок (в метрах):")
+print(f"  ▸ Средняя ошибка:      {np.mean(error):.2f} м")
+print(f"  ▸ Стандартное отклонение: {np.std(error):.2f} м")
+print(f"  ▸ Минимальная ошибка:  {np.min(error):.2f} м")
+print(f"  ▸ Максимальная ошибка: {np.max(error):.2f} м")
+print(f"  ▸ Медианная ошибка:    {np.median(error):.2f} м")

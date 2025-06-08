@@ -4,35 +4,35 @@ from collections import defaultdict
 class AnnotationParser:
     def __init__(self, filepath):
         self.filepath = filepath
-        self.annotations = {"lines": {}, "points": {}}
+        self.annotations = {"line": {}, "point": {}}
         self._load()
 
     def _load(self):
         with open(self.filepath, "r", encoding="utf-8") as f:
             self.annotations = json.load(f)
             # Убедимся, что оба типа присутствуют
-            self.annotations.setdefault("lines", {})
-            self.annotations.setdefault("points", {})
+            self.annotations.setdefault("line", {})
+            self.annotations.setdefault("point", {})
 
     def get_all_classes(self):
         classes = set(self.annotations["lines"].keys()) | set(self.annotations["points"].keys())
         return sorted(classes)
 
     def get_points_by_class(self, class_name):
-        return self.annotations["points"].get(class_name, [])
+        return self.annotations["point"].get(class_name, [])
 
     def get_lines_by_class(self, class_name):
-        return self.annotations["lines"].get(class_name, [])
+        return self.annotations["line"].get(class_name, [])
 
     def get_all_points(self):
         all_points = []
-        for cls, pts in self.annotations["points"].items():
+        for cls, pts in self.annotations["point"].items():
             all_points.extend(pts)
         return all_points
 
     def get_all_lines(self):
         all_lines = []
-        for cls, lines in self.annotations["lines"].items():
+        for cls, lines in self.annotations["line"].items():
             all_lines.extend(lines)
         return all_lines
 
@@ -40,8 +40,8 @@ class AnnotationParser:
         stats = {}
         for cls in self.get_all_classes():
             stats[cls] = {
-                "points": len(self.get_points_by_class(cls)),
-                "lines": len(self.get_lines_by_class(cls))
+                "point": len(self.get_points_by_class(cls)),
+                "line": len(self.get_lines_by_class(cls))
             }
         return stats
 
