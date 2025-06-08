@@ -1,5 +1,7 @@
-from .data_markup_tool import LineAnnotationTool
+from .data_markup_tool import AnnotationTool
+from .annotation_parser import AnnotationParser
 
 __all__ = [
-    "LineAnnotationTool",
+    "AnnotationTool",
+    "AnnotationParser",
 ]
