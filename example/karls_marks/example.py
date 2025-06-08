@@ -9,10 +9,10 @@ from calibration.debug import load_scene_gps, visualize_source
 
 from vp_detection import VanishingPointEstimatorManual
 
-# Разметка данных
+# # Разметка данных
 # from utils.data_markup_tool import LineAnnotationTool
 #
-# line_tool = LineAnnotationTool("image/pattern_corrected_image.png","marked","dist_ between_line_4.json")
+# line_tool = LineAnnotationTool("image/pattern_corrected_image.png","marked","horizontal_lines_all.json")
 # line_tool.run()
 
 import numpy as np
@@ -66,7 +66,7 @@ refiner_first = RefineOptimizer(camera=camera,
                                 residual_blocks=resualds_blocks_first,
                                 mask=[0, 6],
                                 bounds=([800, 5], [2000, 30]),
-                                # debug_save_path='image/',
+                                debug_save_path='image/',
                                 )
 
 resualds_blocks_second = [
@@ -80,10 +80,10 @@ refiner_second = RefineOptimizer(camera=camera,
 pipeline = CalibrationPipeline([vp_init, refiner_first])
 camera = pipeline.run(camera, data)
 
-
 from scipy.spatial.transform import Rotation as R
 from scipy.optimize import minimize
 import numpy as np
+
 
 # === LOSS-компоненты ===
 
@@ -103,6 +103,7 @@ def loss_vertical_alignment(omega, R0, K, lines_img):
         loss += 1 - cos_theta ** 2
     return loss
 
+
 def loss_planar_alignment(omega, R0, K, planar_lines_img):
     delta_R = R.from_rotvec(omega).as_matrix()
     R_corr = delta_R @ R0
@@ -119,6 +120,7 @@ def loss_planar_alignment(omega, R0, K, planar_lines_img):
         total_loss += z_component ** 2
     return total_loss
 
+
 # === Общий функционал ===
 
 def total_loss(omega, R0, K, verticals=None, planar_lines=None, weights=(1.0, 1.0, 10.0)):
@@ -133,6 +135,7 @@ def total_loss(omega, R0, K, verticals=None, planar_lines=None, weights=(1.0, 1.
     loss += lambda_reg * np.sum(omega ** 2)
     return loss
 
+
 # === Данные ===
 K = camera.intrinsics.get()
 params = camera.get_params()
@@ -141,17 +144,23 @@ angles = params[1:4]
 R0 = R.from_euler('zyx', angles, degrees=True).as_matrix()
 
 lines_vertical = extract_direction_vectors_from_lines(load_lines('marked/vertical_lines.json'))
-lines_horison = extract_direction_vectors_from_lines(load_lines('marked/horizontal_lines.json'))
+lines_horison = extract_direction_vectors_from_lines(load_lines('marked/horizontal_lines_all.json'))
 
-initial_omega = np.zeros(3)
+def scaled_loss(scaled_omega, *args):
+    scale = 0.01
+    omega = scaled_omega * scale
+    return total_loss(omega, *args)
+
 res = minimize(
-    total_loss,
-    initial_omega,
-    args=(R0, K, lines_vertical, lines_horison, (0.5, 1.0, 10.0)),
+    scaled_loss,
+    np.zeros(3),
+    args=(R0, K, lines_vertical, lines_horison, (1, 1, 100)),
     method='BFGS'
 )
 
-omega_opt = res.x
+omega_opt = res.x * 0.01
+
+
 R_opt = R.from_rotvec(omega_opt).as_matrix() @ R0
 euler_opt = R.from_matrix(R_opt).as_euler('zyx', degrees=True)
 
