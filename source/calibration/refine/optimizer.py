@@ -1,6 +1,6 @@
 import numpy as np
 from pandas.core.methods.selectn import SelectNSeries
-from scipy.optimize import least_squares
+from scipy.optimize import least_squares, minimize
 
 from calibration.base import Calibration
 from core.camera import Camera
@@ -46,6 +46,11 @@ class RefineOptimizer(Calibration):
             current_params[self.mask] = masked_params
             return self.compute_total_residuals(self.camera, data, current_params, self.residual_blocks)
 
+        def loss_fn_mse(masked_params):
+            current_params = full_params.copy()
+            current_params[self.mask] = masked_params
+            return self.compute_total_mse(self.camera, data, current_params, self.residual_blocks)
+
         if self.method == "lm":
             result = self.solver(loss_fn,
                                  x0,
@@ -53,7 +58,7 @@ class RefineOptimizer(Calibration):
                                  verbose=2,
                                  max_nfev=10000
                                  )
-        else:
+        elif self.method == "trf":
             result = self.solver(loss_fn,
                                  x0,
                                  method=self.method,
@@ -64,11 +69,18 @@ class RefineOptimizer(Calibration):
                                  xtol=1e-8,
                                  ftol=1e-8
                                  )
+        elif self.method == "minimize":
+            result = minimize(
+                fun=loss_fn_mse,
+                x0=x0,
+                bounds=self.bounds,
+                method='Powell'
+            )
 
         print("-" * 50)
         print(f"✅ Оптимизация завершена")
         print(f"🔁 Итераций: {result.nfev}")
-        print(f"🎯 Финальная ошибка (cost): {result.cost:.6f}")
+        print(f"🎯 Финальная ошибка (cost): {result.fun:.6f}")
         print("📍 Обновлённые параметры:", np.round(result.x, 2).tolist())
         full_params[self.mask] = result.x
 
@@ -77,7 +89,8 @@ class RefineOptimizer(Calibration):
         if self.debug_save_path is not None:
             from calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png",grid_range=10)
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png", grid_range=10,
+                                 grid_step=2)
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:
                 pass

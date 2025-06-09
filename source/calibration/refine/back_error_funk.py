@@ -71,12 +71,27 @@ def residual_parallel_group(camera, data, group, plane_z=0):
 
     return residuals
 
+def compute_line_length(camera: Camera, line, plane_z=0):
+    """
+    Возвращает длину линии в 3D, восстановленной из двух концов.
+    """
+    P1 = camera.project_back(PointND(line[0]), plane_z).get()
+    P2 = camera.project_back(PointND(line[1]), plane_z).get()
+    return np.linalg.norm(P2 - P1)
 
-def residual_vertical_lines_directional(camera, data, group):
+
+def residual_line_length(camera, data, group, expected):
+    """
+    Возвращает список остатков (residuals), включающий:
+    - отклонения расстояний между линиями от expected_spacing
+    - отклонения длин линий от expected_length
+    """
     residuals = []
-
     lines = data.get(group, [])
-    for p1, p2 in lines:
-        X1 = camera.project_back(PointND(p1), 0).get()
-        X2 = camera.project_back(PointND(p2), 1).get()
 
+    # Длины самих линий
+    for line in lines:
+        L = compute_line_length(camera, line,0)
+        residuals.append(L - expected)
+
+    return residuals

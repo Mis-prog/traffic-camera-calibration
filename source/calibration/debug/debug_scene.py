@@ -83,7 +83,7 @@ def visualize_grid_debug(
 
     if save_path is not None:
         plt.savefig(save_path)
-    plt.show()
+    # plt.show()
 
 
 def set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z):

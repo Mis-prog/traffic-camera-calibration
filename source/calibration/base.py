@@ -22,3 +22,13 @@ class Calibration(ABC):
             residuals.extend(res)
 
         return np.array(residuals)
+
+    def compute_total_mse(self, camera, data, params, residual_blocks):
+        camera.set_params_from_list(params)
+        residuals = []
+
+        for block in residual_blocks:
+            res = block(camera, data)
+            residuals.extend(res)
+
+        return np.mean(np.square(residuals))

@@ -180,7 +180,7 @@ class AnnotationTool(QMainWindow):
                         pen = QPen(QColor("yellow") if self.hover == (kind, cls, i, 0) else color, 4)
                         painter.setPen(pen)
                         painter.drawEllipse(QPoint(x, y), 5, 5)
-                        painter.drawText(x + 6, y + 6, cls)
+                        painter.drawText(x + 8, y - 8, cls)
                     elif kind == "line":
                         for j, (px, py) in enumerate(item):
                             sx, sy = int(px * self.display_scale), int(py * self.display_scale)
@@ -191,6 +191,12 @@ class AnnotationTool(QMainWindow):
                         sx2, sy2 = int(item[1][0] * self.display_scale), int(item[1][1] * self.display_scale)
                         painter.setPen(QPen(color, 2))
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
+
+                        # Центр линии и подпись класса
+                        mx = int((item[0][0] + item[1][0]) / 2 * self.display_scale)
+                        my = int((item[0][1] + item[1][1]) / 2 * self.display_scale)
+                        painter.setPen(QPen(color, 1))
+                        painter.drawText(mx + 6, my - 6, cls)
 
         if len(self.current_line) == 1:
             cx, cy = [int(p * self.display_scale) for p in self.current_line[0]]
@@ -214,6 +220,14 @@ class AnnotationTool(QMainWindow):
         with open(path, "r") as f:
             self.annotations = json.load(f)
         self.update_display()
+
+        self.class_selector.clear()
+        known_classes = set()
+        for kind in ["point", "line"]:
+            for cls in self.annotations.get(kind, {}).keys():
+                known_classes.add(cls)
+        for cls in sorted(known_classes):
+            self.class_selector.addItem(cls)
 
     def add_class(self):
         cls = self.class_selector.currentText().strip()
