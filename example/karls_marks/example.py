@@ -15,7 +15,6 @@ from source.vp_detection import VanishingPointEstimatorManual
 from source.calibration.utils import gps_to_enu, enu_to_gps
 from source.utils import AnnotationParser
 
-
 # Точки схода
 # Фокусное расстояние и ориентация
 annotation_parser = AnnotationParser("data/data_full.json")
@@ -34,13 +33,12 @@ vp_init = VanishingPointCalibration(camera, debug_save_path='data/vp.png')
 vp_init.set_vanishing_points(vpX=vps_manual[0], vpZ=vps_manual[1])
 
 
-def back_refine():
+def back_refine(camera):
     """
     Результататы для перекрестка
     [781.26, -13.46, 48.12, -164.54, 0.0, 0.0, 17.26]
     """
-    global annotation_parser, data, camera
-    from source.utils import AnnotationParser
+    global annotation_parser
 
     data = {
         "pedestrian crossing": annotation_parser.get_lines_by_class("pedestrian crossing"),
@@ -55,16 +53,42 @@ def back_refine():
         lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3),
         lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=23),
     ]
-    refiner_first = RefineOptimizer(camera=camera,
-                                    residual_blocks=resualds_blocks_first,
-                                    mask=[0, 6],
-                                    bounds=([700, 2000], [5, 30]),
-                                    debug_save_path='data/',
-                                    method="minimize",
-                                    )
+    refiner_first = RefineOptimizer(
+        camera=camera,
+        residual_blocks=resualds_blocks_first,
+        mask=[0, 6],
+        bounds=([700, 2000], [5, 30]),
+        debug_save_path='data/',
+        method="minimize",
+    )
     pipeline = CalibrationPipeline([vp_init, refiner_first])
     camera = pipeline.run(camera, data)
 
-# back_refine()
+    return camera
+
+# camera = back_refine() # Проверка кода
 
 
+def direct_refine(camera):
+    """
+    Результаты для перекрестка
+
+    """
+    data = {
+        "point_to_point": None,
+        "line_to_line": None,
+    }
+
+    residual_blocks_first = [
+
+    ]
+
+    refiner_first = RefineOptimizer(
+        camera=camera,
+        residual_blocks=residual_blocks_first,
+
+    )
+
+    return camera
+
+camera = direct_refine(camera)

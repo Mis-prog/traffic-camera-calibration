@@ -310,6 +310,23 @@ class AnnotationTool(QMainWindow):
             return
         with open(path, "r") as f:
             self.annotations = json.load(f)
+
+        # Гарантировать структуру
+        for key in ["point", "line", "curve"]:
+            if key not in self.annotations:
+                self.annotations[key] = {}
+
+        # Очистить пустые/битые кривые
+        for cls in list(self.annotations["curve"].keys()):
+            valid = [
+                c for c in self.annotations["curve"][cls]
+                if isinstance(c, list) and len(c) >= 2 and all(isinstance(pt, list) and len(pt) == 2 for pt in c)
+            ]
+            if valid:
+                self.annotations["curve"][cls] = valid
+            else:
+                del self.annotations["curve"][cls]
+
         self.update_display()
 
         self.class_selector.clear()
