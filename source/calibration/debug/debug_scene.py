@@ -6,8 +6,8 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-from core import Camera, PointND
-from calibration.utils import enu_to_gps
+from ...core import Camera, PointND
+from ..utils import enu_to_gps
 
 
 def visualize_grid_debug(

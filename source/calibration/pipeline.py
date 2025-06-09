@@ -1,5 +1,5 @@
-from core.camera import Camera
-from calibration.base import Calibration
+from ..core.camera import Camera
+from .base import Calibration
 
 
 class CalibrationPipeline:

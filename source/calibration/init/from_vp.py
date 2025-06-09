@@ -1,5 +1,5 @@
 import numpy as np
-from calibration.base import Calibration
+from ..base import Calibration
 from source.core import Camera, PointND
 
 
@@ -152,7 +152,7 @@ class VanishingPointCalibration(Calibration):
         print("✅ [VP Init] Инициализация завершена")
 
         if self.debug_save_path is not None:
-            from calibration.debug import visualize_vps_debug
+            from source.calibration.debug import visualize_vps_debug
             print(f"💾 Сохраняю визуализацию в: {self.debug_save_path}")
             visualize_vps_debug(self.camera, save_path=self.debug_save_path)
 

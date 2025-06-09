@@ -2,9 +2,9 @@ import numpy as np
 from pandas.core.methods.selectn import SelectNSeries
 from scipy.optimize import least_squares, minimize
 
-from calibration.base import Calibration
-from core.camera import Camera
-from core.pointND import PointND
+from ..base import Calibration
+from ...core.camera import Camera
+from ...core.pointND import PointND
 
 
 class RefineOptimizer(Calibration):
@@ -87,7 +87,7 @@ class RefineOptimizer(Calibration):
         self.camera.set_params_from_list(full_params)
 
         if self.debug_save_path is not None:
-            from calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
+            from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
             visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path + "grid.png", grid_range=10,
                                  grid_step=2)

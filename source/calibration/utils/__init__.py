@@ -1,6 +1,6 @@
-from calibration.utils.data_preparation import load_lines, load_lines_from_json, \
+from  .data_preparation import load_lines, load_lines_from_json, \
     extract_direction_vectors_from_lines
-from calibration.utils.gps_connection_world import gps_to_enu, enu_to_gps
+from .gps_connection_world import gps_to_enu, enu_to_gps
 from .plot_lines import draw_lines_on_image
 
 __all__ = [

@@ -1,3 +1,4 @@
 runs/
 .ipynb_checkpoints/
 yolov8n.pt
+__pycache__/

@@ -1,7 +1,7 @@
 import numpy as np
 
-from core import Camera, PointND
-from calibration.utils import gps_to_enu
+from ...core import Camera, PointND
+from ...calibration.utils import gps_to_enu
 
 
 def residual_reprojection_line(camera, data, group, gps_origin):

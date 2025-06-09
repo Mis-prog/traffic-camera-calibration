@@ -1,12 +1,18 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+
 import matplotlib.pyplot as plt
 
 from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer, PointND
 from source.calibration.utils import load_lines, load_lines_from_json, extract_direction_vectors_from_lines
-from calibration.refine import residual_interline_distance, residual_line_length
-from calibration.debug import load_scene_gps, visualize_source
+from source.calibration.refine import residual_interline_distance, residual_line_length
+from source.calibration.debug import load_scene_gps, visualize_source
 
-from vp_detection import VanishingPointEstimatorManual
+from source.vp_detection import VanishingPointEstimatorManual
 
 import numpy as np
 
@@ -23,7 +29,7 @@ camera = Camera('image/pattern_corrected_image.png')
 vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
 vp_init.set_vanishing_points(vpX=vps_manual[0], vpZ=vps_manual[1])
 
-from utils import AnnotationParser
+from source.utils import AnnotationParser
 
 annotation_parser = AnnotationParser("marked/data_full.json")
 
@@ -35,11 +41,11 @@ data = {
 }
 
 resualds_blocks_first = [
-    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=4.2),
-    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=4.2),
-    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=4.2),
-    lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3.5),
-    lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=24)
+    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=4),
+    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=4),
+    lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=4),
+    lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3),
+    lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=23),
 ]
 
 refiner_first = RefineOptimizer(camera=camera,
@@ -144,7 +150,7 @@ camera.extrinsics.set_rotation(euler_opt)
 
 print(*camera.get_params())
 
-from calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
+from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
 
 point_start = PointND(camera.intrinsics.get_main_point(), add_weight=True)
 visualize_grid_debug(camera, point_start, grid_range=10, grid_step=2, save_path="image/grid_second.png")
@@ -153,7 +159,7 @@ visualize_grid_debug(camera, point_start, grid_range=10, grid_step=2, save_path=
 # visualize_vps_debug(camera, show=True)
 
 
-from calibration.utils import gps_to_enu, enu_to_gps
+from source.calibration.utils import gps_to_enu, enu_to_gps
 
 
 def generate_yandex_maps_url(points):
@@ -222,7 +228,7 @@ R = estimate_rotation_svd(points_cam, points_enu)
 anchor_3D = camera.project_back(PointND(camera.intrinsics.get_main_point(), add_weight=True), plane_z=0)
 anchor_x, anchor_y, anchor_z = anchor_3D.get()
 
-from calibration.debug import set_grid_real
+from source.calibration.debug import set_grid_real
 
 count, world_points = set_grid_real(anchor_x, anchor_y, 10, 2, 0)
 

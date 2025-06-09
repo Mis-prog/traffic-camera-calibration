@@ -1,6 +1,6 @@
 from .base import Calibration
 from .pipeline import CalibrationPipeline
-from calibration.refine.optimizer import RefineOptimizer
+from .refine.optimizer import RefineOptimizer
 from .init.from_vp import VanishingPointCalibration
 
 __all__ = [

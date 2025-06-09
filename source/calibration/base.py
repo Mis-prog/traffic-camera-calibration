@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-from core.camera import Camera
+from ..core.camera import Camera
 
 
 class Calibration(ABC):
