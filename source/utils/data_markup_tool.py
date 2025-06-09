@@ -37,6 +37,7 @@ class AnnotationTool(QMainWindow):
 
         self.class_selector = QComboBox()
         self.class_selector.setEditable(True)
+        self.class_selector.addItem("all")
         self.class_selector.addItem("default")
 
         self.add_class_btn = QPushButton("Добавить класс")
@@ -167,12 +168,16 @@ class AnnotationTool(QMainWindow):
         if not self.image:
             return
 
+        selected_cls = self.class_selector.currentText().strip()
+        
         pix = QPixmap(self.scaled_image)
         painter = QPainter(pix)
         painter.setFont(QFont("Arial", 10))
 
         for kind in ["point", "line"]:
             for cls, items in self.annotations[kind].items():
+                if selected_cls != "all" and cls != selected_cls:
+                    continue
                 color = self.get_color(cls)
                 for i, item in enumerate(items):
                     if kind == "point":
@@ -189,7 +194,7 @@ class AnnotationTool(QMainWindow):
                             painter.drawEllipse(QPoint(sx, sy), 4, 4)
                         sx1, sy1 = int(item[0][0] * self.display_scale), int(item[0][1] * self.display_scale)
                         sx2, sy2 = int(item[1][0] * self.display_scale), int(item[1][1] * self.display_scale)
-                        painter.setPen(QPen(color, 2))
+                        painter.setPen(QPen(color, 4))
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
 
                         # Центр линии и подпись класса
@@ -222,6 +227,7 @@ class AnnotationTool(QMainWindow):
         self.update_display()
 
         self.class_selector.clear()
+        self.class_selector.addItem("all")
         known_classes = set()
         for kind in ["point", "line"]:
             for cls in self.annotations.get(kind, {}).keys():

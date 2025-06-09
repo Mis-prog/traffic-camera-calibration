@@ -46,7 +46,7 @@ class AnnotationParser:
         return stats
 
 if __name__ == "__main__":
-    parser = AnnotationParser("../../example/karls_marks/marked/data_full.json")
+    parser = AnnotationParser("../../example/karls_marks/data/data_full.json")
 
     print("Классы:", parser.get_all_classes())
     print("Точек всего:", len(parser.get_all_points()))
