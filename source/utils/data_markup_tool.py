@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtGui import QMouseEvent
 
 
 class AnnotationTool(QMainWindow):
@@ -34,6 +35,7 @@ class AnnotationTool(QMainWindow):
         self.mode_selector = QComboBox()
         self.mode_selector.addItem("Точка", "point")
         self.mode_selector.addItem("Линия", "line")
+        self.mode_selector.addItem("Кривая", "curve")
 
         self.class_selector = QComboBox()
         self.class_selector.setEditable(True)
@@ -61,11 +63,12 @@ class AnnotationTool(QMainWindow):
         self.image = None
         self.scaled_image = None
         self.display_scale = 1.0
-        self.annotations = {"point": {}, "line": {}}
+        self.annotations = {"point": {}, "line": {}, "curve": {}}
         self.current_line = []
         self.selected = None
         self.dragging = False
         self.hover = None
+        self.current_curve = []
 
     def load_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Выберите изображение")
@@ -92,6 +95,7 @@ class AnnotationTool(QMainWindow):
     def mouse_press_event(self, event):
         if not self.image:
             return
+
         x, y = self.get_mouse_pos(event)
         cls = self.class_selector.currentText().strip()
         mode = self.mode_selector.currentData()
@@ -99,35 +103,57 @@ class AnnotationTool(QMainWindow):
         if cls and self.class_selector.findText(cls) == -1:
             self.class_selector.addItem(cls)
 
+        # === ПКМ: удалить ===
         if event.button() == Qt.RightButton:
             self.try_delete_nearest(x, y)
             return
 
-        self.selected = self.find_nearest_point(x, y)
-        if self.selected:
-            self.dragging = True
-            return
+        # === ЛКМ: редактирование (если навёлся на точку) ===
+        if event.button() == Qt.LeftButton:
+            target = self.find_nearest_point(x, y)
+            if target:
+                self.selected = target
+                self.dragging = True
+                return
 
+        # === ЛКМ: добавление точки ===
         if mode == "point":
             self.annotations["point"].setdefault(cls, []).append((x, y))
+
         elif mode == "line":
             self.current_line.append((x, y))
             if len(self.current_line) == 2:
                 self.annotations["line"].setdefault(cls, []).append(self.current_line.copy())
                 self.current_line.clear()
 
+        elif mode == "curve":
+            self.current_curve.append((x, y))
+            if event.type() == QMouseEvent.MouseButtonDblClick:
+                if len(self.current_curve) >= 2:
+                    self.annotations["curve"].setdefault(cls, []).append(self.current_curve.copy())
+                self.current_curve.clear()
+
         self.update_display()
 
     def mouse_move_event(self, event):
         x, y = self.get_mouse_pos(event)
+
         if self.dragging and self.selected:
             kind, cls, item, pt_idx = self.selected
-            if kind == "point":
-                self.annotations["point"][cls][item] = (x, y)
-            elif kind == "line":
-                self.annotations["line"][cls][item][pt_idx] = (x, y)
+            try:
+                if kind == "point":
+                    self.annotations["point"][cls][item] = (x, y)
+                elif kind == "line":
+                    self.annotations["line"][cls][item][pt_idx] = (x, y)
+                elif kind == "curve":
+                    self.annotations["curve"][cls][item][pt_idx] = (x, y)
+            except (KeyError, IndexError):
+                # Например, точка была удалена
+                self.dragging = False
+                self.selected = None
         else:
             self.hover = self.find_nearest_point(x, y)
+
         self.update_display()
 
     def mouse_release_event(self, event):
@@ -138,14 +164,34 @@ class AnnotationTool(QMainWindow):
         target = self.find_nearest_point(x, y, threshold)
         if not target:
             return
-        kind, cls, item_idx, _ = target
-        del self.annotations[kind][cls][item_idx]
-        if not self.annotations[kind][cls]:
-            del self.annotations[kind][cls]
+
+        kind, cls, item_idx, pt_idx = target
+
+        if kind == "point":
+            del self.annotations["point"][cls][item_idx]
+            if not self.annotations["point"][cls]:
+                del self.annotations["point"][cls]
+
+        elif kind == "line":
+            del self.annotations["line"][cls][item_idx]
+            if not self.annotations["line"][cls]:
+                del self.annotations["line"][cls]
+
+        elif kind == "curve":
+            curve = self.annotations["curve"][cls][item_idx]
+            if 0 <= pt_idx < len(curve):
+                del curve[pt_idx]
+                if len(curve) < 2:
+                    del self.annotations["curve"][cls][item_idx]
+                if not self.annotations["curve"][cls]:
+                    del self.annotations["curve"][cls]
+
+        self.hover = None
+        self.selected = None
         self.update_display()
 
     def find_nearest_point(self, x, y, threshold=10):
-        for kind in ["point", "line"]:
+        for kind in ["point", "line", "curve"]:
             for cls, items in self.annotations[kind].items():
                 for i, item in enumerate(items):
                     if kind == "point":
@@ -153,6 +199,10 @@ class AnnotationTool(QMainWindow):
                         if abs(px - x) < threshold and abs(py - y) < threshold:
                             return (kind, cls, i, 0)
                     elif kind == "line":
+                        for j, (px, py) in enumerate(item):
+                            if abs(px - x) < threshold and abs(py - y) < threshold:
+                                return (kind, cls, i, j)
+                    elif kind == "curve":
                         for j, (px, py) in enumerate(item):
                             if abs(px - x) < threshold and abs(py - y) < threshold:
                                 return (kind, cls, i, j)
@@ -169,12 +219,12 @@ class AnnotationTool(QMainWindow):
             return
 
         selected_cls = self.class_selector.currentText().strip()
-        
+
         pix = QPixmap(self.scaled_image)
         painter = QPainter(pix)
         painter.setFont(QFont("Arial", 10))
 
-        for kind in ["point", "line"]:
+        for kind in ["point", "line", "curve"]:
             for cls, items in self.annotations[kind].items():
                 if selected_cls != "all" and cls != selected_cls:
                     continue
@@ -186,6 +236,7 @@ class AnnotationTool(QMainWindow):
                         painter.setPen(pen)
                         painter.drawEllipse(QPoint(x, y), 5, 5)
                         painter.drawText(x + 8, y - 8, cls)
+
                     elif kind == "line":
                         for j, (px, py) in enumerate(item):
                             sx, sy = int(px * self.display_scale), int(py * self.display_scale)
@@ -197,16 +248,51 @@ class AnnotationTool(QMainWindow):
                         painter.setPen(QPen(color, 4))
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
 
-                        # Центр линии и подпись класса
+                        # Подпись класса
                         mx = int((item[0][0] + item[1][0]) / 2 * self.display_scale)
                         my = int((item[0][1] + item[1][1]) / 2 * self.display_scale)
                         painter.setPen(QPen(color, 1))
                         painter.drawText(mx + 6, my - 6, cls)
 
+                    elif kind == "curve":
+                        path = item
+                        # Точки
+                        for k, (px, py) in enumerate(path):
+                            sx, sy = int(px * self.display_scale), int(py * self.display_scale)
+                            is_hover = self.hover == (kind, cls, i, k)
+                            pen = QPen(QColor("yellow") if is_hover else color, 4)
+                            painter.setPen(pen)
+                            painter.drawEllipse(QPoint(sx, sy), 4, 4)
+                        # Линии
+                        for k in range(1, len(path)):
+                            x1, y1 = [int(p * self.display_scale) for p in path[k - 1]]
+                            x2, y2 = [int(p * self.display_scale) for p in path[k]]
+                            painter.setPen(QPen(color, 2))
+                            painter.drawLine(QPoint(x1, y1), QPoint(x2, y2))
+                        # Подпись
+                        if path:
+                            mx = sum(p[0] for p in path) / len(path)
+                            my = sum(p[1] for p in path) / len(path)
+                            painter.setPen(QPen(color, 1))
+                            painter.drawText(int(mx * self.display_scale + 6),
+                                             int(my * self.display_scale - 6), cls)
+
+        # Временная линия
         if len(self.current_line) == 1:
             cx, cy = [int(p * self.display_scale) for p in self.current_line[0]]
             painter.setPen(QPen(QColor("blue"), 2))
             painter.drawEllipse(QPoint(cx, cy), 5, 5)
+
+        # Временная кривая
+        if self.current_curve:
+            painter.setPen(QPen(QColor("blue"), 2))
+            for k in range(1, len(self.current_curve)):
+                x1, y1 = [int(p * self.display_scale) for p in self.current_curve[k - 1]]
+                x2, y2 = [int(p * self.display_scale) for p in self.current_curve[k]]
+                painter.drawLine(QPoint(x1, y1), QPoint(x2, y2))
+            for (px, py) in self.current_curve:
+                sx, sy = int(px * self.display_scale), int(py * self.display_scale)
+                painter.drawEllipse(QPoint(sx, sy), 4, 4)
 
         painter.end()
         self.image_label.setPixmap(pix)
@@ -229,7 +315,7 @@ class AnnotationTool(QMainWindow):
         self.class_selector.clear()
         self.class_selector.addItem("all")
         known_classes = set()
-        for kind in ["point", "line"]:
+        for kind in ["point", "line", "curve"]:
             for cls in self.annotations.get(kind, {}).keys():
                 known_classes.add(cls)
         for cls in sorted(known_classes):
