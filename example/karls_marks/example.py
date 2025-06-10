@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer, PointND
 from source.calibration.utils import load_lines, load_lines_from_json, extract_direction_vectors_from_lines
-from source.calibration.refine import residual_interline_distance, residual_line_length
+from source.calibration.refine import residual_interline_distance, residual_line_length, residual_reprojection_line
 from source.calibration.debug import load_scene_gps, visualize_source
 from source.vp_detection import VanishingPointEstimatorManual
 from source.calibration.utils import gps_to_enu, enu_to_gps
-from source.utils import AnnotationParser
+from source.annotation_tools import AnnotationParser
 
 # Точки схода
 # Фокусное расстояние и ориентация
@@ -41,7 +41,7 @@ def back_refine(camera):
     global annotation_parser
 
     data = {
-        "Пешеходный переход 1": annotation_parser.get_lines_by_class("Переходный переход 1"),
+        "Пешеходный переход 1": annotation_parser.get_lines_by_class("Пешеходный переход 1"),
         "Пешеходный переход 2": annotation_parser.get_lines_by_class("Пешеходный переход 2"),
         "Пешеходный переход 3": annotation_parser.get_lines_by_class("Пешеходный переход 3"),
         "Дорожные линии 2": annotation_parser.get_lines_by_class("Дорожные линии 2"),
@@ -59,7 +59,7 @@ def back_refine(camera):
         residual_blocks=resualds_blocks_first,
         mask=[6],
         bounds=[(5, 30)],
-        debug_save_path='data/',
+        debug_save_path='data/grid_back_1.png',
         method="minimize",
     )
 
@@ -68,7 +68,7 @@ def back_refine(camera):
         residual_blocks=resualds_blocks_first,
         mask=[0],
         bounds=[(900, 2000)],
-        debug_save_path='data/',
+        debug_save_path='data/grid_back_2.png',
         method="minimize",
     )
     pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
@@ -76,31 +76,62 @@ def back_refine(camera):
 
     return camera
 
-camera = back_refine(camera)
+
+# camera = back_refine(camera)
 """
 - Проблема с масштабом
 - Возможно проблема в углах.
 """
+
 
 def direct_refine(camera):
     """
     Результаты для перекрестка
 
     """
+    gps_origin = (54.725378, 55.941036)
+
     data = {
-        "point_to_point": None,
-        "line_to_line": None,
+        "Пешеходный переход 1": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 1"),
+        "Пешеходный переход 2": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 2"),
+        "Дорожные линии": annotation_parser.get_lines_with_gps_and_pixel("Дорожные линии"),
     }
 
     residual_blocks_first = [
-
+        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 1",
+                                                     gps_origin=gps_origin),
+        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 2",
+                                                     gps_origin=gps_origin),
+        lambda cam, data: residual_reprojection_line(cam, data, group="Дорожные линии",
+                                                     gps_origin=gps_origin),
     ]
 
     refiner_first = RefineOptimizer(
         camera=camera,
         residual_blocks=residual_blocks_first,
+        debug_save_path='data/grid_direct_1.png',
+        mask=[1, 2, 3, 6],
+        bounds=([-360, -360, -360, 5],
+                [360, 360, 360, 30])
     )
+
+    refiner_second = RefineOptimizer(
+        camera=camera,
+        residual_blocks=residual_blocks_first,
+        debug_save_path='data/grid_direct_2.png',
+        mask=[0],
+        bounds=([800],
+                [2000])
+    )
+
+    pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
+    camera = pipeline.run(camera, data)
 
     return camera
 
-# camera = direct_refine(camera)
+
+camera = direct_refine(camera)
+
+"""
+Что то с данными или калибровкой прямо
+"""

@@ -1,6 +1,6 @@
 from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer
-from source.utils import load_lines, load_lines_from_json
+from source.annotation_tools import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group, \
     residual_reprojection_line
 from calibration.debug import load_scene_gps, visualize_source
