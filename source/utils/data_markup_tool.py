@@ -10,6 +10,15 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 
+from PyQt5.QtGui import QColor
+
+PALETTE = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+    "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
+    "#bcbd22", "#17becf", "#aec7e8", "#ffbb78",
+    "#98df8a", "#ff9896", "#c5b0d5", "#c49c94"
+]
+
 
 class AnnotationTool(QMainWindow):
     def __init__(self):
@@ -36,11 +45,20 @@ class AnnotationTool(QMainWindow):
         self.mode_selector.addItem("Точка", "point")
         self.mode_selector.addItem("Линия", "line")
         self.mode_selector.addItem("Кривая", "curve")
+        self.mode_selector.currentIndexChanged.connect(self.toggle_gps_fields)
 
         self.class_selector = QComboBox()
         self.class_selector.setEditable(True)
         self.class_selector.addItem("all")
         self.class_selector.addItem("default")
+
+        from PyQt5.QtWidgets import QLineEdit
+
+        self.gps_input_1 = QLineEdit()
+        self.gps_input_1.setPlaceholderText("GPS 1: широта, долгота")
+        self.gps_input_2 = QLineEdit()
+        self.gps_input_2.setPlaceholderText("GPS 2: широта, долгота")
+        self.gps_input_2.hide()  # По умолчанию скрыто
 
         self.add_class_btn = QPushButton("Добавить класс")
         self.add_class_btn.clicked.connect(self.add_class)
@@ -48,11 +66,17 @@ class AnnotationTool(QMainWindow):
         # Layout
         top_bar = QHBoxLayout()
         for widget in [self.load_btn, self.load_ann_btn, self.save_btn,
-                       self.mode_selector, self.class_selector, self.add_class_btn]:
+                       self.mode_selector, self.class_selector]:
             top_bar.addWidget(widget)
 
         layout = QVBoxLayout()
         layout.addLayout(top_bar)
+
+        gps_layout = QHBoxLayout()
+        gps_layout.addWidget(self.gps_input_1)
+        gps_layout.addWidget(self.gps_input_2)
+        layout.addLayout(gps_layout)
+
         layout.addWidget(self.image_label)
 
         container = QWidget()
@@ -69,6 +93,20 @@ class AnnotationTool(QMainWindow):
         self.dragging = False
         self.hover = None
         self.current_curve = []
+
+    def toggle_gps_fields(self):
+        mode = self.mode_selector.currentData()
+        if mode == "line":
+            self.gps_input_2.show()
+        else:
+            self.gps_input_2.hide()
+
+    def parse_gps(self, text):
+        try:
+            lat_str, lon_str = text.split(",")
+            return float(lat_str.strip()), float(lon_str.strip())
+        except:
+            return None
 
     def load_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Выберите изображение")
@@ -97,6 +135,9 @@ class AnnotationTool(QMainWindow):
             return
 
         x, y = self.get_mouse_pos(event)
+        gps1 = self.parse_gps(self.gps_input_1.text())
+        gps2 = self.parse_gps(self.gps_input_2.text())
+
         cls = self.class_selector.currentText().strip()
         mode = self.mode_selector.currentData()
 
@@ -118,19 +159,45 @@ class AnnotationTool(QMainWindow):
 
         # === ЛКМ: добавление точки ===
         if mode == "point":
-            self.annotations["point"].setdefault(cls, []).append((x, y))
+            self.annotations["point"].setdefault(cls, []).append({
+                "image": (x, y),
+                "gps": gps1
+            })
+
 
         elif mode == "line":
+
             self.current_line.append((x, y))
+
             if len(self.current_line) == 2:
-                self.annotations["line"].setdefault(cls, []).append(self.current_line.copy())
+                self.annotations["line"].setdefault(cls, []).append({
+
+                    "image": self.current_line.copy(),
+
+                    "gps": [gps1, gps2]
+
+                })
+
                 self.current_line.clear()
 
+
+
+
         elif mode == "curve":
+
             self.current_curve.append((x, y))
+
             if event.type() == QMouseEvent.MouseButtonDblClick:
+
                 if len(self.current_curve) >= 2:
-                    self.annotations["curve"].setdefault(cls, []).append(self.current_curve.copy())
+                    self.annotations["curve"].setdefault(cls, []).append({
+
+                        "image": self.current_curve.copy(),
+
+                        "gps": [gps1 for _ in self.current_curve]
+
+                    })
+
                 self.current_curve.clear()
 
         self.update_display()
@@ -142,11 +209,11 @@ class AnnotationTool(QMainWindow):
             kind, cls, item, pt_idx = self.selected
             try:
                 if kind == "point":
-                    self.annotations["point"][cls][item] = (x, y)
+                    self.annotations["point"][cls][item]["image"] = (x, y)
                 elif kind == "line":
-                    self.annotations["line"][cls][item][pt_idx] = (x, y)
+                    self.annotations["line"][cls][item]["image"][pt_idx] = (x, y)
                 elif kind == "curve":
-                    self.annotations["curve"][cls][item][pt_idx] = (x, y)
+                    self.annotations["curve"][cls][item]["image"][pt_idx] = (x, y)
             except (KeyError, IndexError):
                 # Например, точка была удалена
                 self.dragging = False
@@ -193,7 +260,8 @@ class AnnotationTool(QMainWindow):
     def find_nearest_point(self, x, y, threshold=10):
         for kind in ["point", "line", "curve"]:
             for cls, items in self.annotations[kind].items():
-                for i, item in enumerate(items):
+                for i, ann in enumerate(items):
+                    item = ann["image"]
                     if kind == "point":
                         px, py = item
                         if abs(px - x) < threshold and abs(py - y) < threshold:
@@ -210,9 +278,8 @@ class AnnotationTool(QMainWindow):
 
     def get_color(self, name):
         h = int(hashlib.md5(name.encode()).hexdigest(), 16)
-        hue = (h % 360) / 360.0
-        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
-        return QColor(int(r * 255), int(g * 255), int(b * 255))
+        color_hex = PALETTE[h % len(PALETTE)]
+        return QColor(color_hex)
 
     def update_display(self):
         if not self.image:
@@ -229,30 +296,77 @@ class AnnotationTool(QMainWindow):
                 if selected_cls != "all" and cls != selected_cls:
                     continue
                 color = self.get_color(cls)
-                for i, item in enumerate(items):
+                for i, ann in enumerate(items):
+                    item = ann["image"]
+                    gps = ann.get("gps", None)
                     if kind == "point":
                         x, y = [int(p * self.display_scale) for p in item]
                         pen = QPen(QColor("yellow") if self.hover == (kind, cls, i, 0) else color, 4)
                         painter.setPen(pen)
                         painter.drawEllipse(QPoint(x, y), 5, 5)
                         painter.drawText(x + 8, y - 8, cls)
+                        if gps and isinstance(gps, (list, tuple)) and len(gps) == 2 and isinstance(gps[0],
+                                                                                                   (int, float)):
+                            painter.setPen(QPen(color, 1))
+                            painter.drawText(x + 8, y + 12, f"{gps[0]:.6f}, {gps[1]:.6f}")
+
+
+
 
                     elif kind == "line":
-                        for j, (px, py) in enumerate(item):
-                            sx, sy = int(px * self.display_scale), int(py * self.display_scale)
-                            pen = QPen(QColor("yellow") if self.hover == (kind, cls, i, j) else color, 3)
-                            painter.setPen(pen)
-                            painter.drawEllipse(QPoint(sx, sy), 4, 4)
-                        sx1, sy1 = int(item[0][0] * self.display_scale), int(item[0][1] * self.display_scale)
-                        sx2, sy2 = int(item[1][0] * self.display_scale), int(item[1][1] * self.display_scale)
+
+                        # Получаем точки начала и конца
+
+                        (x1, y1), (x2, y2) = item
+
+                        sx1, sy1 = int(x1 * self.display_scale), int(y1 * self.display_scale)
+
+                        sx2, sy2 = int(x2 * self.display_scale), int(y2 * self.display_scale)
+
+                        # Линия
+
                         painter.setPen(QPen(color, 4))
+
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
 
-                        # Подпись класса
-                        mx = int((item[0][0] + item[1][0]) / 2 * self.display_scale)
-                        my = int((item[0][1] + item[1][1]) / 2 * self.display_scale)
+                        # Точки начала и конца
+
+                        for j, (px, py) in enumerate(item):
+                            sx, sy = int(px * self.display_scale), int(py * self.display_scale)
+
+                            is_hover = self.hover == (kind, cls, i, j)
+
+                            pen = QPen(QColor("yellow") if is_hover else color, 3)
+
+                            painter.setPen(pen)
+
+                            painter.drawEllipse(QPoint(sx, sy), 4, 4)
+
+                        # Подпись класса в центре
+
+                        mx = int((x1 + x2) / 2 * self.display_scale)
+
+                        my = int((y1 + y2) / 2 * self.display_scale)
+
                         painter.setPen(QPen(color, 1))
+
                         painter.drawText(mx + 6, my - 6, cls)
+
+                        # Подписи GPS координат у обеих точек
+
+                        if gps and isinstance(gps, list):
+
+                            if len(gps) >= 1 and isinstance(gps[0], (list, tuple)) and len(gps[0]) == 2:
+                                painter.setPen(QPen(color, 1))
+
+                                painter.drawText(sx1 + 8, sy1 + 12, f"{gps[0][0]:.6f}, {gps[0][1]:.6f}")
+
+                            if len(gps) >= 2 and isinstance(gps[1], (list, tuple)) and len(gps[1]) == 2:
+                                painter.setPen(QPen(color, 1))
+
+                                painter.drawText(sx2 + 8, sy2 + 12, f"{gps[1][0]:.6f}, {gps[1][1]:.6f}")
+
+
 
                     elif kind == "curve":
                         path = item
@@ -318,10 +432,16 @@ class AnnotationTool(QMainWindow):
 
         # Очистить пустые/битые кривые
         for cls in list(self.annotations["curve"].keys()):
-            valid = [
-                c for c in self.annotations["curve"][cls]
-                if isinstance(c, list) and len(c) >= 2 and all(isinstance(pt, list) and len(pt) == 2 for pt in c)
-            ]
+            valid = []
+            for ann in self.annotations["curve"][cls]:
+                if (
+                        isinstance(ann, dict) and
+                        "image" in ann and
+                        isinstance(ann["image"], list) and
+                        len(ann["image"]) >= 2 and
+                        all(isinstance(pt, (list, tuple)) and len(pt) == 2 for pt in ann["image"])
+                ):
+                    valid.append(ann)
             if valid:
                 self.annotations["curve"][cls] = valid
             else:

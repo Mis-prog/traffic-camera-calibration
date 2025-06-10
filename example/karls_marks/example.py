@@ -76,10 +76,10 @@ def back_refine(camera):
 
     return camera
 
-
 # camera = back_refine(camera)
 """
-Проблема с масштабом возможно проблема в углах. Так в целом рабочий варик.
+- Проблема с масштабом
+- Возможно проблема в углах.
 """
 
 def direct_refine(camera):
@@ -99,7 +99,6 @@ def direct_refine(camera):
     refiner_first = RefineOptimizer(
         camera=camera,
         residual_blocks=residual_blocks_first,
-
     )
 
     return camera
