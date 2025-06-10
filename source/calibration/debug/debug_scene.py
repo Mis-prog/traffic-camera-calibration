@@ -15,7 +15,7 @@ def visualize_grid_debug(
         point_start: PointND,
         grid_range: float = 5.0,  # диапазон в метрах от центра
         grid_step: float = 1.0,  # размер клетки
-        arrow_len: float = 5.0,  # длина вектора "вверх"
+        arrow_len: float = 10.0,  # длина вектора "вверх"
         plane_z: float = 0.0,  # плоскость, на которую кладём сетку
         save_path=None
 ):

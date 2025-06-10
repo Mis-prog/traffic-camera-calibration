@@ -47,27 +47,40 @@ def back_refine(camera):
         "distance between line": annotation_parser.get_lines_by_class("distance between line"),
     }
     resualds_blocks_first = [
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=4),
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=4),
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=4),
-        lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3),
-        lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=23),
+        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3.25),
+        # lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=24),
+        # lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing 2", expected=24),
     ]
     refiner_first = RefineOptimizer(
         camera=camera,
         residual_blocks=resualds_blocks_first,
-        mask=[0, 6],
-        bounds=([700, 2000], [5, 30]),
+        mask=[6],
+        bounds=[(5, 30)],
         debug_save_path='data/',
         method="minimize",
     )
-    pipeline = CalibrationPipeline([vp_init, refiner_first])
+
+    refiner_second = RefineOptimizer(
+        camera=camera,
+        residual_blocks=resualds_blocks_first,
+        mask=[0],
+        bounds=[(900, 2000)],
+        debug_save_path='data/',
+        method="minimize",
+    )
+    pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
     camera = pipeline.run(camera, data)
 
     return camera
 
-# camera = back_refine() # Проверка кода
 
+# camera = back_refine(camera)
+"""
+Проблема с масштабом возможно проблема в углах. Так в целом рабочий варик.
+"""
 
 def direct_refine(camera):
     """
@@ -91,4 +104,4 @@ def direct_refine(camera):
 
     return camera
 
-camera = direct_refine(camera)
+# camera = direct_refine(camera)
