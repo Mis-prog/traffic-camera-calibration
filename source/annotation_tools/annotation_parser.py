@@ -60,6 +60,17 @@ class AnnotationParser:
                 result.append({"pixel": ann["image"], "gps": ann["gps"]})
         return result
 
+    def get_points_with_gps_and_pixel(self, class_name):
+        """
+        Возвращает список словарей с пиксельными и GPS-координатами для линий указанного класса.
+        Формат: [{"pixel": [[x1, y1], [x2, y2]], "gps": [[lat1, lon1, alt1], [lat2, lon2, alt2]]}, ...]
+        """
+        result = []
+        for ann in self.annotations["point"].get(class_name, []):
+            if "image" in ann and "gps" in ann:
+                result.append({"pixel": ann["image"], "gps": ann["gps"]})
+        return result
+
 if __name__ == "__main__":
     parser = AnnotationParser("../../example/karls_marks/data/data_full.json")
 

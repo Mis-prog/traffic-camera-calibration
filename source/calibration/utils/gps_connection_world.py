@@ -1,6 +1,6 @@
 import numpy as np
 from pyproj import Geod
-from ...core import PointND, Camera
+from source.core import PointND, Camera
 
 
 def gps_to_enu(lat, lon, ref_lat, ref_lon):

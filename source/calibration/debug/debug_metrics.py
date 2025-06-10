@@ -1,6 +1,6 @@
 import numpy as np
-from ..utils import gps_to_enu, enu_to_gps
-from ...core import PointND
+from source.calibration.utils import gps_to_enu, enu_to_gps
+from source.core import PointND
 
 
 def generate_yandex_maps_url(points):
@@ -62,10 +62,10 @@ def compute_alignment_and_metrics(
     # Подсчёт ошибок (в ENU)
     errors = [
         np.linalg.norm(
-            np.array(gps_to_enu(*gps, lat0, lon0)) -
-            np.array(gps_to_enu(*ideal, lat0, lon0))
+            np.array(R @ predict) -
+            np.array(ideal)
         )
-        for gps, ideal in zip(point_image, point_gps_ideal)
+        for predict, ideal in zip(points_cam, points_enu)
     ]
 
     stats = {
@@ -80,8 +80,12 @@ def compute_alignment_and_metrics(
     for name, value in stats.items():
         print(f"  ▸ {name:<24} {value:.2f} м")
 
+    point_gps_predict = [enu_to_gps(*R @ point, lat0, lon0) for point in points_cam]
+
+    url =generate_yandex_maps_url(point_gps_predict)
+    print(f'URL YANDEX {url}')
     return {
         "rotation_matrix": R,
         "errors": errors,
-        "stats": stats
+        "stats": stats,
     }

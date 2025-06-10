@@ -1,6 +1,6 @@
 import numpy as np
 
-from ...core import Camera, PointND
+from source.core import Camera, PointND
 
 
 def residual_interline_distance(camera, data, group, expected):

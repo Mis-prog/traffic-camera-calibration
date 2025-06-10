@@ -2,7 +2,7 @@ import numpy as np
 import os
 import json
 
-from ...core.pointND import PointND
+from source.core.pointND import PointND
 
 
 def load_data(path):
