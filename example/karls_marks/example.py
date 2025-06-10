@@ -48,10 +48,10 @@ def back_refine(camera):
         "Дорожные линии 2": annotation_parser.get_lines_by_class("Дорожные линии 2"),
     }
     resualds_blocks_first = [
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 1", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 2", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 3", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="Дорожные линии 2", expected=3.25),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 1", expected=4),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 2", expected=4),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 3", expected=4),
+        lambda cam, data: residual_interline_distance(cam, data, group="Дорожные линии 2", expected=3.5),
         # lambda cam, data: residual_line_length(cam, data, group="Пешеходный переход 1", expected=24),
         # lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing 2", expected=24),
     ]
