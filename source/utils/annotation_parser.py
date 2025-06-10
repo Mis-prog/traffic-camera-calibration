@@ -9,41 +9,45 @@ class AnnotationParser:
 
     def _load(self):
         with open(self.filepath, "r", encoding="utf-8") as f:
-            self.annotations = json.load(f)
-            # Убедимся, что оба типа присутствуют
-            self.annotations.setdefault("line", {})
-            self.annotations.setdefault("point", {})
+            data = json.load(f)
+        self.annotations["point"] = data.get("point", {})
+        self.annotations["line"] = data.get("line", {})
 
     def get_all_classes(self):
-        classes = set(self.annotations["lines"].keys()) | set(self.annotations["points"].keys())
-        return sorted(classes)
+        return sorted(set(self.annotations["point"]) | set(self.annotations["line"]))
 
     def get_points_by_class(self, class_name):
-        return self.annotations["point"].get(class_name, [])
+        return [ann["image"] for ann in self.annotations["point"].get(class_name, []) if "image" in ann]
 
     def get_lines_by_class(self, class_name):
-        return self.annotations["line"].get(class_name, [])
+        return [ann["image"] for ann in self.annotations["line"].get(class_name, []) if "image" in ann]
 
     def get_all_points(self):
-        all_points = []
-        for cls, pts in self.annotations["point"].items():
-            all_points.extend(pts)
-        return all_points
+        points = []
+        for ann_list in self.annotations["point"].values():
+            points.extend([ann["image"] for ann in ann_list if "image" in ann])
+        return points
 
     def get_all_lines(self):
-        all_lines = []
-        for cls, lines in self.annotations["line"].items():
-            all_lines.extend(lines)
-        return all_lines
+        lines = []
+        for ann_list in self.annotations["line"].values():
+            lines.extend([ann["image"] for ann in ann_list if "image" in ann])
+        return lines
 
     def count_per_class(self):
         stats = {}
         for cls in self.get_all_classes():
             stats[cls] = {
-                "point": len(self.get_points_by_class(cls)),
-                "line": len(self.get_lines_by_class(cls))
+                "point": len(self.annotations["point"].get(cls, [])),
+                "line": len(self.annotations["line"].get(cls, [])),
             }
         return stats
+
+    def get_gps_points_by_class(self, class_name):
+        return [ann["gps"] for ann in self.annotations["point"].get(class_name, []) if "gps" in ann]
+
+    def get_gps_lines_by_class(self, class_name):
+        return [ann["gps"] for ann in self.annotations["line"].get(class_name, []) if "gps" in ann]
 
 if __name__ == "__main__":
     parser = AnnotationParser("../../example/karls_marks/data/data_full.json")
@@ -52,6 +56,5 @@ if __name__ == "__main__":
     print("Точек всего:", len(parser.get_all_points()))
     print("Линий всего:", len(parser.get_all_lines()))
 
-    stats = parser.count_per_class()
-    for cls, s in stats.items():
-        print(f"{cls}: {s['points']} точек, {s['lines']} линий")
+    for cls, s in parser.count_per_class().items():
+        print(f"{cls}: {s['point']} точек, {s['line']} линий")

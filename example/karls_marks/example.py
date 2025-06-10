@@ -17,7 +17,7 @@ from source.utils import AnnotationParser
 
 # Точки схода
 # Фокусное расстояние и ориентация
-annotation_parser = AnnotationParser("data/data_full.json")
+annotation_parser = AnnotationParser("data/data_full_new.json")
 
 lines_vp1 = annotation_parser.get_lines_by_class("vp1")
 lines_vp3 = annotation_parser.get_lines_by_class("vp3")
@@ -41,16 +41,16 @@ def back_refine(camera):
     global annotation_parser
 
     data = {
-        "pedestrian crossing": annotation_parser.get_lines_by_class("pedestrian crossing"),
-        "pedestrian crossing 2": annotation_parser.get_lines_by_class("pedestrian crossing 2"),
-        "pedestrian crossing 3": annotation_parser.get_lines_by_class("pedestrian crossing 3"),
-        "distance between line": annotation_parser.get_lines_by_class("distance between line"),
+        "Пешеходный переход 1": annotation_parser.get_lines_by_class("Переходный переход 1"),
+        "Пешеходный переход 2": annotation_parser.get_lines_by_class("Пешеходный переход 2"),
+        "Пешеходный переход 3": annotation_parser.get_lines_by_class("Пешеходный переход 3"),
+        "Дорожные линии 2": annotation_parser.get_lines_by_class("Дорожные линии 2"),
     }
     resualds_blocks_first = [
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 2", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="pedestrian crossing 3", expected=3.8),
-        lambda cam, data: residual_interline_distance(cam, data, group="distance between line", expected=3.25),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 1", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 2", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 3", expected=3.8),
+        lambda cam, data: residual_interline_distance(cam, data, group="Дорожные линии 2", expected=3.25),
         # lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing", expected=24),
         # lambda cam, data: residual_line_length(cam, data, group="pedestrian crossing 2", expected=24),
     ]
@@ -76,7 +76,7 @@ def back_refine(camera):
 
     return camera
 
-# camera = back_refine(camera)
+camera = back_refine(camera)
 """
 - Проблема с масштабом
 - Возможно проблема в углах.
