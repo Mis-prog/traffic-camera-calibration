@@ -26,7 +26,6 @@ class CalibrationPipeline:
             print(f"🚀 [Pipeline] Начальный этап: {self.init_stage.__class__.__name__}")
             self.init_stage.camera = camera
             camera = self.init_stage.run(data, **kwargs)
-            print("✅ [Pipeline] Начальная калибровка завершена\n")
 
         for iteration in range(1, self.n_iter + 1):
             print(f"🔁 [Pipeline] Итерация уточнения {iteration}/{self.n_iter}")
@@ -35,7 +34,6 @@ class CalibrationPipeline:
                 stage.camera = camera
                 print(f"🔧 [Pipeline] Этап {idx}: {stage.__class__.__name__}")
                 camera = stage.run(data, **kwargs)
-                print(f"✅ [Pipeline] Этап {idx} завершён\n")
 
         print("🎯 [Pipeline] Калибровка завершена")
         print("=" * 60)

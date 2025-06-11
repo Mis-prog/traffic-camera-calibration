@@ -1,6 +1,7 @@
 import numpy as np
 from pandas.core.methods.selectn import SelectNSeries
 from scipy.optimize import least_squares, minimize
+from scipy.spatial.transform import Rotation as R
 
 from source.calibration.base import Calibration
 from source.core.camera import Camera
@@ -16,6 +17,7 @@ class RefineOptimizer(Calibration):
                  mask: list = None,
                  debug_save_path: str = None,
                  gps_origin: tuple = None,
+                 omega_mode=False
                  ):
         super().__init__(camera, debug_save_path)
         self.residual_blocks = residual_blocks
@@ -25,16 +27,19 @@ class RefineOptimizer(Calibration):
         self.solver = solver
         self.method = method
         self.gps_origin = gps_origin
+        self.omega_mode = omega_mode
 
-    def run(self, data, **kwargs) -> Camera:
+    def run(self, data, **kwargs):
+        if self.omega_mode:
+            return self._run_omega_mode(data)
+        else:
+            return self._run_normal(data, **kwargs)
+
+    def _run_normal(self, data, **kwargs) -> Camera:
         """
         :param data: ограничения
         :return: обновлённая камера
         """
-
-        print("=" * 50)
-        print("🔧 [RefineOptimizer] Запуск дооптимизации параметров камеры")
-        print("=" * 50)
 
         full_params = np.array(self.camera.get_params(), dtype=float)
         print(f"📌 Начальные параметры: {np.round(full_params, 2).tolist()}")
@@ -77,10 +82,8 @@ class RefineOptimizer(Calibration):
                 method='Powell'
             )
 
-        print("-" * 50)
-        print(f"✅ Оптимизация завершена")
         print(f"🔁 Итераций: {result.nfev}")
-        if self.method in ["trf","lm"]:
+        if self.method in ["trf", "lm"]:
             print(f"🎯 Финальная ошибка (cost): {result.cost:.6f}")
         else:
             print(f"🎯 Финальная ошибка (cost): {result.fun:.6f}")
@@ -97,5 +100,37 @@ class RefineOptimizer(Calibration):
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:
                 pass
+
+        return self.camera
+
+    def _run_omega_mode(self, data):
+        scaled_omega0 = np.zeros(2)  # только ω_x и ω_y
+        R0 = self.camera.extrinsics.get_rotation()
+        K = self.camera.intrinsics.get()
+        scale = 0.01
+
+        def cost_fn(scaled_omega_xy):
+            # восстанавливаем полный ω = [ω_x, ω_y, 0]
+            omega = np.array([scaled_omega_xy[0], scaled_omega_xy[1], 0]) * scale
+            delta_R = R.from_rotvec(omega).as_matrix()
+
+            self.camera.extrinsics.set_rotation(delta_R @ R0, from_type='vp')
+
+            residuals = []
+            for block in self.residual_blocks:
+                residuals.extend(block(self.camera, data))
+
+            reg_weight = 400
+            regularization = reg_weight * np.sum(omega[:2] ** 2)
+
+            return np.sum(np.square(residuals)) + regularization
+
+        # оптимизация только по двум параметрам
+        result = minimize(cost_fn, scaled_omega0, method='BFGS')
+
+        # итоговое ω: домножаем масштаб, добавляем ноль по Z
+        omega_opt = np.array([result.x[0], result.x[1], 0.0]) * scale
+        delta_R = R.from_rotvec(omega_opt).as_matrix()
+        self.camera.extrinsics.set_rotation(delta_R @ R0, from_type='vp')
 
         return self.camera

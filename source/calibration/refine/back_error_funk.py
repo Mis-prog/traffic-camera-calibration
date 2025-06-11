@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from source.core import Camera, PointND
 
@@ -95,6 +96,75 @@ def residual_line_length(camera, data, group, expected):
         residuals.append(L - expected)
 
     return residuals
+
+def residual_planar_alignment(omega, R0, K, planar_lines_img):
+    delta_R = R.from_rotvec(omega).as_matrix()
+    R_corr = delta_R @ R0
+    K_inv = np.linalg.inv(K)
+
+    residuals = []
+    for line_dir in planar_lines_img:
+        line_dir = line_dir / np.linalg.norm(line_dir)
+        dir_img_h = np.array([line_dir[0], line_dir[1], 1.0])
+        dir_cam = K_inv @ dir_img_h
+        dir_cam = dir_cam / np.linalg.norm(dir_cam)
+        dir_world = R_corr.T @ dir_cam
+        z_component = dir_world[2]
+        residuals.append(z_component)  # просто сама компонента, без квадрата
+    return residuals
+
+
+def residual_vertical_alignment(omega, R0, K, lines_img):
+    delta_R = R.from_rotvec(omega).as_matrix()
+    R_corr = delta_R @ R0
+    z_world = np.array([0, 0, 1])
+
+    residuals = []
+    for line_dir in lines_img:
+        line_dir = line_dir / np.linalg.norm(line_dir)
+        v_cam = R_corr @ z_world
+        v_img = K @ v_cam
+        v_img = v_img[:2] / v_img[2]
+        v_img = v_img / np.linalg.norm(v_img)
+        cos_theta = np.dot(v_img, line_dir)
+        residuals.append(1 - cos_theta ** 2)
+    return residuals
+
+def residual_alignment_block(verticals=None, planar_lines=None, weights=(1.0, 1.0, 10.0)):
+    """
+    Возвращает residual-функцию совместимую с RefineOptimizer:
+    (camera, data) -> List[float]
+    """
+    def block(camera, data):
+        # Начальное приближение (ориентация R0 фиксируется при создании блока)
+        angles_current = camera.get_params()[1:4]
+        R_current = R.from_euler('zyx', angles_current, degrees=True)
+
+        # Предположим, что R0 зафиксировано в момент создания блока
+        # → сохраним его в момент инициализации
+        if not hasattr(block, "_R0"):
+            block._R0 = R_current
+            block._angles0 = angles_current
+
+        R0 = block._R0.as_matrix()
+        R1 = R_current.as_matrix()
+
+        # Разность вращений
+        R_delta = R1 @ R0.T
+        omega = R.from_matrix(R_delta).as_rotvec()
+
+        residuals = []
+        if verticals:
+            res_vert = residual_vertical_alignment(omega, R0, camera.intrinsics.get(), verticals)
+            residuals.extend([weights[0] * r for r in res_vert])
+        if planar_lines:
+            res_planar = residual_planar_alignment(omega, R0, camera.intrinsics.get(), planar_lines)
+            residuals.extend([weights[1] * r for r in res_planar])
+
+        residuals.extend([weights[2] * w for w in omega])
+        return residuals
+
+    return block
 
 # from scipy.spatial.transform import Rotation as R
 # from scipy.optimize import minimize
