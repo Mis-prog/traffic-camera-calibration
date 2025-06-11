@@ -95,7 +95,7 @@ class RefineOptimizer(Calibration):
         if self.debug_save_path is not None:
             from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range=12,
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range=5,
                                  grid_step=1)
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:
