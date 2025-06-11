@@ -69,13 +69,16 @@ def back_refine():
 
 
 def direct_refine():
+    """
+    Параметры камеры 1361.23, -144.89, 51.28, 169.9, 0.0, 0.0, 28.09
+    """
     global camera
     data = {"lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json')
             }
 
     resualds_blocks = [
         lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel",
-                                                     gps_origin=(54.723603, 55.933098)),
+                                                     gps_origin=(54.723617, 55.933152)),
     ]
 
     refiner_1 = RefineOptimizer(camera=camera,
@@ -104,7 +107,21 @@ def direct_refine():
 
 camera = direct_refine()  # Дооптимизация через прямую проекцию
 
-projection_line(camera, load_lines_from_json('marked/lines_gps_to_pixel.json'), 54.723603, 55.933098, save_path='image/projection_line.png')
+projection_line(camera, load_lines_from_json('marked/lines_gps_to_pixel.json'), 54.723617, 55.933152, save_path='image/projection_line.png')
+
+from source.annotation_tools import AnnotationParser
+annotation_parser = AnnotationParser("marked/data_full.json")
+point_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
+point_image, point_gps = [], []
+for point in point_control:
+    _point_image, _point_gps = point["pixel"], point["gps"]
+    print(_point_image, _point_gps)
+    point_image.append(_point_image)
+    point_gps.append(_point_gps)
+
+from calibration.debug import compute_alignment_and_metrics
+compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera)
+
 
 def gibrid():
     global camera

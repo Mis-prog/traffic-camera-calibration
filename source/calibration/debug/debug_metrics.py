@@ -62,7 +62,8 @@ def compute_alignment_and_metrics(
     # Подсчёт ошибок (в ENU)
     errors = [
         np.linalg.norm(
-            np.array(R @ predict) -
+            # np.array(R @ predict) -
+            np.array( predict) -
             np.array(ideal)
         )
         for predict, ideal in zip(points_cam, points_enu)
