@@ -3,7 +3,7 @@ from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
 from source.annotation_tools import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group, \
     residual_reprojection_line
-from calibration.debug import load_scene_gps, visualize_source
+from calibration.debug import load_scene_gps, visualize_source, projection_line
 
 import numpy as np
 
@@ -99,9 +99,12 @@ def direct_refine():
     )
     camera = pipeline.run(camera, data)
 
+    return camera
 
-direct_refine()  # Дооптимизация через прямую проекцию
 
+camera = direct_refine()  # Дооптимизация через прямую проекцию
+
+projection_line(camera, load_lines_from_json('marked/lines_gps_to_pixel.json'), 54.723603, 55.933098, save_path='image/projection_line.png')
 
 def gibrid():
     global camera
