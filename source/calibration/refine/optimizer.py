@@ -79,7 +79,7 @@ class RefineOptimizer(Calibration):
                 fun=loss_fn_mse,
                 x0=x0,
                 bounds=self.bounds,
-                method='Powell'
+                method='Nelder-Mead'
             )
 
         print(f"🔁 Итераций: {result.nfev}")

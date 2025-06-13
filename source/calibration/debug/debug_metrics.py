@@ -83,10 +83,86 @@ def compute_alignment_and_metrics(
 
     point_gps_predict = [enu_to_gps(*R @ point, lat0, lon0) for point in points_cam]
 
-    url =generate_yandex_maps_url(point_gps_predict)
-    print(f'URL YANDEX {url}')
+    # url =generate_yandex_maps_url(point_gps_predict)
+    # print(f'URL YANDEX {url}')
+    save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict)
     return {
         "rotation_matrix": R,
         "errors": errors,
         "stats": stats,
+        "point_gps_predict": point_gps_predict,
+        "point_gps_ideal": point_gps_ideal,
     }
+
+def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path="yandex_comparison.html"):
+    """
+    Сохраняет HTML-файл с Яндекс.Картой, на которой отображаются:
+    - Зелёные точки: идеальные GPS координаты
+    - Синие точки: предсказанные GPS (после обратной проекции)
+    - Красные линии: векторы ошибок
+    """
+    if len(point_gps_ideal) != len(point_gps_predict):
+        raise ValueError("Количество точек должно совпадать")
+
+    center_lat = sum(lat for lat, lon in point_gps_ideal) / len(point_gps_ideal)
+    center_lon = sum(lon for lat, lon in point_gps_ideal) / len(point_gps_ideal)
+
+    # Метки и линии
+    placemarks = ""
+    polylines = ""
+
+    for i, (ideal, pred) in enumerate(zip(point_gps_ideal, point_gps_predict)):
+        placemarks += f"""
+        myMap.geoObjects.add(new ymaps.Placemark([{ideal[0]}, {ideal[1]}], {{
+            balloonContent: "Идеал {i+1}"
+        }}, {{
+            preset: "islands#greenDotIcon"
+        }}));
+        myMap.geoObjects.add(new ymaps.Placemark([{pred[0]}, {pred[1]}], {{
+            balloonContent: "Предсказание {i+1}"
+        }}, {{
+            preset: "islands#blueDotIcon"
+        }}));
+        """
+
+        polylines += f"""
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [{ideal[0]}, {ideal[1]}],
+            [{pred[0]}, {pred[1]}]
+        ], {{
+        }}, {{
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }}));
+        """
+
+    # Финальный HTML
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Сравнение GPS точек</title>
+    <meta charset="utf-8" />
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+</head>
+<body>
+<div id="map" style="width: 100%; height: 600px;"></div>
+<script>
+ymaps.ready(function () {{
+    var myMap = new ymaps.Map("map", {{
+        center: [{center_lat}, {center_lon}],
+        zoom: 18
+    }});
+
+    {placemarks}
+
+    {polylines}
+}});
+</script>
+</body>
+</html>"""
+
+    with open(save_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"✅ HTML-карта с точками и векторами ошибок сохранена в: {save_path}")

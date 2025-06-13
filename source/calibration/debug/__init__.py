@@ -13,5 +13,5 @@ __all__ = [
     "set_grid_real",
     "estimate_rotation_svd",
     "generate_yandex_maps_url",
-    "compute_alignment_and_metrics"
-]
+    "compute_alignment_and_metrics",
+    ]

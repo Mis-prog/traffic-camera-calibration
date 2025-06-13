@@ -94,6 +94,47 @@ class AnnotationTool(QMainWindow):
         self.hover = None
         self.current_curve = []
 
+        self.highlighted_line = None
+
+        self.update_gps_btn = QPushButton("Обновить GPS")
+        self.update_gps_btn.clicked.connect(self.update_selected_gps)
+        gps_layout.addWidget(self.update_gps_btn)
+
+    def update_selected_gps(self):
+        if not self.selected:
+            return
+
+        kind, cls, item_idx, pt_idx = self.selected
+
+        if kind == "point":
+            gps = self.parse_gps(self.gps_input_1.text())
+            if gps:
+                self.annotations["point"][cls][item_idx]["gps"] = gps
+
+        elif kind == "line":
+            gps1_new = self.parse_gps(self.gps_input_1.text())
+            gps2_new = self.parse_gps(self.gps_input_2.text())
+
+            gps_old = self.annotations["line"][cls][item_idx].get("gps", [None, None])
+            if len(gps_old) != 2:
+                gps_old = [None, None]
+
+            if gps1_new:
+                gps_old[0] = gps1_new
+            if gps2_new:
+                gps_old[1] = gps2_new
+
+            self.annotations["line"][cls][item_idx]["gps"] = gps_old
+            self.highlighted_line = (cls, item_idx)  # ❗ обновим выделение вручную
+
+        elif kind == "curve":
+            gps = self.parse_gps(self.gps_input_1.text())
+            if gps:
+                n = len(self.annotations["curve"][cls][item_idx]["image"])
+                self.annotations["curve"][cls][item_idx]["gps"] = [gps] * n
+
+        self.update_display()
+
     def toggle_gps_fields(self):
         mode = self.mode_selector.currentData()
         if mode == "line":
@@ -153,8 +194,33 @@ class AnnotationTool(QMainWindow):
         if event.button() == Qt.LeftButton:
             target = self.find_nearest_point(x, y)
             if target:
+                kind, cls, item_idx, pt_idx = target
+                ann = self.annotations[kind][cls][item_idx]
                 self.selected = target
                 self.dragging = True
+
+                # 🔶 Подсветка
+                if kind == "line":
+                    self.highlighted_line = (cls, item_idx)
+                else:
+                    self.highlighted_line = None
+
+                # 📍 GPS автозаполнение
+                if kind == "point":
+                    gps = ann.get("gps")
+                    if gps:
+                        self.gps_input_1.setText(f"{gps[0]:.6f}, {gps[1]:.6f}")
+
+                elif kind == "line":
+                    gps_list = ann.get("gps")
+                    if gps_list and len(gps_list) >= 2:
+                        gps1 = gps_list[0]
+                        gps2 = gps_list[1]
+                        if gps1:
+                            self.gps_input_1.setText(f"{gps1[0]:.6f}, {gps1[1]:.6f}")
+                        if gps2:
+                            self.gps_input_2.setText(f"{gps2[0]:.6f}, {gps2[1]:.6f}")
+
                 return
 
         # === ЛКМ: добавление точки ===
@@ -365,6 +431,35 @@ class AnnotationTool(QMainWindow):
                                 painter.setPen(QPen(color, 1))
 
                                 painter.drawText(sx2 + 8, sy2 + 12, f"{gps[1][0]:.6f}, {gps[1][1]:.6f}")
+
+                        # Подсветка если выделена
+                        is_selected = (self.highlighted_line == (cls, i))
+                        line_pen = QPen(QColor("yellow") if is_selected else color, 6 if is_selected else 4)
+                        painter.setPen(line_pen)
+                        painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
+
+                        # Точки A и B
+                        labels = ["A", "B"]
+                        for j, (px, py) in enumerate(item):
+                            sx, sy = int(px * self.display_scale), int(py * self.display_scale)
+
+                            if is_selected:
+                                if j == 0:
+                                    painter.setPen(QPen(QColor("limegreen"), 6))  # Начало — зелёная
+                                    painter.setBrush(QColor("limegreen"))
+                                    painter.drawEllipse(QPoint(sx, sy), 6, 6)
+                                    painter.setPen(QPen(QColor("black"), 1))
+                                    painter.drawText(sx + 8, sy - 8, "A")
+                                elif j == 1:
+                                    painter.setPen(QPen(QColor("red"), 6))  # Конец — красная
+                                    painter.setBrush(QColor("red"))
+                                    painter.drawEllipse(QPoint(sx, sy), 6, 6)
+                                    painter.setPen(QPen(QColor("black"), 1))
+                                    painter.drawText(sx + 8, sy - 8, "B")
+                            else:
+                                is_hover = self.hover == (kind, cls, i, j)
+                                painter.setPen(QPen(QColor("yellow") if is_hover else color, 3))
+                                painter.drawEllipse(QPoint(sx, sy), 4, 4)
 
 
 
