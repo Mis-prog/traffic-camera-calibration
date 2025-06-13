@@ -17,7 +17,8 @@ class RefineOptimizer(Calibration):
                  mask: list = None,
                  debug_save_path: str = None,
                  gps_origin: tuple = None,
-                 omega_mode=False
+                 omega_mode=False,
+                 grid_range=10
                  ):
         super().__init__(camera, debug_save_path)
         self.residual_blocks = residual_blocks
@@ -28,6 +29,7 @@ class RefineOptimizer(Calibration):
         self.method = method
         self.gps_origin = gps_origin
         self.omega_mode = omega_mode
+        self.grid_range = grid_range
 
     def run(self, data, **kwargs):
         if self.omega_mode:
@@ -95,7 +97,7 @@ class RefineOptimizer(Calibration):
         if self.debug_save_path is not None:
             from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range=5,
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range=self.grid_range,
                                  grid_step=1)
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:

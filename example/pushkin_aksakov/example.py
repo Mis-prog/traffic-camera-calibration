@@ -86,7 +86,7 @@ def back_refine(camera):
 
 def direct_refine():
     """
-    Параметры камеры 1361.23, -144.89, 51.28, 169.9, 0.0, 0.0, 28.09
+    Параметры камеры 1167.74, -142.28, 49.46, 172.08, 0.0, 0.0, 30.37 погрешность 65 см
     """
     global camera
     data = {"lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json'),
@@ -102,56 +102,30 @@ def direct_refine():
                                                      gps_origin=(54.723617, 55.933152)),
     ]
 
-    # refiner_1 = RefineOptimizer(camera=camera,
-    #                             residual_blocks=resualds_blocks,
-    #                             debug_save_path='image/grid_direct_1.png',
-    #                             mask=[6],
-    #                             # bounds=([800, -360, -360, -360, 5],
-    #                             #         [2000, 360, 360, 360, 30]),
-    #                             bounds=[(10, 35)],
-    #                             method="minimize",
-    #                             )
-
-    refiner_2 = RefineOptimizer(camera=camera,
+    refiner_1 = RefineOptimizer(camera=camera,
                                 residual_blocks=resualds_blocks,
-                                debug_save_path='image/grid_direct_2.png',
+                                debug_save_path='image/grid_direct_1.png',
                                 mask=[0, 1, 2, 3, 6],
                                 bounds=([800, -360, -360, -360, 13],
                                         [2000, 360, 360, 360, 35]),
                                 # bounds=[(-180, 100), (0, 100), (150, 190)],
                                 method="trf",
+                                grid_range=10
                                 )
-
-    refiner_3 = RefineOptimizer(camera=camera,
-                                residual_blocks=resualds_blocks,
-                                debug_save_path='image/grid_direct_3.png',
-                                mask=[0, 6],
-                                # bounds=([800, -360, -360, -360, 5],
-                                #         [2000, 360, 360, 360, 30]),
-                                bounds=[(10, 35), (700, 2000)],
-                                method="minimize",
-                                )
-
-    # refiner_2 = RefineOptimizer(camera=camera,
-    #                             residual_blocks=resualds_blocks,
-    #                             debug_save_path='image/',
-    #                             mask=[0, 1, 2, 3],
-    #                             )
 
     pipeline = CalibrationPipeline(
         init_stage=vp_init,
-        refine_stages=[refiner_2],
+        refine_stages=[refiner_1],
         n_iter=1,
     )
     camera = pipeline.run(camera, data)
 
+    projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("Размеченные линии"), 54.723617, 55.933152,
+                    save_path='image/projection_line.png')
+
     return camera
 
-
 camera = direct_refine()  # Дооптимизация через прямую проекцию
-
-projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("Размеченные линии"), 54.723617, 55.933152,
-                save_path='image/projection_line.png')
 
 from source.annotation_tools import AnnotationParser
 
@@ -198,26 +172,3 @@ def gibrid():
     camera = pipeline.run(camera, data)
 
 # gibrid()
-
-
-# Разметка данных
-# from utils.data_markup_tool import LineAnnotationTool
-#
-# line_tool = LineAnnotationTool("image/pattern_corrected_image.png","marked","vertical_lines.json")
-# line_tool.run()
-
-
-# Тесты
-# from source.calibration.debug import visualize_grid_debug
-# from source.core import PointND
-# from utils.gps_connection_world import gps_to_enu, enu_to_gps
-#
-# gps_origin = (54.723767, 55.933369)
-# camera.set_params_from_list([1263.28, -142.97, 51.84, 172.31, 0.0, 0.0, 28.88])
-# visualize_grid_debug(camera, PointND(camera.intrinsics.get_main_point()))
-#
-# point = - camera.project_back(PointND([775.49946776, 886.09295195])).get()
-# print(point)
-# # point = [ -9.72, -15.13]
-# enu = enu_to_gps(*point[:2], gps_origin[0], gps_origin[1])
-# print(enu)
