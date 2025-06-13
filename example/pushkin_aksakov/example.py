@@ -2,7 +2,7 @@ from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer
 from source.annotation_tools import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group, \
-    residual_reprojection_line
+    residual_reprojection_line, orthogonal_to_plane_loss, parallel_to_plane_loss
 from calibration.debug import load_scene_gps, visualize_source, projection_line
 
 import numpy as np
@@ -31,6 +31,7 @@ def back_refine(camera):
     """
     Параметры камеры [934.15, -158.11, 51.84, 172.31, 0.0, 0.0, 20.89] (не оптимизировал углы)
     """
+
     data = {
         "Перешеходный переход 1": annotation_parser.get_lines_by_class("Перешеходный переход 1"),
         "Перешеходный переход 2": annotation_parser.get_lines_by_class("Перешеходный переход 2"),
@@ -38,35 +39,52 @@ def back_refine(camera):
         "Перешеходный переход 4": annotation_parser.get_lines_by_class("Перешеходный переход 4"),
         "Расстояние между линиями": annotation_parser.get_lines_by_class("Расстояние между линиями"),
         "Расстояние между линиями 2": annotation_parser.get_lines_by_class("Расстояние между линиями 2"),
+        "Вертикальные линии": annotation_parser.get_lines_by_class("Вертикальные линии"),
+        "Горизонтальные линии": annotation_parser.get_lines_by_class("Горизонтальные линии"),
     }
-    resualds_blocks = [
+    resualds_blocks_1 = [
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 1", expected=4),
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 2", expected=4),
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 3", expected=4),
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 4", expected=4),
-        lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями", expected=3.2),
+        # lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями", expected=3.2),
         lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями 2", expected=7),
-
     ]
+
+    resualds_blocks_2 = [
+        lambda cam, data: orthogonal_to_plane_loss(cam, data, group="Вертикальные линии"),
+        lambda cam, data: parallel_to_plane_loss(cam, data, group="Горизонтальные линии"),
+    ]
+
     refiner_1 = RefineOptimizer(camera=camera,
-                                residual_blocks=resualds_blocks,
-                                mask=[0],
-                                # bounds=[(700, 1600)],
-                                bounds=[[700], [1600]],
+                                residual_blocks=resualds_blocks_1,
+                                mask=[6],
+                                # bounds=[(15, 40)],
+                                bounds=[[12], [40]],
                                 debug_save_path='image/grid_back_1.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
                                 )
 
     refiner_2 = RefineOptimizer(camera=camera,
-                                residual_blocks=resualds_blocks,
-                                mask=[6],
-                                # bounds=[(12, 35)],
-                                bounds=[[12], [35]],
-                                debug_save_path='image/grid_back_2.png',
+                                residual_blocks=resualds_blocks_1,
+                                mask=[0, 6],
+                                # bounds=[(15, 40)],
+                                bounds=[[1000, 12], [1700, 40]],
+                                debug_save_path='image/grid_back_1.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
                                 )
+
+    # refiner_2 = RefineOptimizer(camera=camera,
+    #                             residual_blocks=resualds_blocks_2,
+    #                             mask=[2, 3],
+    #                             bounds=[(40, 53), (170,180)],
+    #                             # bounds=[[12], [40]],
+    #                             debug_save_path='image/grid_back_2.png',
+    #                             gps_origin=(54.723767, 55.933369),
+    #                             method="minimize",
+    #                             )
 
     pipeline = CalibrationPipeline(
         init_stage=vp_init,
@@ -74,14 +92,15 @@ def back_refine(camera):
             refiner_1,
             refiner_2
         ],
-        n_iter=40
+        n_iter=1
     )
+
     camera = pipeline.run(camera, data)
 
     return camera
 
 
-# camera = back_refine(camera)  # Дооптимизация через обратную проекцию
+camera = back_refine(camera)
 
 
 def direct_refine():
@@ -125,7 +144,8 @@ def direct_refine():
 
     return camera
 
-camera = direct_refine()  # Дооптимизация через прямую проекцию
+
+# camera = direct_refine()  # Дооптимизация через прямую проекцию
 
 from source.annotation_tools import AnnotationParser
 
@@ -133,7 +153,7 @@ point_control = annotation_parser.get_points_with_gps_and_pixel("Контрол�
 point_image, point_gps = [], []
 for point in point_control:
     _point_image, _point_gps = point["pixel"], point["gps"]
-    print(_point_image, _point_gps)
+    # print(_point_image, _point_gps)
     point_image.append(_point_image)
     point_gps.append(_point_gps)
 

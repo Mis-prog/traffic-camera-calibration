@@ -18,7 +18,7 @@ class RefineOptimizer(Calibration):
                  debug_save_path: str = None,
                  gps_origin: tuple = None,
                  omega_mode=False,
-                 grid_range=10
+                 grid_range=10,
                  ):
         super().__init__(camera, debug_save_path)
         self.residual_blocks = residual_blocks
@@ -30,6 +30,7 @@ class RefineOptimizer(Calibration):
         self.gps_origin = gps_origin
         self.omega_mode = omega_mode
         self.grid_range = grid_range
+        self.initial_params = camera.get_params()
 
     def run(self, data, **kwargs):
         if self.omega_mode:
@@ -81,7 +82,7 @@ class RefineOptimizer(Calibration):
                 fun=loss_fn_mse,
                 x0=x0,
                 bounds=self.bounds,
-                method='Nelder-Mead'
+                method="Powell"
             )
 
         print(f"🔁 Итераций: {result.nfev}")

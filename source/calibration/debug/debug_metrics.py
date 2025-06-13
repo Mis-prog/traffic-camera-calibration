@@ -57,13 +57,13 @@ def compute_alignment_and_metrics(
 
     # Поворот между камерами и ENU
     R = estimate_rotation_svd(points_cam, points_enu)
-    print(f"📐 Матрица поворота:\n{R}")
+    # print(f"📐 Матрица поворота:\n{R}")
 
     # Подсчёт ошибок (в ENU)
     errors = [
         np.linalg.norm(
-            # np.array(R @ predict) -
-            np.array( predict) -
+            np.array(R @ predict) -
+            # np.array( predict) -
             np.array(ideal)
         )
         for predict, ideal in zip(points_cam, points_enu)
@@ -107,19 +107,24 @@ def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_pat
     center_lat = sum(lat for lat, lon in point_gps_ideal) / len(point_gps_ideal)
     center_lon = sum(lon for lat, lon in point_gps_ideal) / len(point_gps_ideal)
 
-    # Метки и линии
     placemarks = ""
     polylines = ""
 
     for i, (ideal, pred) in enumerate(zip(point_gps_ideal, point_gps_predict)):
+        lat1, lon1 = ideal
+        lat2, lon2 = pred
+
         placemarks += f"""
-        myMap.geoObjects.add(new ymaps.Placemark([{ideal[0]}, {ideal[1]}], {{
-            balloonContent: "Идеал {i+1}"
+        myMap.geoObjects.add(new ymaps.Placemark([{lat1}, {lon1}], {{
+            balloonContent: "📍 Исходная точка {i + 1}",
+            hintContent: "📍 Исходная точка {i + 1}"
         }}, {{
             preset: "islands#greenDotIcon"
         }}));
-        myMap.geoObjects.add(new ymaps.Placemark([{pred[0]}, {pred[1]}], {{
-            balloonContent: "Предсказание {i+1}"
+
+        myMap.geoObjects.add(new ymaps.Placemark([{lat2}, {lon2}], {{
+            balloonContent: "🎯 Спроецированная точка {i + 1}",
+            hintContent: "🎯 Спроецированная точка {i + 1}"
         }}, {{
             preset: "islands#blueDotIcon"
         }}));
@@ -127,9 +132,10 @@ def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_pat
 
         polylines += f"""
         myMap.geoObjects.add(new ymaps.Polyline([
-            [{ideal[0]}, {ideal[1]}],
-            [{pred[0]}, {pred[1]}]
+            [{lat1}, {lon1}],
+            [{lat2}, {lon2}]
         ], {{
+            hintContent: "Вектор ошибки"
         }}, {{
             strokeColor: "#FF0000",
             strokeWidth: 3,
@@ -137,7 +143,6 @@ def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_pat
         }}));
         """
 
-    # Финальный HTML
     html = f"""<!DOCTYPE html>
 <html>
 <head>
