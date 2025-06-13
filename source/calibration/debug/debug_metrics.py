@@ -41,7 +41,8 @@ def compute_alignment_and_metrics(
         point_image,  # Точки с изображения
         point_gps_ideal,  # Идеальные GPS точки
         lat0, lon0,  # Начальная точка ENU-системы
-        camera  # Объект камеры
+        camera,  # Объект камеры
+        save_path="yandex_comparison.html"
 ):
     # Обратная проекция GPS в мировую систему (XY)
     points_cam = [
@@ -85,7 +86,7 @@ def compute_alignment_and_metrics(
 
     # url =generate_yandex_maps_url(point_gps_predict)
     # print(f'URL YANDEX {url}')
-    save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict)
+    save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path)
     return {
         "rotation_matrix": R,
         "errors": errors,
@@ -94,7 +95,8 @@ def compute_alignment_and_metrics(
         "point_gps_ideal": point_gps_ideal,
     }
 
-def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path="yandex_comparison.html"):
+
+def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path):
     """
     Сохраняет HTML-файл с Яндекс.Картой, на которой отображаются:
     - Зелёные точки: идеальные GPS координаты

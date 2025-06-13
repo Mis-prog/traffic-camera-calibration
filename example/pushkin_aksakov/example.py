@@ -23,8 +23,16 @@ vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
 vp_init.set_vanishing_points(vpX=vps_auto_new[0], vpY=vps_auto_new[1])
 
 from source.annotation_tools import AnnotationParser
+from calibration.debug import compute_alignment_and_metrics
 
 annotation_parser = AnnotationParser("marked/data_full.json")
+point_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
+point_image, point_gps = [], []
+for point in point_control:
+    _point_image, _point_gps = point["pixel"], point["gps"]
+    # print(_point_image, _point_gps)
+    point_image.append(_point_image)
+    point_gps.append(_point_gps)
 
 
 def back_refine(camera):
@@ -47,7 +55,7 @@ def back_refine(camera):
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 2", expected=4),
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 3", expected=4),
         lambda cam, data: residual_interline_distance(cam, data, group="Перешеходный переход 4", expected=4),
-        # lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями", expected=3.2),
+        lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями", expected=3.2),
         lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями 2", expected=7),
     ]
 
@@ -64,14 +72,15 @@ def back_refine(camera):
                                 debug_save_path='image/grid_back_1.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
+                                grid_range=10
                                 )
 
     refiner_2 = RefineOptimizer(camera=camera,
-                                residual_blocks=resualds_blocks_1,
-                                mask=[0, 6],
+                                residual_blocks=resualds_blocks_2,
+                                mask=[2, 3],
                                 # bounds=[(15, 40)],
-                                bounds=[[1000, 12], [1700, 40]],
-                                debug_save_path='image/grid_back_1.png',
+                                bounds=[[1], [1700, 40]],
+                                debug_save_path='image/grid_back_2.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
                                 )
@@ -90,7 +99,7 @@ def back_refine(camera):
         init_stage=vp_init,
         refine_stages=[
             refiner_1,
-            refiner_2
+            # refiner_2
         ],
         n_iter=1
     )
@@ -101,6 +110,11 @@ def back_refine(camera):
 
 
 camera = back_refine(camera)
+
+data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="back.html")
+
+projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("Размеченные линии"), 54.723617, 55.933152,
+                save_path='image/projection_line_2.png', R=data["rotation_matrix"].T)
 
 
 def direct_refine():
@@ -146,20 +160,7 @@ def direct_refine():
 
 
 # camera = direct_refine()  # Дооптимизация через прямую проекцию
-
-from source.annotation_tools import AnnotationParser
-
-point_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
-point_image, point_gps = [], []
-for point in point_control:
-    _point_image, _point_gps = point["pixel"], point["gps"]
-    # print(_point_image, _point_gps)
-    point_image.append(_point_image)
-    point_gps.append(_point_gps)
-
-from calibration.debug import compute_alignment_and_metrics
-
-data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera)
+# data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="direct.html")
 
 
 def gibrid():
