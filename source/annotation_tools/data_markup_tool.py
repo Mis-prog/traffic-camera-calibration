@@ -105,34 +105,33 @@ class AnnotationTool(QMainWindow):
             return
 
         kind, cls, item_idx, pt_idx = self.selected
+        ann = self.annotations[kind][cls][item_idx]
+
+        gps1_text = self.gps_input_1.text().strip()
+        gps2_text = self.gps_input_2.text().strip()
+
+        gps1 = self.parse_gps(gps1_text) if gps1_text else None
+        gps2 = self.parse_gps(gps2_text) if gps2_text else None
 
         if kind == "point":
-            gps = self.parse_gps(self.gps_input_1.text())
-            if gps:
-                self.annotations["point"][cls][item_idx]["gps"] = gps
+            ann["gps"] = gps1
 
         elif kind == "line":
-            gps1_new = self.parse_gps(self.gps_input_1.text())
-            gps2_new = self.parse_gps(self.gps_input_2.text())
-
-            gps_old = self.annotations["line"][cls][item_idx].get("gps", [None, None])
-            if len(gps_old) != 2:
-                gps_old = [None, None]
-
-            if gps1_new:
-                gps_old[0] = gps1_new
-            if gps2_new:
-                gps_old[1] = gps2_new
-
-            self.annotations["line"][cls][item_idx]["gps"] = gps_old
-            self.highlighted_line = (cls, item_idx)  # ❗ обновим выделение вручную
+            gps_old = ann.get("gps", [None, None])
+            new_gps = list(gps_old)
+            new_gps[0] = gps1 if gps1_text else None
+            new_gps[1] = gps2 if gps2_text else None
+            ann["gps"] = new_gps
 
         elif kind == "curve":
-            gps = self.parse_gps(self.gps_input_1.text())
-            if gps:
-                n = len(self.annotations["curve"][cls][item_idx]["image"])
-                self.annotations["curve"][cls][item_idx]["gps"] = [gps] * n
+            if gps1:
+                ann["gps"] = [gps1] * len(ann["image"])
+            elif gps1_text == "":
+                ann["gps"] = [None] * len(ann["image"])
 
+        # Сброс выделения после обновления
+        self.selected = None
+        self.highlighted_line = None
         self.update_display()
 
     def toggle_gps_fields(self):
@@ -176,21 +175,24 @@ class AnnotationTool(QMainWindow):
             return
 
         x, y = self.get_mouse_pos(event)
-        gps1 = self.parse_gps(self.gps_input_1.text())
-        gps2 = self.parse_gps(self.gps_input_2.text())
-
         cls = self.class_selector.currentText().strip()
         mode = self.mode_selector.currentData()
+
+        gps1_text = self.gps_input_1.text().strip()
+        gps2_text = self.gps_input_2.text().strip()
+        gps1 = self.parse_gps(gps1_text) if gps1_text else None
+        gps2 = self.parse_gps(gps2_text) if gps2_text else None
 
         if cls and self.class_selector.findText(cls) == -1:
             self.class_selector.addItem(cls)
 
-        # === ПКМ: удалить ===
+        # ПКМ — удаление точки
         if event.button() == Qt.RightButton:
             self.try_delete_nearest(x, y)
             return
 
-        # === ЛКМ: редактирование (если навёлся на точку) ===
+        # Наведение и редактирование
+        # Наведение и редактирование
         if event.button() == Qt.LeftButton:
             target = self.find_nearest_point(x, y)
             if target:
@@ -199,71 +201,56 @@ class AnnotationTool(QMainWindow):
                 self.selected = target
                 self.dragging = True
 
-                # 🔶 Подсветка
                 if kind == "line":
                     self.highlighted_line = (cls, item_idx)
                 else:
                     self.highlighted_line = None
 
-                # 📍 GPS автозаполнение
-                if kind == "point":
-                    gps = ann.get("gps")
-                    if gps:
-                        self.gps_input_1.setText(f"{gps[0]:.6f}, {gps[1]:.6f}")
+                # Автозаполнение GPS
+                if kind == "point" and ann.get("gps"):
+                    lat, lon = ann["gps"]
+                    self.gps_input_1.setText(f"{lat:.6f}, {lon:.6f}")
 
-                elif kind == "line":
-                    gps_list = ann.get("gps")
+                elif kind == "line" and ann.get("gps"):
+                    gps_list = ann["gps"]
                     if gps_list and len(gps_list) >= 2:
-                        gps1 = gps_list[0]
-                        gps2 = gps_list[1]
-                        if gps1:
-                            self.gps_input_1.setText(f"{gps1[0]:.6f}, {gps1[1]:.6f}")
-                        if gps2:
-                            self.gps_input_2.setText(f"{gps2[0]:.6f}, {gps2[1]:.6f}")
-
+                        if gps_list[0]:
+                            lat1, lon1 = gps_list[0]
+                            self.gps_input_1.setText(f"{lat1:.6f}, {lon1:.6f}")
+                        if gps_list[1]:
+                            lat2, lon2 = gps_list[1]
+                            self.gps_input_2.setText(f"{lat2:.6f}, {lon2:.6f}")
                 return
+            else:
+                self.selected = None
+                self.highlighted_line = None
+                self.update_display()
 
-        # === ЛКМ: добавление точки ===
+        # === Добавление новой точки/линии/кривой ===
+
         if mode == "point":
             self.annotations["point"].setdefault(cls, []).append({
                 "image": (x, y),
                 "gps": gps1
             })
 
-
         elif mode == "line":
-
             self.current_line.append((x, y))
-
             if len(self.current_line) == 2:
                 self.annotations["line"].setdefault(cls, []).append({
-
                     "image": self.current_line.copy(),
-
                     "gps": [gps1, gps2]
-
                 })
-
                 self.current_line.clear()
 
-
-
-
         elif mode == "curve":
-
             self.current_curve.append((x, y))
-
-            if event.type() == QMouseEvent.MouseButtonDblClick:
-
-                if len(self.current_curve) >= 2:
-                    self.annotations["curve"].setdefault(cls, []).append({
-
-                        "image": self.current_curve.copy(),
-
-                        "gps": [gps1 for _ in self.current_curve]
-
-                    })
-
+            if event.type() == QMouseEvent.MouseButtonDblClick and len(self.current_curve) >= 2:
+                gps_list = [gps1] * len(self.current_curve) if gps1 else [None] * len(self.current_curve)
+                self.annotations["curve"].setdefault(cls, []).append({
+                    "image": self.current_curve.copy(),
+                    "gps": gps_list
+                })
                 self.current_curve.clear()
 
         self.update_display()
@@ -292,6 +279,7 @@ class AnnotationTool(QMainWindow):
     def mouse_release_event(self, event):
         self.dragging = False
         self.selected = None
+        self.highlighted_line = None
 
     def try_delete_nearest(self, x, y, threshold=10):
         target = self.find_nearest_point(x, y, threshold)

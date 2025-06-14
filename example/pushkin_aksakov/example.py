@@ -159,8 +159,8 @@ def direct_refine():
     return camera
 
 
-# camera = direct_refine()  # Дооптимизация через прямую проекцию
-# data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="direct.html")
+camera = direct_refine()  # Дооптимизация через прямую проекцию
+data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="direct.html")
 
 
 def gibrid():

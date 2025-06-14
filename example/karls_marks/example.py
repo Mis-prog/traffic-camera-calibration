@@ -16,6 +16,7 @@ from source.calibration.debug import load_scene_gps, visualize_source, generate_
 from source.vp_detection import VanishingPointEstimatorManual
 from source.calibration.utils import gps_to_enu, enu_to_gps
 from source.annotation_tools import AnnotationParser
+from calibration.debug import load_scene_gps, visualize_source, projection_line
 
 # Точки схода
 # Фокусное расстояние и ориентация
@@ -23,6 +24,8 @@ annotation_parser = AnnotationParser("data/data_full_new.json")
 
 lines_vp1 = annotation_parser.get_lines_by_class("vp1")
 lines_vp3 = annotation_parser.get_lines_by_class("vp3")
+
+annotation_parser = AnnotationParser("data/data_full.json")
 
 vp1_manual = VanishingPointEstimatorManual().estimate(lines_vp1)
 vp3_manual = VanishingPointEstimatorManual().estimate(lines_vp3)
@@ -103,18 +106,18 @@ def back_refine(camera):
     return camera
 
 
-camera = back_refine(camera)
+# camera = back_refine(camera)
 
 # Метрика
-gps_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
-point_image, point_gps = [], []
-for point in gps_control:
-    _point_image, _point_gps = point["pixel"], point["gps"]
-    print(_point_image, _point_gps)
-    point_image.append(_point_image)
-    point_gps.append(_point_gps)
-
-compute_alignment_and_metrics(point_image, point_gps, 54.725378, 55.941036, camera)
+# gps_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
+# point_image, point_gps = [], []
+# for point in gps_control:
+#     _point_image, _point_gps = point["pixel"], point["gps"]
+#     print(_point_image, _point_gps)
+#     point_image.append(_point_image)
+#     point_gps.append(_point_gps)
+#
+# compute_alignment_and_metrics(point_image, point_gps, 54.725378, 55.941036, camera)
 
 """
 - Проблема с масштабом
@@ -130,17 +133,13 @@ def direct_refine(camera):
     gps_origin = (54.725378, 55.941036)
 
     data = {
-        "Пешеходный переход 1": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 1"),
-        "Пешеходный переход 2": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 2"),
-        "Дорожные линии": annotation_parser.get_lines_with_gps_and_pixel("Дорожные линии"),
+        "all": annotation_parser.get_lines_with_gps_and_pixel("all"),
     }
 
+    print(data)
+
     residual_blocks_first = [
-        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 1",
-                                                     gps_origin=gps_origin),
-        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 2",
-                                                     gps_origin=gps_origin),
-        lambda cam, data: residual_reprojection_line(cam, data, group="Дорожные линии",
+        lambda cam, data: residual_reprojection_line(cam, data, group="all",
                                                      gps_origin=gps_origin),
     ]
 
@@ -148,94 +147,25 @@ def direct_refine(camera):
         camera=camera,
         residual_blocks=residual_blocks_first,
         debug_save_path='data/grid_direct_1.png',
-        mask=[1],
-        bounds=([-180],
-                [180]),
+        mask=[0, 1, 2, 3, 6],
+        bounds=([800, -360, -360, -360, 2],
+                [2000, 360, 360, 360, 35]),
         # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
-        # method="minimize",
+        method="trf",
     )
-
-    refiner_2 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_2.png',
-        mask=[2],
-        bounds=([-180],
-                [180]),
-        # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
-        # method="minimize",
-    )
-
-    refiner_3 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_3.png',
-        mask=[3],
-        bounds=([-180],
-                [180]),
-        # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
-        # method="minimize",
-    )
-
-    refiner_4 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_4.png',
-        mask=[6],
-        bounds=([5],
-                [30]),
-        # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
-        # method="minimize",
-    )
-
-    refiner_5 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_5.png',
-        mask=[0],
-        bounds=([700],
-                [2000]),
-        # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
-        # method="minimize",
-    )
-
-    # refiner_second = RefineOptimizer(
-    #     camera=camera,
-    #     residual_blocks=residual_blocks_first,
-    #     debug_save_path='data/grid_direct_2.png',
-    #     mask=[0],
-    #     bounds=([800],
-    #             [2000])
-    # )
 
     pipeline = CalibrationPipeline(
         init_stage=vp_init,
-        refine_stages=[refiner_1, refiner_2, refiner_3, refiner_4, refiner_5],
-        n_iter=10
+        refine_stages=[refiner_1],
+        n_iter=1
     )
 
     camera = pipeline.run(camera, data)
 
-    #
-    #
-    # world_point = []
-    # for line in data['Пешеходный переход 1']:
-    #     p1, p2 = line['gps']
-    #     world_point.append(p1)
-    #     world_point.append(p2)
-    #
-    # for line in data['Пешеходный переход 2']:
-    #     p1, p2 = line['gps']
-    #     world_point.append(p1)
-    #     world_point.append(p2)
-    #
-    # for line in data['Дорожные линии']:
-    #     p1, p2 = line['gps']
-    #     world_point.append(p1)
-    #     world_point.append(p2)
-    #
-    # print(generate_yandex_maps_url(world_point))
+    projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("all"), 54.725378, 55.941036,
+                    save_path='data/projection_line.png')
 
     return camera
 
-# camera = direct_refine(camera)
+
+camera = direct_refine(camera)

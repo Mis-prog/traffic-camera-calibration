@@ -122,6 +122,26 @@ class Camera:
 
         return PointND(point3D, add_weight=True)
 
+    def backproject_ray(self, pixel_2d: tuple[float, float]) -> np.ndarray:
+        """
+        Возвращает направляющий вектор луча, проходящего от центра камеры через пиксель.
+        В мировой системе координат.
+        """
+        K = self.intrinsics.get()
+        R = self.extrinsics.get_rotation()
+
+        # Преобразуем пиксель в однородные координаты
+        x = np.array([pixel_2d[0], pixel_2d[1], 1.0])
+
+        # Направление в камере
+        ray_cam = np.linalg.inv(K) @ x
+
+        # Направление в мировой системе
+        ray_world = R.T @ ray_cam
+        ray_world /= np.linalg.norm(ray_world)
+
+        return ray_world
+
 
 def homography(self, point: PointND, direction='direct') -> PointND:
     RT = self.extrinsics.get()

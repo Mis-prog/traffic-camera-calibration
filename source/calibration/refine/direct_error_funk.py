@@ -15,6 +15,7 @@ def residual_reprojection_line(camera, data, group, gps_origin):
         error1 = np.sum((np.array(_p2) - np.array(p2)) ** 2)
         error2 = np.sum((np.array(_p1) - np.array(p1)) ** 2)
         error = np.sqrt(error1 + error2)
+        # print(error)
         residuals.append(error)
         # residuals.append(error1)
         # residuals.append(error2)

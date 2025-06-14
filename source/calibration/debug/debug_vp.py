@@ -122,3 +122,5 @@ def visualize_vps_debug(
         plt.show()
     else:
         plt.close(fig)
+
+
