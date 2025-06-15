@@ -13,10 +13,26 @@ from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtGui import QColor
 
 PALETTE = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-    "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-    "#bcbd22", "#17becf", "#aec7e8", "#ffbb78",
-    "#98df8a", "#ff9896", "#c5b0d5", "#c49c94"
+    "#e6194b",  # красный
+    "#3cb44b",  # зелёный
+    "#ffe119",  # жёлтый
+    "#4363d8",  # синий
+    "#f58231",  # оранжевый
+    "#911eb4",  # фиолетовый
+    "#46f0f0",  # бирюзовый
+    "#f032e6",  # розовый
+    "#bcf60c",  # салатовый
+    "#fabebe",  # светло-розовый
+    "#008080",  # тёмная бирюза
+    "#e6beff",  # сиреневый
+    "#9a6324",  # коричневый
+    "#fffac8",  # бледно-жёлтый
+    "#800000",  # бордовый
+    "#aaffc3",  # мятный
+    "#808000",  # оливковый
+    "#ffd8b1",  # персиковый
+    "#000075",  # тёмно-синий
+    "#808080"  # серый
 ]
 
 
@@ -73,8 +89,21 @@ class AnnotationTool(QMainWindow):
         layout.addLayout(top_bar)
 
         gps_layout = QHBoxLayout()
+
+        self.gps_status = QLabel("Ничего не выбрано")
+        layout.addWidget(self.gps_status)  # добавляется ПЕРЕД gps_layout
+
         gps_layout.addWidget(self.gps_input_1)
         gps_layout.addWidget(self.gps_input_2)
+
+        self.update_gps_btn = QPushButton("Обновить GPS")
+        self.update_gps_btn.clicked.connect(self.update_selected_gps)
+        gps_layout.addWidget(self.update_gps_btn)
+
+        self.clear_gps_btn = QPushButton("Сбросить GPS")
+        self.clear_gps_btn.clicked.connect(self.clear_gps)
+        gps_layout.addWidget(self.clear_gps_btn)
+
         layout.addLayout(gps_layout)
 
         layout.addWidget(self.image_label)
@@ -96,9 +125,25 @@ class AnnotationTool(QMainWindow):
 
         self.highlighted_line = None
 
-        self.update_gps_btn = QPushButton("Обновить GPS")
-        self.update_gps_btn.clicked.connect(self.update_selected_gps)
         gps_layout.addWidget(self.update_gps_btn)
+
+    def auto_update_gps(self):
+        if self.selected:
+            self.update_selected_gps()
+
+    def clear_gps(self):
+        if not self.selected:
+            # Если ничего не выделено, просто очищаем поля ввода
+            self.gps_input_1.clear()
+            self.gps_input_2.clear()
+            return
+
+        # Очищаем поля ввода
+        self.gps_input_1.clear()
+        self.gps_input_2.clear()
+
+        # Обновляем GPS выделенного объекта
+        self.update_selected_gps()
 
     def update_selected_gps(self):
         if not self.selected:
@@ -110,6 +155,7 @@ class AnnotationTool(QMainWindow):
         gps1_text = self.gps_input_1.text().strip()
         gps2_text = self.gps_input_2.text().strip()
 
+        # Парсим GPS или устанавливаем None для пустых строк
         gps1 = self.parse_gps(gps1_text) if gps1_text else None
         gps2 = self.parse_gps(gps2_text) if gps2_text else None
 
@@ -117,21 +163,26 @@ class AnnotationTool(QMainWindow):
             ann["gps"] = gps1
 
         elif kind == "line":
-            gps_old = ann.get("gps", [None, None])
-            new_gps = list(gps_old)
-            new_gps[0] = gps1 if gps1_text else None
-            new_gps[1] = gps2 if gps2_text else None
-            ann["gps"] = new_gps
+            # Инициализируем массив GPS если его нет
+            if "gps" not in ann:
+                ann["gps"] = [None, None]
+            elif not isinstance(ann["gps"], list):
+                ann["gps"] = [None, None]
+            elif len(ann["gps"]) < 2:
+                ann["gps"] = ann["gps"] + [None] * (2 - len(ann["gps"]))
+
+            ann["gps"][0] = gps1
+            ann["gps"][1] = gps2
 
         elif kind == "curve":
-            if gps1:
+            if gps1 is not None:
                 ann["gps"] = [gps1] * len(ann["image"])
-            elif gps1_text == "":
+            else:
                 ann["gps"] = [None] * len(ann["image"])
 
-        # Сброс выделения после обновления
-        self.selected = None
-        self.highlighted_line = None
+        print(f"GPS после обновления для {kind} класса '{cls}' №{item_idx}:", ann.get("gps"))
+
+        # НЕ сбрасываем выделение, чтобы пользователь видел результат
         self.update_display()
 
     def toggle_gps_fields(self):
@@ -200,6 +251,10 @@ class AnnotationTool(QMainWindow):
                 ann = self.annotations[kind][cls][item_idx]
                 self.selected = target
                 self.dragging = True
+                self.gps_status.setText(f"Редактируется {kind.upper()} – класс '{cls}' №{item_idx}")
+
+                self.gps_input_1.setText("")
+                self.gps_input_2.setText("")
 
                 if kind == "line":
                     self.highlighted_line = (cls, item_idx)
@@ -224,6 +279,7 @@ class AnnotationTool(QMainWindow):
             else:
                 self.selected = None
                 self.highlighted_line = None
+                self.gps_status.setText("Ничего не выбрано")
                 self.update_display()
 
         # === Добавление новой точки/линии/кривой ===
@@ -278,7 +334,7 @@ class AnnotationTool(QMainWindow):
 
     def mouse_release_event(self, event):
         self.dragging = False
-        self.selected = None
+        # self.selected = None
         self.highlighted_line = None
 
     def try_delete_nearest(self, x, y, threshold=10):
@@ -298,12 +354,30 @@ class AnnotationTool(QMainWindow):
             if not self.annotations["line"][cls]:
                 del self.annotations["line"][cls]
 
+
+
         elif kind == "curve":
-            curve = self.annotations["curve"][cls][item_idx]
-            if 0 <= pt_idx < len(curve):
-                del curve[pt_idx]
-                if len(curve) < 2:
+
+            ann = self.annotations["curve"][cls][item_idx]
+
+            if "image" in ann and 0 <= pt_idx < len(ann["image"]):
+
+                # Удаляем точку по индексу
+
+                del ann["image"][pt_idx]
+
+                # Если есть gps — тоже удаляем соответствующую
+
+                if "gps" in ann and len(ann["gps"]) > pt_idx:
+                    del ann["gps"][pt_idx]
+
+                # Если после удаления осталось меньше 2 точек — удаляем всю кривую
+
+                if len(ann["image"]) < 2:
                     del self.annotations["curve"][cls][item_idx]
+
+                # Если класс стал пустой — удаляем ключ
+
                 if not self.annotations["curve"][cls]:
                     del self.annotations["curve"][cls]
 
@@ -353,72 +427,24 @@ class AnnotationTool(QMainWindow):
                 for i, ann in enumerate(items):
                     item = ann["image"]
                     gps = ann.get("gps", None)
+
                     if kind == "point":
                         x, y = [int(p * self.display_scale) for p in item]
                         pen = QPen(QColor("yellow") if self.hover == (kind, cls, i, 0) else color, 4)
                         painter.setPen(pen)
                         painter.drawEllipse(QPoint(x, y), 5, 5)
                         painter.drawText(x + 8, y - 8, cls)
-                        if gps and isinstance(gps, (list, tuple)) and len(gps) == 2 and isinstance(gps[0],
-                                                                                                   (int, float)):
-                            painter.setPen(QPen(color, 1))
-                            painter.drawText(x + 8, y + 12, f"{gps[0]:.6f}, {gps[1]:.6f}")
 
-
-
+                        # Отображение GPS для точки
+                        if gps and isinstance(gps, (list, tuple)) and len(gps) == 2:
+                            if isinstance(gps[0], (int, float)) and isinstance(gps[1], (int, float)):
+                                painter.setPen(QPen(color, 1))
+                                painter.drawText(x + 8, y + 12, f"{gps[0]:.6f}, {gps[1]:.6f}")
 
                     elif kind == "line":
-
-                        # Получаем точки начала и конца
-
                         (x1, y1), (x2, y2) = item
-
                         sx1, sy1 = int(x1 * self.display_scale), int(y1 * self.display_scale)
-
                         sx2, sy2 = int(x2 * self.display_scale), int(y2 * self.display_scale)
-
-                        # Линия
-
-                        painter.setPen(QPen(color, 4))
-
-                        painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
-
-                        # Точки начала и конца
-
-                        for j, (px, py) in enumerate(item):
-                            sx, sy = int(px * self.display_scale), int(py * self.display_scale)
-
-                            is_hover = self.hover == (kind, cls, i, j)
-
-                            pen = QPen(QColor("yellow") if is_hover else color, 3)
-
-                            painter.setPen(pen)
-
-                            painter.drawEllipse(QPoint(sx, sy), 4, 4)
-
-                        # Подпись класса в центре
-
-                        mx = int((x1 + x2) / 2 * self.display_scale)
-
-                        my = int((y1 + y2) / 2 * self.display_scale)
-
-                        painter.setPen(QPen(color, 1))
-
-                        painter.drawText(mx + 6, my - 6, cls)
-
-                        # Подписи GPS координат у обеих точек
-
-                        if gps and isinstance(gps, list):
-
-                            if len(gps) >= 1 and isinstance(gps[0], (list, tuple)) and len(gps[0]) == 2:
-                                painter.setPen(QPen(color, 1))
-
-                                painter.drawText(sx1 + 8, sy1 + 12, f"{gps[0][0]:.6f}, {gps[0][1]:.6f}")
-
-                            if len(gps) >= 2 and isinstance(gps[1], (list, tuple)) and len(gps[1]) == 2:
-                                painter.setPen(QPen(color, 1))
-
-                                painter.drawText(sx2 + 8, sy2 + 12, f"{gps[1][0]:.6f}, {gps[1][1]:.6f}")
 
                         # Подсветка если выделена
                         is_selected = (self.highlighted_line == (cls, i))
@@ -427,19 +453,18 @@ class AnnotationTool(QMainWindow):
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
 
                         # Точки A и B
-                        labels = ["A", "B"]
                         for j, (px, py) in enumerate(item):
                             sx, sy = int(px * self.display_scale), int(py * self.display_scale)
 
                             if is_selected:
                                 if j == 0:
-                                    painter.setPen(QPen(QColor("limegreen"), 6))  # Начало — зелёная
+                                    painter.setPen(QPen(QColor("limegreen"), 6))
                                     painter.setBrush(QColor("limegreen"))
                                     painter.drawEllipse(QPoint(sx, sy), 6, 6)
                                     painter.setPen(QPen(QColor("black"), 1))
                                     painter.drawText(sx + 8, sy - 8, "A")
                                 elif j == 1:
-                                    painter.setPen(QPen(QColor("red"), 6))  # Конец — красная
+                                    painter.setPen(QPen(QColor("red"), 6))
                                     painter.setBrush(QColor("red"))
                                     painter.drawEllipse(QPoint(sx, sy), 6, 6)
                                     painter.setPen(QPen(QColor("black"), 1))
@@ -449,7 +474,23 @@ class AnnotationTool(QMainWindow):
                                 painter.setPen(QPen(QColor("yellow") if is_hover else color, 3))
                                 painter.drawEllipse(QPoint(sx, sy), 4, 4)
 
+                        # Подпись класса в центре
+                        mx = int((x1 + x2) / 2 * self.display_scale)
+                        my = int((y1 + y2) / 2 * self.display_scale)
+                        painter.setPen(QPen(color, 1))
+                        painter.drawText(mx + 6, my - 6, cls)
 
+                        # ИСПРАВЛЕННОЕ отображение GPS координат
+                        if gps and isinstance(gps, list) and len(gps) >= 2:
+                            # GPS для первой точки (A)
+                            if gps[0] is not None and isinstance(gps[0], (list, tuple)) and len(gps[0]) == 2:
+                                painter.setPen(QPen(color, 1))
+                                painter.drawText(sx1 + 8, sy1 + 12, f"{gps[0][0]:.6f}, {gps[0][1]:.6f}")
+
+                            # GPS для второй точки (B)
+                            if gps[1] is not None and isinstance(gps[1], (list, tuple)) and len(gps[1]) == 2:
+                                painter.setPen(QPen(color, 1))
+                                painter.drawText(sx2 + 8, sy2 + 12, f"{gps[1][0]:.6f}, {gps[1][1]:.6f}")
 
                     elif kind == "curve":
                         path = item

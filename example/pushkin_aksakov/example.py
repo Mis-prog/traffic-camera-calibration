@@ -2,7 +2,7 @@ from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
     RefineOptimizer
 from source.annotation_tools import load_lines, load_lines_from_json
 from calibration.refine import residual_interline_distance, residual_parallel_group, \
-    residual_reprojection_line, orthogonal_to_plane_loss, parallel_to_plane_loss
+    residual_reprojection_line
 from calibration.debug import load_scene_gps, visualize_source, projection_line
 
 import numpy as np
@@ -109,7 +109,7 @@ def back_refine(camera):
     return camera
 
 
-camera = back_refine(camera)
+# camera = back_refine(camera)
 
 data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="back.html")
 
@@ -143,7 +143,7 @@ def direct_refine():
                                         [2000, 360, 360, 360, 35]),
                                 # bounds=[(-180, 100), (0, 100), (150, 190)],
                                 method="trf",
-                                grid_range=10
+                                grid_range=(10, 10)
                                 )
 
     pipeline = CalibrationPipeline(

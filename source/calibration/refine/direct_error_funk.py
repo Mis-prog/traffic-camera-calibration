@@ -3,6 +3,8 @@ import numpy as np
 from source.core import Camera, PointND
 from source.calibration.utils import gps_to_enu
 
+RESUALDS = []
+
 
 def residual_reprojection_line(camera, data, group, gps_origin):
     residuals = []
@@ -15,7 +17,8 @@ def residual_reprojection_line(camera, data, group, gps_origin):
         error1 = np.sum((np.array(_p2) - np.array(p2)) ** 2)
         error2 = np.sum((np.array(_p1) - np.array(p1)) ** 2)
         error = np.sqrt(error1 + error2)
-        # print(error)
+        # print(f"DEBUG error: {error}, error1: {np.sqrt(error1)}, error2: {np.sqrt(error2)}")
+        RESUALDS.append([error, error1, error2])
         residuals.append(error)
         # residuals.append(error1)
         # residuals.append(error2)

@@ -25,7 +25,7 @@ annotation_parser = AnnotationParser("data/data_full_new.json")
 lines_vp1 = annotation_parser.get_lines_by_class("vp1")
 lines_vp3 = annotation_parser.get_lines_by_class("vp3")
 
-annotation_parser = AnnotationParser("data/data_full.json")
+annotation_parser = AnnotationParser("data/data_new.json")
 
 vp1_manual = VanishingPointEstimatorManual().estimate(lines_vp1)
 vp3_manual = VanishingPointEstimatorManual().estimate(lines_vp3)
@@ -130,7 +130,7 @@ def direct_refine(camera):
     Результаты для перекрестка
 
     """
-    gps_origin = (54.725378, 55.941036)
+    gps_origin = (54.725376, 55.941034)
 
     data = {
         "all": annotation_parser.get_lines_with_gps_and_pixel("all"),
@@ -143,13 +143,15 @@ def direct_refine(camera):
                                                      gps_origin=gps_origin),
     ]
 
+    # z0, x0, y0 = camera
+
     refiner_1 = RefineOptimizer(
         camera=camera,
         residual_blocks=residual_blocks_first,
         debug_save_path='data/grid_direct_1.png',
-        mask=[0, 1, 2, 3, 6],
-        bounds=([800, -360, -360, -360, 2],
-                [2000, 360, 360, 360, 35]),
+        mask=[1],
+        bounds=([-360],
+                [360]),
         # bounds=[(-360, 360), (-360, 360), (-360, 360), (5, 30)],
         method="trf",
     )
