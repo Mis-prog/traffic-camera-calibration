@@ -6,8 +6,10 @@ from calibration.refine import residual_interline_distance, residual_parallel_gr
 from calibration.debug import load_scene_gps, visualize_source, projection_line
 
 import numpy as np
+from source.annotation_tools import AnnotationParser
+from calibration.debug import compute_alignment_and_metrics
 
-camera = Camera('image/pattern_corrected_image.png')
+camera = Camera('image/undistorted_output_one.jpg')
 
 # vp1 = [3974.185, -248.69977]
 # vp2 = [768.4042, 2362.912]
@@ -15,15 +17,22 @@ camera = Camera('image/pattern_corrected_image.png')
 # vps_auto = np.array([vp1, vp3, vp2])
 
 # Набор найденный через RANSAK
-vp1_new = [3.535e+03, -1.270e+02]
-vp2_new = [164.36434109, -476.74418605]
-vps_auto_new = np.array([vp1_new, vp2_new])
+# vp1_new = [3.535e+03, -1.270e+02]
+# vp2_new = [164.36434109, -476.74418605]
+# vps_auto_new = np.array([vp1_new, vp2_new])
+
+annotation_parser = AnnotationParser("marked/data_full.json")
+lines_vp1 = annotation_parser.get_lines_by_class("vp1")
+lines_vp3 = annotation_parser.get_lines_by_class("vp3")
+
+from source.vp_detection import VanishingPointEstimatorManual
+
+vp1_manual = VanishingPointEstimatorManual().estimate(lines_vp1)
+vp3_manual = VanishingPointEstimatorManual().estimate(lines_vp3)
+print(vp1_manual, vp3_manual)
 
 vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
-vp_init.set_vanishing_points(vpX=vps_auto_new[0], vpY=vps_auto_new[1])
-
-from source.annotation_tools import AnnotationParser
-from calibration.debug import compute_alignment_and_metrics
+vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
 
 annotation_parser = AnnotationParser("marked/data_full.json")
 point_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
@@ -59,11 +68,6 @@ def back_refine(camera):
         lambda cam, data: residual_interline_distance(cam, data, group="Расстояние между линиями 2", expected=7),
     ]
 
-    resualds_blocks_2 = [
-        lambda cam, data: orthogonal_to_plane_loss(cam, data, group="Вертикальные линии"),
-        lambda cam, data: parallel_to_plane_loss(cam, data, group="Горизонтальные линии"),
-    ]
-
     refiner_1 = RefineOptimizer(camera=camera,
                                 residual_blocks=resualds_blocks_1,
                                 mask=[6],
@@ -72,17 +76,19 @@ def back_refine(camera):
                                 debug_save_path='image/grid_back_1.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
-                                grid_range=10
+                                grid_range=(10, 10),
+
                                 )
 
     refiner_2 = RefineOptimizer(camera=camera,
-                                residual_blocks=resualds_blocks_2,
-                                mask=[2, 3],
+                                residual_blocks=resualds_blocks_1,
+                                mask=[0, 6],
                                 # bounds=[(15, 40)],
-                                bounds=[[1], [1700, 40]],
+                                bounds=[[900, 20], [1700, 40]],
                                 debug_save_path='image/grid_back_2.png',
                                 gps_origin=(54.723767, 55.933369),
                                 method="trf",
+                                grid_range=(20, 10),
                                 )
 
     # refiner_2 = RefineOptimizer(camera=camera,
@@ -99,7 +105,7 @@ def back_refine(camera):
         init_stage=vp_init,
         refine_stages=[
             refiner_1,
-            # refiner_2
+            refiner_2
         ],
         n_iter=1
     )
@@ -111,10 +117,11 @@ def back_refine(camera):
 
 # camera = back_refine(camera)
 
-data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="back.html")
 
-projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("Размеченные линии"), 54.723617, 55.933152,
-                save_path='image/projection_line_2.png', R=data["rotation_matrix"].T)
+# data = compute_alignment_and_metrics(point_image, point_gps, 54.723617, 55.933152, camera, save_path="back.html")
+#
+# projection_line(camera, annotation_parser.get_lines_with_gps_and_pixel("Размеченные линии"), 54.723617, 55.933152,
+#                 save_path='image/projection_line_2.png', R=data["rotation_matrix"].T)
 
 
 def direct_refine():
@@ -192,4 +199,58 @@ def gibrid():
     pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
     camera = pipeline.run(camera, data)
 
+
 # gibrid()
+
+from scipy.spatial.transform import Rotation as R
+from scipy.optimize import minimize
+
+rz, rx, ry = camera.extrinsics.get_angles()
+K = camera.intrinsics.get()
+annotation_parser = AnnotationParser("marked/data_angle.json")
+
+lines = annotation_parser.get_lines_by_class("all")
+
+
+def build_rotation_matrix_zxy(pitch_deg, yaw_deg, roll_deg=0.0):
+    return R.from_euler('zxy', [roll_deg, pitch_deg, yaw_deg], degrees=True).as_matrix()
+
+
+def loss_in_plane_v2(angles_xy_deg, roll_fixed_deg, lines, K, reg_weight=0.1):
+    pitch, yaw = angles_xy_deg
+    R_new = build_rotation_matrix_zxy(pitch, yaw, roll_fixed_deg)
+
+    # Нормаль плоскости дороги в мировых координатах
+    n_world = np.array([0, 0, 1])  # предполагаем горизонтальную плоскость
+
+    loss = 0.0
+    for p1, p2 in lines:
+        # Получаем лучи в координатах камеры
+        ray1 = np.linalg.inv(K) @ np.array([*p1, 1.0])
+        ray2 = np.linalg.inv(K) @ np.array([*p2, 1.0])
+
+        # Направление линии в координатах камеры
+        line_dir_cam = ray2 - ray1
+        line_dir_cam = line_dir_cam / np.linalg.norm(line_dir_cam)
+
+        # Переводим в мировые координаты
+        line_dir_world = R_new.T @ line_dir_cam
+
+        # Для линий на плоскости дороги их направление должно быть перпендикулярно нормали
+        dot_product = np.abs(np.dot(line_dir_world, n_world))
+        loss += dot_product ** 2
+
+    # Регуляризация для стабильности
+    reg = reg_weight * np.sum(np.array([pitch, yaw]) ** 2)
+    return loss / len(lines) + reg
+
+
+result = minimize(
+    loss_in_plane_v2,
+    x0=[rx, ry],
+    args=(rz, lines, K),
+    method='Powell',
+    options={'maxiter': 300, 'disp': True}
+)
+
+print(result.x)

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Сравнение GPS точек</title>
+    <meta charset="utf-8" />
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+</head>
+<body>
+<div id="map" style="width: 100%; height: 600px;"></div>
+<script>
+ymaps.ready(function () {
+    var myMap = new ymaps.Map("map", {
+        center: [54.72382775, 55.9335835],
+        zoom: 18
+    });
+
+    
+        myMap.geoObjects.add(new ymaps.Placemark([54.72376, 55.933338], {
+            balloonContent: "📍 Исходная точка 1",
+            hintContent: "📍 Исходная точка 1"
+        }, {
+            preset: "islands#greenDotIcon"
+        }));
+
+        myMap.geoObjects.add(new ymaps.Placemark([54.723752021530395, 55.93334075604317], {
+            balloonContent: "🎯 Спроецированная точка 1",
+            hintContent: "🎯 Спроецированная точка 1"
+        }, {
+            preset: "islands#blueDotIcon"
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Placemark([54.72399, 55.933488], {
+            balloonContent: "📍 Исходная точка 2",
+            hintContent: "📍 Исходная точка 2"
+        }, {
+            preset: "islands#greenDotIcon"
+        }));
+
+        myMap.geoObjects.add(new ymaps.Placemark([54.723976145914044, 55.9334889307624], {
+            balloonContent: "🎯 Спроецированная точка 2",
+            hintContent: "🎯 Спроецированная точка 2"
+        }, {
+            preset: "islands#blueDotIcon"
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Placemark([54.723896, 55.933864], {
+            balloonContent: "📍 Исходная точка 3",
+            hintContent: "📍 Исходная точка 3"
+        }, {
+            preset: "islands#greenDotIcon"
+        }));
+
+        myMap.geoObjects.add(new ymaps.Placemark([54.72389225671881, 55.933892227150594], {
+            balloonContent: "🎯 Спроецированная точка 3",
+            hintContent: "🎯 Спроецированная точка 3"
+        }, {
+            preset: "islands#blueDotIcon"
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Placemark([54.723665, 55.933644], {
+            balloonContent: "📍 Исходная точка 4",
+            hintContent: "📍 Исходная точка 4"
+        }, {
+            preset: "islands#greenDotIcon"
+        }));
+
+        myMap.geoObjects.add(new ymaps.Placemark([54.7236533612683, 55.9336462312265], {
+            balloonContent: "🎯 Спроецированная точка 4",
+            hintContent: "🎯 Спроецированная точка 4"
+        }, {
+            preset: "islands#blueDotIcon"
+        }));
+        
+
+    
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [54.72376, 55.933338],
+            [54.723752021530395, 55.93334075604317]
+        ], {
+            hintContent: "Вектор ошибки"
+        }, {
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [54.72399, 55.933488],
+            [54.723976145914044, 55.9334889307624]
+        ], {
+            hintContent: "Вектор ошибки"
+        }, {
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [54.723896, 55.933864],
+            [54.72389225671881, 55.933892227150594]
+        ], {
+            hintContent: "Вектор ошибки"
+        }, {
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }));
+        
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [54.723665, 55.933644],
+            [54.7236533612683, 55.9336462312265]
+        ], {
+            hintContent: "Вектор ошибки"
+        }, {
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }));
+        
+});
+</script>
+</body>
+</html>

@@ -102,7 +102,7 @@ class RefineOptimizer(Calibration):
             point_start = PointND(self.point_start, add_weight=True)
             visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range_x=self.grid_range_x,
                                  grid_range_y=self.grid_range_y,
-                                 grid_step=5)
+                                 grid_step=1)
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)
             if self.gps_origin is not None:
                 pass

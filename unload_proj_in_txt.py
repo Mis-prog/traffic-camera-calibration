@@ -1,6 +1,9 @@
 import os
 
-folder_paths = ['source', 'example']  
+# folder_paths = ['source', 'example']
+#
+
+folder_paths  = ['source']
 output_file = 'all_code.txt'
 comment_prefixes = ('#', '//', '/*', '*', '--')
 

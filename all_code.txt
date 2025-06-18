@@ -110,10 +110,26 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtGui import QColor
 PALETTE = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-    "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-    "#bcbd22", "#17becf", "#aec7e8", "#ffbb78",
-    "#98df8a", "#ff9896", "#c5b0d5", "#c49c94"
+    "#e6194b",  # красный
+    "#3cb44b",  # зелёный
+    "#ffe119",  # жёлтый
+    "#4363d8",  # синий
+    "#f58231",  # оранжевый
+    "#911eb4",  # фиолетовый
+    "#46f0f0",  # бирюзовый
+    "#f032e6",  # розовый
+    "#bcf60c",  # салатовый
+    "#fabebe",  # светло-розовый
+    "#008080",  # тёмная бирюза
+    "#e6beff",  # сиреневый
+    "#9a6324",  # коричневый
+    "#fffac8",  # бледно-жёлтый
+    "#800000",  # бордовый
+    "#aaffc3",  # мятный
+    "#808000",  # оливковый
+    "#ffd8b1",  # персиковый
+    "#000075",  # тёмно-синий
+    "#808080"  # серый
 ]
 class AnnotationTool(QMainWindow):
     def __init__(self):
@@ -154,8 +170,16 @@ class AnnotationTool(QMainWindow):
         layout = QVBoxLayout()
         layout.addLayout(top_bar)
         gps_layout = QHBoxLayout()
+        self.gps_status = QLabel("Ничего не выбрано")
+        layout.addWidget(self.gps_status)  # добавляется ПЕРЕД gps_layout
         gps_layout.addWidget(self.gps_input_1)
         gps_layout.addWidget(self.gps_input_2)
+        self.update_gps_btn = QPushButton("Обновить GPS")
+        self.update_gps_btn.clicked.connect(self.update_selected_gps)
+        gps_layout.addWidget(self.update_gps_btn)
+        self.clear_gps_btn = QPushButton("Сбросить GPS")
+        self.clear_gps_btn.clicked.connect(self.clear_gps)
+        gps_layout.addWidget(self.clear_gps_btn)
         layout.addLayout(gps_layout)
         layout.addWidget(self.image_label)
         container = QWidget()
@@ -170,6 +194,46 @@ class AnnotationTool(QMainWindow):
         self.dragging = False
         self.hover = None
         self.current_curve = []
+        self.highlighted_line = None
+        gps_layout.addWidget(self.update_gps_btn)
+    def auto_update_gps(self):
+        if self.selected:
+            self.update_selected_gps()
+    def clear_gps(self):
+        if not self.selected:
+            self.gps_input_1.clear()
+            self.gps_input_2.clear()
+            return
+        self.gps_input_1.clear()
+        self.gps_input_2.clear()
+        self.update_selected_gps()
+    def update_selected_gps(self):
+        if not self.selected:
+            return
+        kind, cls, item_idx, pt_idx = self.selected
+        ann = self.annotations[kind][cls][item_idx]
+        gps1_text = self.gps_input_1.text().strip()
+        gps2_text = self.gps_input_2.text().strip()
+        gps1 = self.parse_gps(gps1_text) if gps1_text else None
+        gps2 = self.parse_gps(gps2_text) if gps2_text else None
+        if kind == "point":
+            ann["gps"] = gps1
+        elif kind == "line":
+            if "gps" not in ann:
+                ann["gps"] = [None, None]
+            elif not isinstance(ann["gps"], list):
+                ann["gps"] = [None, None]
+            elif len(ann["gps"]) < 2:
+                ann["gps"] = ann["gps"] + [None] * (2 - len(ann["gps"]))
+            ann["gps"][0] = gps1
+            ann["gps"][1] = gps2
+        elif kind == "curve":
+            if gps1 is not None:
+                ann["gps"] = [gps1] * len(ann["image"])
+            else:
+                ann["gps"] = [None] * len(ann["image"])
+        print(f"GPS после обновления для {kind} класса '{cls}' №{item_idx}:", ann.get("gps"))
+        self.update_display()
     def toggle_gps_fields(self):
         mode = self.mode_selector.currentData()
         if mode == "line":
@@ -205,10 +269,12 @@ class AnnotationTool(QMainWindow):
         if not self.image:
             return
         x, y = self.get_mouse_pos(event)
-        gps1 = self.parse_gps(self.gps_input_1.text())
-        gps2 = self.parse_gps(self.gps_input_2.text())
         cls = self.class_selector.currentText().strip()
         mode = self.mode_selector.currentData()
+        gps1_text = self.gps_input_1.text().strip()
+        gps2_text = self.gps_input_2.text().strip()
+        gps1 = self.parse_gps(gps1_text) if gps1_text else None
+        gps2 = self.parse_gps(gps2_text) if gps2_text else None
         if cls and self.class_selector.findText(cls) == -1:
             self.class_selector.addItem(cls)
         if event.button() == Qt.RightButton:
@@ -217,9 +283,35 @@ class AnnotationTool(QMainWindow):
         if event.button() == Qt.LeftButton:
             target = self.find_nearest_point(x, y)
             if target:
+                kind, cls, item_idx, pt_idx = target
+                ann = self.annotations[kind][cls][item_idx]
                 self.selected = target
                 self.dragging = True
+                self.gps_status.setText(f"Редактируется {kind.upper()} – класс '{cls}' №{item_idx}")
+                self.gps_input_1.setText("")
+                self.gps_input_2.setText("")
+                if kind == "line":
+                    self.highlighted_line = (cls, item_idx)
+                else:
+                    self.highlighted_line = None
+                if kind == "point" and ann.get("gps"):
+                    lat, lon = ann["gps"]
+                    self.gps_input_1.setText(f"{lat:.6f}, {lon:.6f}")
+                elif kind == "line" and ann.get("gps"):
+                    gps_list = ann["gps"]
+                    if gps_list and len(gps_list) >= 2:
+                        if gps_list[0]:
+                            lat1, lon1 = gps_list[0]
+                            self.gps_input_1.setText(f"{lat1:.6f}, {lon1:.6f}")
+                        if gps_list[1]:
+                            lat2, lon2 = gps_list[1]
+                            self.gps_input_2.setText(f"{lat2:.6f}, {lon2:.6f}")
                 return
+            else:
+                self.selected = None
+                self.highlighted_line = None
+                self.gps_status.setText("Ничего не выбрано")
+                self.update_display()
         if mode == "point":
             self.annotations["point"].setdefault(cls, []).append({
                 "image": (x, y),
@@ -235,12 +327,12 @@ class AnnotationTool(QMainWindow):
                 self.current_line.clear()
         elif mode == "curve":
             self.current_curve.append((x, y))
-            if event.type() == QMouseEvent.MouseButtonDblClick:
-                if len(self.current_curve) >= 2:
-                    self.annotations["curve"].setdefault(cls, []).append({
-                        "image": self.current_curve.copy(),
-                        "gps": [gps1 for _ in self.current_curve]
-                    })
+            if event.type() == QMouseEvent.MouseButtonDblClick and len(self.current_curve) >= 2:
+                gps_list = [gps1] * len(self.current_curve) if gps1 else [None] * len(self.current_curve)
+                self.annotations["curve"].setdefault(cls, []).append({
+                    "image": self.current_curve.copy(),
+                    "gps": gps_list
+                })
                 self.current_curve.clear()
         self.update_display()
     def mouse_move_event(self, event):
@@ -262,7 +354,7 @@ class AnnotationTool(QMainWindow):
         self.update_display()
     def mouse_release_event(self, event):
         self.dragging = False
-        self.selected = None
+        self.highlighted_line = None
     def try_delete_nearest(self, x, y, threshold=10):
         target = self.find_nearest_point(x, y, threshold)
         if not target:
@@ -277,10 +369,12 @@ class AnnotationTool(QMainWindow):
             if not self.annotations["line"][cls]:
                 del self.annotations["line"][cls]
         elif kind == "curve":
-            curve = self.annotations["curve"][cls][item_idx]
-            if 0 <= pt_idx < len(curve):
-                del curve[pt_idx]
-                if len(curve) < 2:
+            ann = self.annotations["curve"][cls][item_idx]
+            if "image" in ann and 0 <= pt_idx < len(ann["image"]):
+                del ann["image"][pt_idx]
+                if "gps" in ann and len(ann["gps"]) > pt_idx:
+                    del ann["gps"][pt_idx]
+                if len(ann["image"]) < 2:
                     del self.annotations["curve"][cls][item_idx]
                 if not self.annotations["curve"][cls]:
                     del self.annotations["curve"][cls]
@@ -330,31 +424,46 @@ class AnnotationTool(QMainWindow):
                         painter.setPen(pen)
                         painter.drawEllipse(QPoint(x, y), 5, 5)
                         painter.drawText(x + 8, y - 8, cls)
-                        if gps and isinstance(gps, (list, tuple)) and len(gps) == 2 and isinstance(gps[0],
-                                                                                                   (int, float)):
-                            painter.setPen(QPen(color, 1))
-                            painter.drawText(x + 8, y + 12, f"{gps[0]:.6f}, {gps[1]:.6f}")
+                        if gps and isinstance(gps, (list, tuple)) and len(gps) == 2:
+                            if isinstance(gps[0], (int, float)) and isinstance(gps[1], (int, float)):
+                                painter.setPen(QPen(color, 1))
+                                painter.drawText(x + 8, y + 12, f"{gps[0]:.6f}, {gps[1]:.6f}")
                     elif kind == "line":
                         (x1, y1), (x2, y2) = item
                         sx1, sy1 = int(x1 * self.display_scale), int(y1 * self.display_scale)
                         sx2, sy2 = int(x2 * self.display_scale), int(y2 * self.display_scale)
-                        painter.setPen(QPen(color, 4))
+                        is_selected = (self.highlighted_line == (cls, i))
+                        line_pen = QPen(QColor("yellow") if is_selected else color, 6 if is_selected else 4)
+                        painter.setPen(line_pen)
                         painter.drawLine(QPoint(sx1, sy1), QPoint(sx2, sy2))
                         for j, (px, py) in enumerate(item):
                             sx, sy = int(px * self.display_scale), int(py * self.display_scale)
-                            is_hover = self.hover == (kind, cls, i, j)
-                            pen = QPen(QColor("yellow") if is_hover else color, 3)
-                            painter.setPen(pen)
-                            painter.drawEllipse(QPoint(sx, sy), 4, 4)
+                            if is_selected:
+                                if j == 0:
+                                    painter.setPen(QPen(QColor("limegreen"), 6))
+                                    painter.setBrush(QColor("limegreen"))
+                                    painter.drawEllipse(QPoint(sx, sy), 6, 6)
+                                    painter.setPen(QPen(QColor("black"), 1))
+                                    painter.drawText(sx + 8, sy - 8, "A")
+                                elif j == 1:
+                                    painter.setPen(QPen(QColor("red"), 6))
+                                    painter.setBrush(QColor("red"))
+                                    painter.drawEllipse(QPoint(sx, sy), 6, 6)
+                                    painter.setPen(QPen(QColor("black"), 1))
+                                    painter.drawText(sx + 8, sy - 8, "B")
+                            else:
+                                is_hover = self.hover == (kind, cls, i, j)
+                                painter.setPen(QPen(QColor("yellow") if is_hover else color, 3))
+                                painter.drawEllipse(QPoint(sx, sy), 4, 4)
                         mx = int((x1 + x2) / 2 * self.display_scale)
                         my = int((y1 + y2) / 2 * self.display_scale)
                         painter.setPen(QPen(color, 1))
                         painter.drawText(mx + 6, my - 6, cls)
-                        if gps and isinstance(gps, list):
-                            if len(gps) >= 1 and isinstance(gps[0], (list, tuple)) and len(gps[0]) == 2:
+                        if gps and isinstance(gps, list) and len(gps) >= 2:
+                            if gps[0] is not None and isinstance(gps[0], (list, tuple)) and len(gps[0]) == 2:
                                 painter.setPen(QPen(color, 1))
                                 painter.drawText(sx1 + 8, sy1 + 12, f"{gps[0][0]:.6f}, {gps[0][1]:.6f}")
-                            if len(gps) >= 2 and isinstance(gps[1], (list, tuple)) and len(gps[1]) == 2:
+                            if gps[1] is not None and isinstance(gps[1], (list, tuple)) and len(gps[1]) == 2:
                                 painter.setPen(QPen(color, 1))
                                 painter.drawText(sx2 + 8, sy2 + 12, f"{gps[1][0]:.6f}, {gps[1][1]:.6f}")
                     elif kind == "curve":
@@ -542,11 +651,12 @@ class Calibration(ABC):
         return np.array(residuals)
     def compute_total_mse(self, camera, data, params, residual_blocks):
         camera.set_params_from_list(params)
-        residuals = []
+        residuals = 0
         for block in residual_blocks:
             res = block(camera, data)
-            residuals.extend(res)
-        return np.mean(np.square(residuals))
+            residuals += res
+        print(residuals)
+        return residuals
 # ==== source\calibration\pipeline.py ====
 from source.core.camera import Camera
 from .base import Calibration
@@ -587,6 +697,7 @@ from .debug_vp import visualize_vps_debug
 from .debug_scene import visualize_grid_debug, load_scene_gps, visualize_grid_gps_debug, set_grid_real
 from .debug_source import visualize_source
 from .debug_metrics import estimate_rotation_svd, generate_yandex_maps_url, compute_alignment_and_metrics
+from .debud_projection import projection_line
 __all__ = [
     "visualize_vps_debug",
     "visualize_grid_debug",
@@ -596,8 +707,41 @@ __all__ = [
     "set_grid_real",
     "estimate_rotation_svd",
     "generate_yandex_maps_url",
-    "compute_alignment_and_metrics"
-]
+    "compute_alignment_and_metrics",
+    ]
+# ==== source\calibration\debug\debud_projection.py ====
+import numpy as np
+import matplotlib.pyplot as plt
+from core import Camera, PointND
+from calibration.utils import gps_to_enu
+def projection_line(camera, data, lat0, lon0, save_path, R=np.array([[1, 0], [0, 1]])):
+    image = camera.get_image()
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.imshow(image)
+    annotation_plotted = False
+    projected_plotted = False
+    for line in data:
+        p1, p2 = line['pixel']
+        P1_gps, P2_gps = line['gps']
+        P1, P2 = [
+            camera.project_direct(PointND([*R @ gps_to_enu(*point, lat0, lon0), 0])).get()
+            for point in line['gps']
+        ]
+        label_ann = 'Исходные линии' if not annotation_plotted else None
+        label_proj = 'Спроецированные линии' if not projected_plotted else None
+        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-', label=label_ann)
+        ax.plot([P1[0], P2[0]], [P1[1], P2[1]], 'b--', label=label_proj)
+        ax.plot(*p1, 'ro')
+        ax.plot(*p2, 'ro')
+        ax.plot(*P1, 'bo')
+        ax.plot(*P2, 'bo')
+        annotation_plotted = True
+        projected_plotted = True
+    ax.set_title("Сравнение аннотаций и проекций")
+    ax.legend(loc='lower right')
+    ax.axis('off')
+    fig.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
 # ==== source\calibration\debug\debug_metrics.py ====
 import numpy as np
 from source.calibration.utils import gps_to_enu, enu_to_gps
@@ -628,7 +772,8 @@ def compute_alignment_and_metrics(
         point_image,  # Точки с изображения
         point_gps_ideal,  # Идеальные GPS точки
         lat0, lon0,  # Начальная точка ENU-системы
-        camera  # Объект камеры
+        camera,  # Объект камеры
+        save_path="yandex_comparison.html"
 ):
     points_cam = [
         camera.project_back(PointND(pt, add_weight=True)).get()[:2]
@@ -639,7 +784,6 @@ def compute_alignment_and_metrics(
         for lat, lon in point_gps_ideal
     ]
     R = estimate_rotation_svd(points_cam, points_enu)
-    print(f"📐 Матрица поворота:\n{R}")
     errors = [
         np.linalg.norm(
             np.array(R @ predict) -
@@ -658,13 +802,80 @@ def compute_alignment_and_metrics(
     for name, value in stats.items():
         print(f"  ▸ {name:<24} {value:.2f} м")
     point_gps_predict = [enu_to_gps(*R @ point, lat0, lon0) for point in points_cam]
-    url =generate_yandex_maps_url(point_gps_predict)
-    print(f'URL YANDEX {url}')
+    save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path)
     return {
         "rotation_matrix": R,
         "errors": errors,
         "stats": stats,
+        "point_gps_predict": point_gps_predict,
+        "point_gps_ideal": point_gps_ideal,
     }
+def save_yandex_comparison_map_html(point_gps_ideal, point_gps_predict, save_path):
+    """
+    Сохраняет HTML-файл с Яндекс.Картой, на которой отображаются:
+    - Зелёные точки: идеальные GPS координаты
+    - Синие точки: предсказанные GPS (после обратной проекции)
+    - Красные линии: векторы ошибок
+    """
+    if len(point_gps_ideal) != len(point_gps_predict):
+        raise ValueError("Количество точек должно совпадать")
+    center_lat = sum(lat for lat, lon in point_gps_ideal) / len(point_gps_ideal)
+    center_lon = sum(lon for lat, lon in point_gps_ideal) / len(point_gps_ideal)
+    placemarks = ""
+    polylines = ""
+    for i, (ideal, pred) in enumerate(zip(point_gps_ideal, point_gps_predict)):
+        lat1, lon1 = ideal
+        lat2, lon2 = pred
+        placemarks += f"""
+        myMap.geoObjects.add(new ymaps.Placemark([{lat1}, {lon1}], {{
+            balloonContent: "📍 Исходная точка {i + 1}",
+            hintContent: "📍 Исходная точка {i + 1}"
+        }}, {{
+            preset: "islands#greenDotIcon"
+        }}));
+        myMap.geoObjects.add(new ymaps.Placemark([{lat2}, {lon2}], {{
+            balloonContent: "🎯 Спроецированная точка {i + 1}",
+            hintContent: "🎯 Спроецированная точка {i + 1}"
+        }}, {{
+            preset: "islands#blueDotIcon"
+        }}));
+        """
+        polylines += f"""
+        myMap.geoObjects.add(new ymaps.Polyline([
+            [{lat1}, {lon1}],
+            [{lat2}, {lon2}]
+        ], {{
+            hintContent: "Вектор ошибки"
+        }}, {{
+            strokeColor: "#FF0000",
+            strokeWidth: 3,
+            strokeOpacity: 0.7
+        }}));
+        """
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Сравнение GPS точек</title>
+    <meta charset="utf-8" />
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+</head>
+<body>
+<div id="map" style="width: 100%; height: 600px;"></div>
+<script>
+ymaps.ready(function () {{
+    var myMap = new ymaps.Map("map", {{
+        center: [{center_lat}, {center_lon}],
+        zoom: 18
+    }});
+    {placemarks}
+    {polylines}
+}});
+</script>
+</body>
+</html>"""
+    with open(save_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"✅ HTML-карта с точками и векторами ошибок сохранена в: {save_path}")
 # ==== source\calibration\debug\debug_position_camera.py ====
 import numpy as np
 import matplotlib.pyplot as plt
@@ -742,10 +953,11 @@ from source.calibration.utils import enu_to_gps
 def visualize_grid_debug(
         camera: Camera,
         point_start: PointND,
-        grid_range: float = 5.0,  # диапазон в метрах от центра
-        grid_step: float = 1.0,  # размер клетки
-        arrow_len: float = 10.0,  # длина вектора "вверх"
-        plane_z: float = 0.0,  # плоскость, на которую кладём сетку
+        grid_range_x: float = 5.0,  # диапазон по X (влево/вправо от центра)
+        grid_range_y: float = 5.0,  # диапазон по Y (вперёд/назад от центра)
+        grid_step: float = 1.0,     # размер клетки
+        arrow_len: float = 15.0,    # длина вектора "вверх"
+        plane_z: float = 0.0,
         save_path=None
 ):
     image = camera.get_image()
@@ -755,23 +967,30 @@ def visualize_grid_debug(
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
     plt.imshow(image)
-    plt.scatter(*point_start.get(),c='red')
+    plt.scatter(*point_start.get(), c='red')
     anchor_3D = camera.project_back(point_start, plane_z=plane_z)
     anchor_x, anchor_y, anchor_z = anchor_3D.get()
-    count, world_points = set_grid_real(anchor_x, anchor_y, grid_range, grid_step, plane_z)
-    for i in range(count):
-        for j in range(count - 1):
-            p1 = world_points[i * count + j]
-            p2 = world_points[i * count + (j + 1)]
-            p1_proj = camera.project_direct(p1).get()
-            p2_proj = camera.project_direct(p2).get()
+    count_x = int(2 * grid_range_x / grid_step) + 1
+    count_y = int(2 * grid_range_y / grid_step) + 1
+    world_points = []
+    for j in range(count_y):
+        for i in range(count_x):
+            x = anchor_x - grid_range_x + i * grid_step
+            y = anchor_y - grid_range_y + j * grid_step
+            world_points.append(PointND(np.array([x, y, plane_z])))
+    for j in range(count_y):
+        for i in range(count_x - 1):
+            idx1 = j * count_x + i
+            idx2 = j * count_x + (i + 1)
+            p1_proj = camera.project_direct(world_points[idx1]).get()
+            p2_proj = camera.project_direct(world_points[idx2]).get()
             ax.plot([p1_proj[0], p2_proj[0]], [p1_proj[1], p2_proj[1]], color='blue', linewidth=1)
-    for j in range(count):
-        for i in range(count - 1):
-            p1 = world_points[i * count + j]
-            p2 = world_points[(i + 1) * count + j]
-            p1_proj = camera.project_direct(p1).get()
-            p2_proj = camera.project_direct(p2).get()
+    for i in range(count_x):
+        for j in range(count_y - 1):
+            idx1 = j * count_x + i
+            idx2 = (j + 1) * count_x + i
+            p1_proj = camera.project_direct(world_points[idx1]).get()
+            p2_proj = camera.project_direct(world_points[idx2]).get()
             ax.plot([p1_proj[0], p2_proj[0]], [p1_proj[1], p2_proj[1]], color='blue', linewidth=1)
     def draw_arrow_from_3D(p3D):
         base = camera.project_direct(p3D).get()
@@ -781,11 +1000,11 @@ def visualize_grid_debug(
         ax.annotate(
             '', xy=(tip[0], tip[1]), xytext=(base[0], base[1]),
             arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
-            annotation_clip=False, label=f'Высота: {arrow_len}'
+            annotation_clip=False
         )
     top_left = world_points[0]
-    top_right = world_points[count - 1]
-    bottom_left = world_points[(count - 1) * count]
+    top_right = world_points[count_x - 1]
+    bottom_left = world_points[(count_y - 1) * count_x]
     bottom_right = world_points[-1]
     for corner in [top_left, top_right, bottom_left, bottom_right]:
         draw_arrow_from_3D(corner)
@@ -1140,9 +1359,10 @@ class VanishingPointCalibration(Calibration):
         return self.camera
 # ==== source\calibration\refine\__init__.py ====
 from .optimizer import RefineOptimizer
-from .back_error_funk import residual_interline_distance, residual_parallel_group, residual_line_length,\
-    residual_planar_alignment,residual_vertical_alignment, residual_alignment_block
+from .back_error_funk import residual_interline_distance, residual_parallel_group, residual_line_length, \
+    residual_planar_alignment, residual_vertical_alignment, residual_alignment_block
 from .direct_error_funk import residual_reprojection_line
+from .refine_angle import get_plane_normal
 __all__ = [
     "RefineOptimizer",
     "residual_interline_distance",
@@ -1151,7 +1371,8 @@ __all__ = [
     "residual_line_length",
     "residual_planar_alignment",
     "residual_vertical_alignment",
-    "residual_alignment_block"
+    "residual_alignment_block",
+    "get_plane_normal"
 ]
 # ==== source\calibration\refine\back_error_funk.py ====
 import numpy as np
@@ -1223,7 +1444,7 @@ def residual_line_length(camera, data, group, expected):
     residuals = []
     lines = data.get(group, [])
     for line in lines:
-        L = compute_line_length(camera, line,0)
+        L = compute_line_length(camera, line, 0)
         residuals.append(L - expected)
     return residuals
 def residual_planar_alignment(omega, R0, K, planar_lines_img):
@@ -1283,6 +1504,7 @@ def residual_alignment_block(verticals=None, planar_lines=None, weights=(1.0, 1.
 import numpy as np
 from source.core import Camera, PointND
 from source.calibration.utils import gps_to_enu
+RESUALDS = []
 def residual_reprojection_line(camera, data, group, gps_origin):
     residuals = []
     lines = data.get(group, [])
@@ -1294,6 +1516,7 @@ def residual_reprojection_line(camera, data, group, gps_origin):
         error1 = np.sum((np.array(_p2) - np.array(p2)) ** 2)
         error2 = np.sum((np.array(_p1) - np.array(p1)) ** 2)
         error = np.sqrt(error1 + error2)
+        RESUALDS.append([error, error1, error2])
         residuals.append(error)
     return residuals
 def line_projection_error(camera: Camera, line, gps_origin):
@@ -1322,7 +1545,9 @@ class RefineOptimizer(Calibration):
                  mask: list = None,
                  debug_save_path: str = None,
                  gps_origin: tuple = None,
-                 omega_mode=False
+                 omega_mode=False,
+                 grid_range=(10, 10),
+                 point_start=None
                  ):
         super().__init__(camera, debug_save_path)
         self.residual_blocks = residual_blocks
@@ -1333,6 +1558,9 @@ class RefineOptimizer(Calibration):
         self.method = method
         self.gps_origin = gps_origin
         self.omega_mode = omega_mode
+        self.grid_range_x, self.grid_range_y = grid_range
+        self.initial_params = camera.get_params()
+        self.point_start = point_start if point_start is not None else self.camera.intrinsics.get_main_point()
     def run(self, data, **kwargs):
         if self.omega_mode:
             return self._run_omega_mode(data)
@@ -1375,7 +1603,7 @@ class RefineOptimizer(Calibration):
                 fun=loss_fn_mse,
                 x0=x0,
                 bounds=self.bounds,
-                method='Powell'
+                method="Powell"
             )
         print(f"🔁 Итераций: {result.nfev}")
         if self.method in ["trf", "lm"]:
@@ -1387,8 +1615,9 @@ class RefineOptimizer(Calibration):
         self.camera.set_params_from_list(full_params)
         if self.debug_save_path is not None:
             from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
-            point_start = PointND(self.camera.intrinsics.get_main_point(), add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range=12,
+            point_start = PointND(self.point_start, add_weight=True)
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range_x=self.grid_range_x,
+                                 grid_range_y=self.grid_range_y,
                                  grid_step=1)
             if self.gps_origin is not None:
                 pass
@@ -1413,6 +1642,14 @@ class RefineOptimizer(Calibration):
         delta_R = R.from_rotvec(omega_opt).as_matrix()
         self.camera.extrinsics.set_rotation(delta_R @ R0, from_type='vp')
         return self.camera
+# ==== source\calibration\refine\refine_angle.py ====
+import numpy as np
+from core.camera import Camera
+def get_plane_normal(camera, p1, p2):
+    r1 = camera.backproject_ray(p1)  # (3,)
+    r2 = camera.backproject_ray(p2)  # (3,)
+    normal = np.cross(r1, r2)
+    return normal / np.linalg.norm(normal)
 # ==== source\calibration\utils\__init__.py ====
 from  .data_preparation import load_lines, load_lines_from_json, \
     extract_direction_vectors_from_lines
@@ -1585,10 +1822,17 @@ from .camera_intrinsics import CameraIntrinsics
 from .camera_extrinsics import CameraExtrinsics
 from .pointND import PointND
 class Camera:
-    def __init__(self, path_image):
-        self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
-        self.size = self.image.shape[:2]
-        self.path = path_image
+    def __init__(self, path_image=None, size=None):
+        if path_image is not None:
+            self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
+            self.size = self.image.shape[:2]  # (height, width)
+            self.path = path_image
+        elif size is not None:
+            self.image = None
+            self.size = size  # size = (height, width)
+            self.path = None
+        else:
+            raise ValueError("Нужно указать либо path_image, либо size")
         self.intrinsics = CameraIntrinsics(self.size[1], self.size[0])
         self.extrinsics = CameraExtrinsics()
     def set_params(self, params: dict):
@@ -1670,6 +1914,18 @@ class Camera:
         t = (plane_z - C[2]) / ray_world[2]  # ищем такой t, чтобы Z == plane_z
         point3D = C + t * ray_world  # точка на плоскости
         return PointND(point3D, add_weight=True)
+    def backproject_ray(self, pixel_2d: tuple[float, float]) -> np.ndarray:
+        """
+        Возвращает направляющий вектор луча, проходящего от центра камеры через пиксель.
+        В мировой системе координат.
+        """
+        K = self.intrinsics.get()
+        R = self.extrinsics.get_rotation()
+        x = np.array([pixel_2d[0], pixel_2d[1], 1.0])
+        ray_cam = np.linalg.inv(K) @ x
+        ray_world = R.T @ ray_cam
+        ray_world /= np.linalg.norm(ray_world)
+        return ray_world
 def homography(self, point: PointND, direction='direct') -> PointND:
     RT = self.extrinsics.get()
     RT = np.delete(RT, 2, axis=1)  # удаляем третий столбец (оси Z) ⇒ проекция на плоскость Z=0
@@ -1689,7 +1945,7 @@ from scipy.spatial.transform import Rotation
 class CameraExtrinsics:
     def __init__(self):
         self.R = np.eye(3)
-        self.C = np.array([0, 0, 16])
+        self.C = np.array([0, 0, 15])
     def set_rotation(self, data, from_type='euler'):
         if from_type == 'euler':
             self.R = Rotation.from_euler('zxy', data, degrees=True).as_matrix()
@@ -1760,6 +2016,93 @@ class PointND:
             raise ValueError("Объект не является 3D точкой")
 # ==== source\distortion\__init__.py ====
 # ==== source\distortion\extended_hough_transform.py ====
+# ==== source\distortion\manual_distortion.py ====
+import numpy as np
+from scipy.optimize import minimize
+from scipy.ndimage import map_coordinates
+import cv2
+def compute_r2(image_shape):
+    h, w = image_shape[:2]
+    r1 = np.sqrt((w / 2) ** 2 + (h / 2) ** 2)
+    return r1 / 2
+def denormalize_p_to_k(p1, p2, r2):
+    k1 = (p1 - 16 * p2) / (-12 * r2 ** 2)
+    k2 = (4 * p2 - p1) / (-12 * r2 ** 4)
+    return k1, k2
+def normalize_k_to_p(k1, k2, r2):
+    p1 = k1 * 4 * r2 ** 2 + k2 * 16 * r2 ** 4
+    p2 = k1 * r2 ** 2 + k2 * r2 ** 4
+    return p1, p2
+def distort_radial_norm(xy, k1, k2, cx, cy):
+    """
+    Применяет радиальную дисторсию к точкам в изображении.
+    xy — массив точек (N, 2)
+    cx, cy — центр дисторсии (обычно центр изображения)
+    """
+    dx = xy[:, 0] - cx
+    dy = xy[:, 1] - cy
+    r2 = dx ** 2 + dy ** 2
+    L = 1 + k1 * r2 + k2 * r2 ** 2
+    x_corr = cx + dx * L
+    y_corr = cy + dy * L
+    return np.stack([x_corr, y_corr], axis=1)
+def undistort_point_iterative(xy, k1, k2, cx, cy, max_iter=5):
+    """
+    Простая итеративная процедура удаления радиальной дисторсии.
+    """
+    x = (xy[:, 0] - cx).copy()
+    y = (xy[:, 1] - cy).copy()
+    for _ in range(max_iter):
+        r2 = x ** 2 + y ** 2
+        L = 1 + k1 * r2 + k2 * r2 ** 2
+        x = (xy[:, 0] - cx) / L
+        y = (xy[:, 1] - cy) / L
+    return np.stack([x + cx, y + cy], axis=1)
+def curve_residuals(curves_undistorted):
+    total_error = 0
+    for curve in curves_undistorted:
+        if len(curve) < 2:
+            continue
+        curve = np.array(curve)
+        fit = np.polyfit(curve[:, 0], curve[:, 1], 1)
+        y_fit = np.polyval(fit, curve[:, 0])
+        error = np.mean((curve[:, 1] - y_fit) ** 2)
+        total_error += error
+    return total_error
+def objective(params, curves, image_shape, r2):
+    p1, p2 = params
+    k1, k2 = denormalize_p_to_k(p1, p2, r2)
+    cx, cy = image_shape[1] / 2, image_shape[0] / 2
+    undistorted_curves = []
+    for curve in curves:
+        pts = np.array(curve)
+        undistorted = undistort_point_iterative(pts, k1, k2, cx, cy)
+        undistorted_curves.append(undistorted)
+    return curve_residuals(undistorted_curves)
+curves = np.load("clicked_curves.npy", allow_pickle=True)
+image_shape = (1080, 1920)
+r2 = compute_r2(image_shape)
+result = minimize(
+    fun=objective,
+    x0=np.array([0.0, 0.0]),
+    args=(curves, image_shape, r2),
+    method="Nelder-Mead",
+    bounds=[(-1.0, 1.0), (-1.0, 1.0)]
+)
+print("🎯 Результат:", result)
+print(result.x)
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 8))
+for curve in curves:
+    curve = np.array(curve)
+    if len(curve) < 2:
+        continue
+    plt.plot(curve[:, 0], curve[:, 1])
+plt.gca().invert_yaxis()  # потому что координаты изображения сверху вниз
+plt.axis("equal")
+plt.grid(True)
+plt.title("Выделенные кривые")
+plt.show()
 # ==== source\distortion\manual_line_distortion_correction.py ====
 import cv2
 import numpy as np
@@ -1914,576 +2257,3 @@ class VanishingPointEstimatorManual(Detector):
         b = np.array(b)
         vp = np.linalg.lstsq(A, b, rcond=None)[0]
         return vp
-# ==== example\karls_marks\example.py ====
-import numpy as np
-import matplotlib.pyplot as plt
-from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
-    RefineOptimizer, PointND
-from source.calibration.utils import load_lines, load_lines_from_json, extract_direction_vectors_from_lines
-from source.calibration.refine import residual_interline_distance, residual_line_length, residual_reprojection_line, \
-    residual_vertical_alignment, residual_planar_alignment, residual_alignment_block
-from source.calibration.debug import load_scene_gps, visualize_source, generate_yandex_maps_url, \
-    compute_alignment_and_metrics
-from source.vp_detection import VanishingPointEstimatorManual
-from source.calibration.utils import gps_to_enu, enu_to_gps
-from source.annotation_tools import AnnotationParser
-annotation_parser = AnnotationParser("data/data_full_new.json")
-lines_vp1 = annotation_parser.get_lines_by_class("vp1")
-lines_vp3 = annotation_parser.get_lines_by_class("vp3")
-vp1_manual = VanishingPointEstimatorManual().estimate(lines_vp1)
-vp3_manual = VanishingPointEstimatorManual().estimate(lines_vp3)
-vps_manual = np.array([vp1_manual, vp3_manual])
-camera = Camera('data/pattern_corrected_image.png')
-vp_init = VanishingPointCalibration(camera, debug_save_path='data/vp.png')
-vp_init.set_vanishing_points(vpX=vps_manual[0], vpZ=vps_manual[1])
-def back_refine(camera):
-    """
-    Результататы для перекрестка
-    [899.24, -13.76, 48.15, -164.42, 0.0, 0.0, 20.02]
-    """
-    global annotation_parser
-    data = {
-        "Пешеходный переход 1": annotation_parser.get_lines_by_class("Пешеходный переход 1"),
-        "Пешеходный переход 2": annotation_parser.get_lines_by_class("Пешеходный переход 2"),
-        "Пешеходный переход 3": annotation_parser.get_lines_by_class("Пешеходный переход 3"),
-        "Дорожные линии 2": annotation_parser.get_lines_by_class("Дорожные линии 2"),
-        "Вертикальные линии": annotation_parser.get_lines_by_class("vp3"),
-        "Линии в плоскости изображения": annotation_parser.get_lines_by_class("Горизонтальные линии")
-    }
-    resualds_blocks_first = [
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 1", expected=4.2),
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 2", expected=4.2),
-        lambda cam, data: residual_interline_distance(cam, data, group="Пешеходный переход 3", expected=4.2),
-        lambda cam, data: residual_interline_distance(cam, data, group="Дорожные линии 2", expected=3.5),
-    ]
-    refiner_1 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=resualds_blocks_first,
-        mask=[6],
-        bounds=[(5, 30)],
-        debug_save_path='data/grid_back_1.png',
-        method="minimize",
-    )
-    refiner_2 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=resualds_blocks_first,
-        mask=[0],
-        bounds=[(700, 1500)],
-        debug_save_path='data/grid_back_2.png',
-        method="minimize",
-    )
-    resualds_blocks_second = [
-        lambda cam, data: residual_alignment_block(
-            verticals=extract_direction_vectors_from_lines(data["Вертикальные линии"]),
-            planar_lines=extract_direction_vectors_from_lines(data["Линии в плоскости изображения"]),
-            weights=(1.0, 1.0, 100.0)
-        )(cam, data)
-    ]
-    refiner_3 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=resualds_blocks_second,
-        omega_mode=True
-    )
-    pipeline = CalibrationPipeline(
-        init_stage=vp_init,
-        refine_stages=[refiner_1, refiner_2, refiner_3],
-        n_iter=20
-    )
-    camera = pipeline.run(camera, data)
-    return camera
-camera = back_refine(camera)
-gps_control = annotation_parser.get_points_with_gps_and_pixel("Контрольные GPS точки")
-point_image, point_gps = [], []
-for point in gps_control:
-    _point_image, _point_gps = point["pixel"], point["gps"]
-    print(_point_image, _point_gps)
-    point_image.append(_point_image)
-    point_gps.append(_point_gps)
-compute_alignment_and_metrics(point_image, point_gps, 54.725378, 55.941036, camera)
-"""
-- Проблема с масштабом
-- Возможно проблема в углах.
-"""
-def direct_refine(camera):
-    """
-    Результаты для перекрестка
-    """
-    gps_origin = (54.725378, 55.941036)
-    data = {
-        "Пешеходный переход 1": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 1"),
-        "Пешеходный переход 2": annotation_parser.get_lines_with_gps_and_pixel("Пешеходный переход 2"),
-        "Дорожные линии": annotation_parser.get_lines_with_gps_and_pixel("Дорожные линии"),
-    }
-    residual_blocks_first = [
-        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 1",
-                                                     gps_origin=gps_origin),
-        lambda cam, data: residual_reprojection_line(cam, data, group="Пешеходный переход 2",
-                                                     gps_origin=gps_origin),
-        lambda cam, data: residual_reprojection_line(cam, data, group="Дорожные линии",
-                                                     gps_origin=gps_origin),
-    ]
-    refiner_1 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_1.png',
-        mask=[1],
-        bounds=([-180],
-                [180]),
-    )
-    refiner_2 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_2.png',
-        mask=[2],
-        bounds=([-180],
-                [180]),
-    )
-    refiner_3 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_3.png',
-        mask=[3],
-        bounds=([-180],
-                [180]),
-    )
-    refiner_4 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_4.png',
-        mask=[6],
-        bounds=([5],
-                [30]),
-    )
-    refiner_5 = RefineOptimizer(
-        camera=camera,
-        residual_blocks=residual_blocks_first,
-        debug_save_path='data/grid_direct_5.png',
-        mask=[0],
-        bounds=([700],
-                [2000]),
-    )
-    pipeline = CalibrationPipeline(
-        init_stage=vp_init,
-        refine_stages=[refiner_1, refiner_2, refiner_3, refiner_4, refiner_5],
-        n_iter=10
-    )
-    camera = pipeline.run(camera, data)
-    return camera
-# ==== example\karls_marks\example_traking.py ====
-from ultralytics import YOLO
-model = YOLO("yolov8n.pt")
-model.track(source="D:\Final qualifying work\Main\other\load_video_ufanet\output.mp4", show=True, save=True)# ==== example\pushkin_aksakov\example.py ====
-from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
-    RefineOptimizer
-from source.annotation_tools import load_lines, load_lines_from_json
-from calibration.refine import residual_interline_distance, residual_parallel_group, \
-    residual_reprojection_line
-from calibration.debug import load_scene_gps, visualize_source
-import numpy as np
-camera = Camera('image/pattern_corrected_image.png')
-vp1 = [3974.185, -248.69977]
-vp2 = [768.4042, 2362.912]
-vp3 = [-24.940735, -669.0249]
-vps_auto = np.array([vp1, vp3, vp2])
-vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
-vp_init.set_vanishing_points(*vps_auto)
-def back_refine():
-    global camera
-    data = {
-        "dist_between_line_1": load_lines('marked/dist_between_line_1.json'),
-        "dist_between_line_2": load_lines('marked/dist_between_line_2.json'),
-        "lane_lines": load_lines('marked/parallel_line_1.json'),
-        "vertical_lines": load_lines('marked/vertical_lines.json'),
-    }
-    resualds_blocks = [
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=9),
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=7),
-        lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
-    ]
-    refiner_first = RefineOptimizer(camera=camera,
-                                    residual_blocks=resualds_blocks,
-                                    mask=[0, 6],
-                                    bounds=([900, 5], [2000, 30]),
-                                    debug_save_path='image/',
-                                    gps_origin=(54.723767, 55.933369),
-                                    )
-    pipeline = CalibrationPipeline([vp_init, refiner_first])
-    camera = pipeline.run(camera, data)
-back_refine()  # Дооптимизация через обратную проекцию
-def direct_refine():
-    global camera
-    data = {"lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json')
-            }
-    resualds_blocks = [
-        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel",
-                                                     gps_origin=(54.723767, 55.933369)),
-    ]
-    refiner_first = RefineOptimizer(camera=camera,
-                                    residual_blocks=resualds_blocks,
-                                    debug_save_path='image/',
-                                    )
-    pipeline = CalibrationPipeline([vp_init, refiner_first])
-    camera = pipeline.run(camera, data)
-def gibrid():
-    global camera
-    data = {
-        "dist_between_line_1": load_lines('marked/dist_between_line_1.json'),
-        "dist_between_line_2": load_lines('marked/dist_between_line_2.json'),
-        "lane_lines": load_lines('marked/parallel_line_1.json'),
-        "lines_gps_and_pixel": load_lines_from_json('marked/lines_gps_to_pixel.json')
-    }
-    resualds_blocks_first = [
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=8),
-        lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=5.5),
-        lambda cam, data: residual_parallel_group(cam, data, group="lane_lines"),
-    ]
-    refiner_first = RefineOptimizer(camera=camera,
-                                    residual_blocks=resualds_blocks_first,
-                                    mask=[0, 6],
-                                    bounds=([900, 5], [2000, 30]),
-                                    debug_save_path='image/')
-    resualds_blocks_second = [
-        lambda cam, data: residual_reprojection_line(cam, data, group="lines_gps_and_pixel",
-                                                     gps_origin=(54.723767, 55.933369)),
-    ]
-    refiner_second = RefineOptimizer(camera=camera, residual_blocks=resualds_blocks_second, debug_save_path='image/')
-    pipeline = CalibrationPipeline([vp_init, refiner_first, refiner_second])
-    camera = pipeline.run(camera, data)
-# ==== example\pushkin_aksakov\example_dist.py ====
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import minimize
-points = []
-def mouse_callback(event, x, y, flags, param):
-    if event == cv2.EVENT_LBUTTONDOWN:
-        points.append((x, y))
-def distort_point(p, k, cx, cy):
-    x, y = p[0] - cx, p[1] - cy
-    r2 = x**2 + y**2
-    scale = 1 + k * r2
-    return x * scale + cx, y * scale + cy
-def undistort(points, k, cx, cy):
-    return np.array([distort_point(p, -k, cx, cy) for p in points])
-def loss_fn(k, original_pts, cx, cy):
-    undistorted = undistort(original_pts, k, cx, cy)
-    x, y = undistorted[:, 0], undistorted[:, 1]
-    A = np.vstack([x, np.ones_like(x)]).T
-    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
-    y_fit = m * x + c
-    return np.mean((y - y_fit) ** 2)
-img = cv2.imread("image/crossroads.jpg")
-if img is None:
-    raise FileNotFoundError("Изображение не найдено")
-h, w = img.shape[:2]
-cx, cy = w / 2, h / 2
-cv2.imshow("Выдели линию (ESC чтобы завершить)", img)
-cv2.setMouseCallback("Выдели линию (ESC чтобы завершить)", mouse_callback)
-while True:
-    key = cv2.waitKey(1)
-    if key == 27 or len(points) > 10:  # ESC или больше 10 точек
-        break
-cv2.destroyAllWindows()
-points = np.array(points)
-res = minimize(loss_fn, x0=[0.0], args=(points, cx, cy), method='Nelder-Mead')
-k_opt = res.x[0]
-print(f"Оптимальный параметр искажения: k = {k_opt:.6f}")
-map_x, map_y = np.meshgrid(np.arange(w), np.arange(h))
-map_undistort = np.zeros((h, w, 2), dtype=np.float32)
-for y in range(h):
-    for x in range(w):
-        dx, dy = x - cx, y - cy
-        r2 = dx**2 + dy**2
-        scale = 1 + k_opt * r2
-        x_u = dx / scale + cx
-        y_u = dy / scale + cy
-        map_undistort[y, x] = [x_u, y_u]
-undistorted = cv2.remap(img, map_undistort[..., 0], map_undistort[..., 1], cv2.INTER_LINEAR)
-plt.figure(figsize=(12, 6))
-plt.subplot(1, 2, 1)
-plt.title("Исходное изображение")
-plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-plt.scatter(*zip(*points), c='red')
-plt.subplot(1, 2, 2)
-plt.title("После коррекции дисторсии")
-plt.imshow(cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB))
-plt.tight_layout()
-plt.show()
-# ==== example\pushkin_aksakov\old\example_back.py ====
-from core.camera_model import Camera
-from calibration.utils.data_preparation import load_data, prep_data_parallel
-from calibration.refine.back.back_optimization import BackProjectionOptimizer
-import numpy as np
-camera = Camera('../image/pattern_corrected_image.png')
-data = {
-    'parallel-1': prep_data_parallel(load_data('../marked_data_4/parallel_lines_1.txt')),
-    'point_to_point': np.array(load_data('../marked_data_4/point_to_point.txt')),
-    'parallel-2': prep_data_parallel(load_data('../marked_data_4/parallel_lines_2.txt')),
-    'parallel-3': prep_data_parallel(load_data('../marked_data_4/parallel_lines_3.txt')),
-}
-camera.calc_R([-158.07642684,   49.78161572,  173.91438536])
-optimize = BackProjectionOptimizer(camera)
-optimize.back_projection(data)
-# ==== example\pushkin_aksakov\old\example_direct.py ====
-from core.camera_model import Camera
-import numpy as np
-import matplotlib.pyplot as plt
-import cv2
-def draw_coordinate_axes_from_vps(vanishing_points, center, scale=100, labels=None, colors=None, flip_z=True):
-    """
-    Рисует координатные оси X, Y, Z от центра изображения по направлению к точкам схода.
-    :param vanishing_points: список [(x1, y1), (x2, y2), (x3, y3)] — координаты VP
-    :param center: (cx, cy) — центр изображения (или центр проекции камеры)
-    :param scale: длина стрелок (в пикселях)
-    :param labels: подписи осей, по умолчанию ['X', 'Y', 'Z']
-    :param colors: цвета осей, по умолчанию ['red', 'green', 'blue']
-    """
-    if labels is None:
-        labels = ['X', 'Y', 'Z']
-    if colors is None:
-        colors = ['red', 'green', 'blue']
-    cx, cy = center
-    for i, (x, y) in enumerate(vanishing_points):
-        dx = x - cx
-        dy = y - cy
-        norm = np.hypot(dx, dy)
-        dx_scaled = dx / norm * scale
-        dy_scaled = dy / norm * scale
-        if flip_z and labels[i].upper() == 'Z':
-            dx_scaled *= -1
-            dy_scaled *= -1
-        plt.arrow(cx, cy, dx_scaled, dy_scaled,
-                  color=colors[i], width=1.2, head_width=10, length_includes_head=True)
-image = cv2.imread('../image/pattern_corrected_image.png')
-image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-image_width = 1920
-image_height = 1080
-cx, cy = image_width // 2, image_height // 2
-camera = Camera('../image/pattern_corrected_image.png')
-camera.set_params([1419.59, -142.56, 49.5, -185.62, -12.82, -18.38, 30.63])
-K = camera.get_K()
-print(f'Matrix intrinsics:\n{K}')
-R = camera.get_R()
-print(f'Matrix rot:\n{R}')
-C = np.array([[-12.82], [-18.38], [30.63]])  # столбец, чтобы собрать [R | t]
-t = -R @ C  # вектор переноса (перевод центра камеры в систему камеры)
-Rt = np.hstack((R, t))  # 3x4 матрица [R | t]
-P = K @ Rt
-VP1 = K @ R[:, 0]
-VP1_pixel = [VP1[0] / VP1[2], VP1[1] / VP1[2]]
-VP2 = K @ R[:, 1]
-VP2_pixel = [VP2[0] / VP2[2], VP2[1] / VP2[2]]
-V3_calc = np.dot(VP1, VP2)
-VP3 = K @ R[:, 2]
-VP3_pixel = [VP3[0] / VP3[2], VP3[1] / VP3[2]]
-VP_opt = [VP1_pixel, VP2_pixel, VP3_pixel]
-VP = [[3974.185, -248.69977], [-24.940735, -669.0249], [768.4042, 2362.912]]
-center = (image_width // 2, image_height // 2)
-plt.imshow(image_rgb)
-plt.xlim(0, image_width)
-plt.ylim(image_height, 0)
-draw_coordinate_axes_from_vps(VP_opt, center, scale=150)
-plt.title("Мировые координатные оси через точки схода")
-plt.show()
-# ==== example\synthetic\python\draw.py ====
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.spatial.transform import Rotation
-from core.camera_model import Camera
-from core.pointND import PointND
-from source.calibration.new_optimization import NewOptimization,RESIDUALS
-from source.data_preparation import fun_lines, load_params, load_data
-def init(h):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))  # Ось Z
-    ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))  # Ось X
-    ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))  # Ось Y
-    ax.xaxis.set_tick_params(labelleft=False, labelbottom=False)  # Убираем метки для оси X
-    ax.yaxis.set_tick_params(labelleft=False, labelbottom=False)  # Убираем метки для оси Y
-    ax.zaxis.set_tick_params(labelleft=False, labelbottom=False)  # Убираем метки для оси Z
-    ax.xaxis.set_ticks_position('none')  # Убираем засечки для оси X
-    ax.yaxis.set_ticks_position('none')  # Убираем засечки для оси Y
-    ax.zaxis.set_ticks_position('none')  # Убираем засечки для оси Z
-    ax.view_init(elev=20, azim=30)
-    ax.set_proj_type('persp')
-    ax.set_zlim(0, h + 10)
-    ax.set_xlim(-40, 40)
-    ax.set_ylim(-40, 40)
-    return ax
-def plot_axies(position, angles=[]):
-    if not angles:
-        ax.quiver(*position, 15, 0, 0, color='black')
-        ax.quiver(*position, 0, 15, 0, color='black')
-        ax.quiver(*position, 0, 0, 15, color='black')
-        ax.scatter(0, 0, 0, marker='^', s=100, color='red', label='Мировая система координат')
-        text_size = 12
-        ax.text(position[0] + 15, position[1] + 1, position[2], 'X', color='black', fontsize=text_size)
-        ax.text(position[0], position[1] + 15, position[2], 'Y', color='black', fontsize=text_size)
-        ax.text(position[0], position[1], position[2] + 15, 'Z', color='black', fontsize=text_size)
-    else:
-        rot = Rotation.from_euler('zxy', angles, degrees=True).as_matrix()
-        transform = np.eye(4)
-        transform[:3, :3] = rot
-        transform[:3, 3] = -rot @ position
-        x_position = transform @ np.array([15, 0, 0, 1])
-        y_position = transform @ np.array([0, 15, 0, 1])
-        z_position = transform @ np.array([0, 0, 15, 1])
-        origin = transform @ np.array([0, 0, 0, 1])
-        distances = np.linalg.norm(transform[:3, 3])
-        ax.scatter(*transform[:3, 3], color='red', label='Система координат камеры камеры')
-        ax.quiver(*origin[:-1], *(x_position[:-1] - origin[:-1]), color='black')
-        ax.quiver(*origin[:-1], *(y_position[:-1] - origin[:-1]), color='black')
-        ax.quiver(*origin[:-1], *(z_position[:-1] - origin[:-1]), color='black')
-        text_size = 12
-        ax.text(*x_position[:-1], 'X', color='black', fontsize=text_size)
-        ax.text(*y_position[:-1], 'Y', color='black', fontsize=text_size)
-        ax.text(*z_position[:-1], 'Z', color='black', fontsize=text_size)
-        ax.legend(loc='upper center')
-def get_normals(x, y, length=4):
-    """
-    Строит нормальные (перпендикулярные) отрезки длиной `length` для заданных точек линии `x, y`.
-    Возвращает:
-    - norm_lines_x: список массивов x-координат отрезков
-    - norm_lines_y: список массивов y-координат отрезков
-    """
-    norm_lines_x = []
-    norm_lines_y = []
-    indices = [73, 69]  # Можно выбрать другие индексы
-    for idx in indices:
-        if idx >= len(x) - 1:  # Проверяем границы массива
-            continue
-        dx = x[idx + 1] - x[idx]
-        dy = y[idx + 1] - y[idx]
-        norm = np.array([-dy, dx])
-        norm = length * norm / np.linalg.norm(norm)  # Делаем его длиной `length`
-        norm_x = [x[idx] - norm[0] / 2, x[idx] + norm[0] / 2]
-        norm_y = [y[idx] - norm[1] / 2, y[idx] + norm[1] / 2]
-        norm_lines_x.append(norm_x)
-        norm_lines_y.append(norm_y)
-    return norm_lines_x, norm_lines_y
-camera = Camera()
-camera.load_scene('../pushkin_aksakov/image/image.webp')
-params = load_params('../pushkin_aksakov/marked_data/calib_data.txt')
-camera.set_params(params)
-ax = init(params[-1])
-plot_axies([0, 0, 0])
-plot_axies([0, 0, params[-1]], params[1:4])
-data = {}
-data['parallel-1'] = []
-data['parallel-2'] = []
-data['angle'] = []
-data['point_to_point'] = []
-start, end = load_data('../pushkin_aksakov/marked_data/parallel_lines_1.txt')[1]
-start3d = camera.back_crop(start)
-end3d = camera.back_crop(end)
-print(np.linalg.norm(end3d.get() - start3d.get()))
-for y_dist in [-10, 0, 10]:
-    x = np.linspace(-60, 25, 100)
-    y = fun_lines(x, start3d, end3d) - y_dist
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-    x_new, y_new = zip(*[p.get() for p in points])
-    data['parallel-1'].append(np.array([x_new, y_new]))
-    plt.plot(x, y, color='black')
-norm_x, norm_y = get_normals(x, y, length=4)
-for i in range(len(norm_x)):
-    plt.plot(norm_x[i], norm_y[i], color='black', label=f"Normal {i + 1}")
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(norm_x[i], norm_y[i])]
-    x_new, y_new = zip(*[p.get() for p in points])
-    data['point_to_point'].append(np.array([x_new, y_new]))
-x = np.linspace(5, 13, 100)
-y = fun_lines(x, start3d, end3d, orthogonal=True)
-plt.plot(x, y, color='black')
-points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-x_new, y_new = zip(*[p.get() for p in points])
-data['angle'].append(np.array([x_new, y_new]))
-start, end = load_data('../pushkin_aksakov/marked_data/parallel_lines_2.txt')[1]
-start3d = camera.back_crop(start)
-end3d = camera.back_crop(end)
-print(np.linalg.norm(end3d.get() - start3d.get()))
-for y_dist in [-10, 0, 10]:
-    x = np.linspace(-17, 17, 100)
-    y = fun_lines(x, start3d, end3d) - y_dist
-    points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-    x_new, y_new = zip(*[p.get() for p in points])
-    data['parallel-2'].append(np.array([x_new, y_new]))
-    plt.plot(x, y, color='black')
-x = np.linspace(0, 4, 100)
-y = fun_lines(x, start3d, end3d, orthogonal=True)
-plt.plot(x, y, color='black')
-points = [camera.direct_crop(PointND([xi, yi])) for xi, yi in zip(x, y)]
-x_new, y_new = zip(*[p.get() for p in points])
-data['angle'].append(np.array([x_new, y_new]))
-plt.show()
-data_optimize = {}
-data_optimize['parallel-1'] = []
-data_optimize['parallel-2'] = []
-data_optimize['angle'] = []
-data_optimize['point_to_point'] = []
-for x, y in data['parallel-1']:
-    plt.plot(x, y, color='black')
-    data_optimize['parallel-1'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
-for x, y in data['parallel-2']:
-    plt.plot(x, y, color='black')
-    data_optimize['parallel-2'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
-for x, y in data['angle']:
-    plt.plot(x, y, color='black')
-    data_optimize['angle'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
-for x, y in data['point_to_point']:
-    plt.plot(x, y, color='black')
-    data_optimize['point_to_point'].append([PointND([x[0], y[0]]), PointND([x[-1], y[-1]])])
-plt.xlim(0, 1920)
-plt.ylim(0, 1080)
-plt.gca().invert_yaxis()
-plt.show()
-curr = []
-for i in range(1, len(data_optimize['parallel-1'])):
-    curr.append(data_optimize['parallel-1'][i - 1] + data_optimize['parallel-1'][i])
-data_optimize['parallel-1'] = np.array(curr)
-curr = []
-for i in range(1, len(data_optimize['parallel-2'])):
-    curr.append(data_optimize['parallel-2'][i - 1] + data_optimize['parallel-2'][i])
-data_optimize['parallel-2'] = np.array(curr)
-data_optimize['angle'] = np.array
-data_optimize['point_to_point'] = np.array(data_optimize['point_to_point'])
-optimize = NewOptimization(camera)
-optimize.back_projection(data_optimize)
-HIST = [np.sum(values) for values in RESIDUALS]
-plt.title('График погрешности')
-plt.ylabel('Точность')
-plt.xlabel('Количество итераций')
-plt.plot(np.arange(0, len(HIST)), HIST)
-plt.show()
-# ==== example\trassa\example.py ====
-from source import CalibrationPipeline, Camera, VanishingPointCalibration, \
-    RefineOptimizer
-from source.annotation_tools import load_lines, load_lines_from_json
-from calibration.refine import residual_interline_distance, residual_parallel_group, \
-    residual_reprojection_line
-from calibration.debug import load_scene_gps, visualize_source
-from vp_detection import VanishingPointEstimatorManual
-import numpy as np
-lines_vp1 = load_lines("marked/horizontal_lines.json")
-lines_vp3 = load_lines("marked/vertical_lines.json")
-vp1_manual = VanishingPointEstimatorManual().estimate(lines_vp1)
-vp3_manual = VanishingPointEstimatorManual().estimate(lines_vp3)
-vps_manual = np.array([vp1_manual, vp3_manual])
-camera = Camera('image/pattern_corrected_image.png')
-vp_init = VanishingPointCalibration(camera, debug_save_path='image/vp.png')
-vp_init.set_vanishing_points(vpX=vps_manual[0], vpZ=vps_manual[1])
-data = {
-    "dist_between_line_1": load_lines('marked/dist_ between_line_1.json'),
-    "dist_between_line_2": load_lines('marked/dist_ between_line_2.json'),
-}
-resualds_blocks = [
-    lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_1", expected=4),
-    lambda cam, data: residual_interline_distance(cam, data, group="dist_between_line_2", expected=4),
-]
-refiner_first = RefineOptimizer(camera=camera,
-                                    residual_blocks=resualds_blocks,
-                                    mask=[0, 6],
-                                    bounds=([700, 1], [2000, 30]),
-                                    debug_save_path='image/',
-                                    )
-pipeline = CalibrationPipeline([vp_init, refiner_first])
-camera = pipeline.run(camera, data)

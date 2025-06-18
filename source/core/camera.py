@@ -7,11 +7,17 @@ from .pointND import PointND
 
 
 class Camera:
-    def __init__(self, path_image):
-        self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
-
-        self.size = self.image.shape[:2]
-        self.path = path_image
+    def __init__(self, path_image=None, size=None):
+        if path_image is not None:
+            self.image = cv2.cvtColor(cv2.imread(path_image), cv2.COLOR_BGR2RGB)
+            self.size = self.image.shape[:2]  # (height, width)
+            self.path = path_image
+        elif size is not None:
+            self.image = None
+            self.size = size  # size = (height, width)
+            self.path = None
+        else:
+            raise ValueError("Нужно указать либо path_image, либо size")
 
         self.intrinsics = CameraIntrinsics(self.size[1], self.size[0])
         self.extrinsics = CameraExtrinsics()
