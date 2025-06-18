@@ -1,21 +1,26 @@
-# import cv2
-# import numpy as np
-#
-# img = cv2.imread("../example/pushkin_aksakov/image/pattern_corrected_image.png", cv2.IMREAD_GRAYSCALE)
-#
-# lsd = cv2.createLineSegmentDetector()
-#
-# lines, _, _, _ = lsd.detect(img)
-#
-#
-# drawn_img = lsd.drawSegments(img.copy(), lines)
-#
-# scale = 0.5  # уменьшить в 2 раза
-# drawn_img = cv2.resize(drawn_img, (0, 0), fx=scale, fy=scale)
-#
-# cv2.imshow("Detected Lines", drawn_img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+import cv2
+import numpy as np
+
+img = cv2.imread("../../example/prospect/data/pattern_corrected_image.png", cv2.IMREAD_GRAYSCALE)
+
+lsd = cv2.createLineSegmentDetector()
+
+x1, y1, x2, y2 = 100, 600, 1000, 1000  # координаты ROI
+roi_mask = np.zeros_like(img, dtype=np.uint8)
+roi_mask[y1:y2, x1:x2] = 255
+
+masked_img = cv2.bitwise_and(img, img, mask=roi_mask)
+lines, _, _, _ = lsd.detect(masked_img)
+
+
+drawn_img = lsd.drawSegments(img.copy(), lines)
+
+scale = 0.5  # уменьшить в 2 раза
+drawn_img = cv2.resize(drawn_img, (0, 0), fx=scale, fy=scale)
+
+cv2.imshow("Detected Lines", drawn_img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 from lu_vp_detect import VPDetection
 import cv2
@@ -61,12 +66,12 @@ principal_point = None
 focal_length = 1419.59
 seed = 1000
 
-img = '../example/pushkin_aksakov/image/pattern_corrected_image.png'
+img = '../../example/prospect/data/pattern_corrected_image.png'
 # img = '../example/karls_marks/image/scene_from_crossroads_not_dist.png'
 # img = '../example/karls_marks/screenshot_1746977335965.jpg'
 image = cv2.imread(img)
-image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-plt.imshow(image_rgb)
+# image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+# plt.imshow(image_rgb)
 
 vpd = VPDetection(length_thresh, principal_point, focal_length, seed)
 vps = vpd.find_vps(img)

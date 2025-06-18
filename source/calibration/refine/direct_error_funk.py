@@ -20,8 +20,8 @@ def residual_reprojection_line(camera, data, group, gps_origin=None):
         else:
             p1, p2 = line['pixel']
             P1, P2 = line['gps']
-            _p1 = camera.project_direct(PointND([*P1])).get()
-            _p2 = camera.project_direct(PointND([*P2])).get()
+            _p1 = camera.project_direct([*P1]).get()
+            _p2 = camera.project_direct([*P2]).get()
             error1 = np.sum((np.array(_p2) - np.array(p2)) ** 2)
             error2 = np.sum((np.array(_p1) - np.array(p1)) ** 2)
             error = np.sqrt(error1 + error2)
