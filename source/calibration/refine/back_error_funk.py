@@ -95,7 +95,7 @@ def residual_line_length(camera, data, group, expected):
     # Длины самих линий
     for line in lines:
         L = compute_line_length(camera, line, 0)
-        residuals.append(L - expected)
+        residuals.append(np.abs(L - expected))
 
     return residuals
 
