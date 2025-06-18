@@ -62,7 +62,8 @@ def create_intersection():
 def create_lane_markings():
     """Создает разметку полос движения - 3 белые линии на каждую дорогу"""
     markings = []
-    full_lane = []
+    full_lane_x = []
+    full_lane_y = []
 
     # Разметка для горизонтальной дороги (3 линии)
     y_positions = [-road_width / 2, 0, road_width / 2]  # 3 линии разметки
@@ -75,9 +76,7 @@ def create_lane_markings():
                 })
 
     for y_pos in y_positions:
-        full_lane.append([shift_point([-20, y_pos, 0]), shift_point([20, y_pos, 0])])
-
-    y_positions = [-road_width / 2, 0, road_width / 2]
+        full_lane_x.append([shift_point([-20, y_pos, 0]), shift_point([20, y_pos, 0])])
 
     # Разметка для вертикальной дороги (3 линии)
     x_positions = [-road_width / 2, 0, road_width / 2]  # 3 линии разметки
@@ -90,9 +89,9 @@ def create_lane_markings():
                 })
 
     for x_pos in x_positions:
-        full_lane.append([shift_point([x_pos, -20, 0]), shift_point([x_pos, 20, 0])])
+        full_lane_y.append([shift_point([x_pos, -20, 0]), shift_point([x_pos, 20, 0])])
 
-    return [shift_object(obj) for obj in markings], full_lane
+    return [shift_object(obj) for obj in markings], full_lane_x, full_lane_y
 
 
 # === Пешеходные переходы ===
@@ -302,7 +301,7 @@ def draw_coordinate_systems(ax):
 # === Создание сцены ===
 # Создаем все объекты
 roads = create_intersection()
-lane_markings, full_lane_markings = create_lane_markings()
+lane_markings, full_lane_x, full_lane_y = create_lane_markings()
 crosswalks = create_crosswalks()
 poles, traffic_lights = create_traffic_infrastructure()
 buildings = create_buildings()
@@ -721,10 +720,112 @@ from source.calibration.base import RESUALDS
 # 3 Точки схода + из точки в точку + расстояние м/у линиями
 # ---------------
 
-
-for p1, p2 in full_lane_markings:
+full_lane_x_optimize = []
+for p1, p2 in full_lane_x:
     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()
     p2 = camera.project_direct(PointND(p2, add_weight=True)).get()
-    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
+    full_lane_x_optimize.append([p1, p2])
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
 
-plt.show()
+full_lane_y_optimize = []
+for p1, p2 in full_lane_y:
+    p1 = camera.project_direct(PointND(p1, add_weight=True)).get()
+    p2 = camera.project_direct(PointND(p2, add_weight=True)).get()
+    full_lane_y_optimize.append([p1, p2])
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='blue', linewidth=2)
+# ax.set_ylim(camera.size[0], -100)
+# plt.show()
+
+
+data_direct_optimize = {
+    "point_to_point": data_direct_optimize_point_to_point[::2],
+    "line_length": crosswalk_dataset[::10],
+    "dist_betweeen_line_1": full_lane_x_optimize,
+    "dist_betweeen_line_2": full_lane_y_optimize,
+}
+
+residualds_blocs = [
+    lambda cam, data: (
+        np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
+        'point_to_point'
+    ),
+    lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
+                       'line_length'),
+    lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_1', expected=4)) * (1),
+                       'dist_betweeen_line_1'),
+    lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_2', expected=4)) * (1),
+                       'dist_betweeen_line_2'),
+]
+
+refine = RefineOptimizer(
+    camera=camera_new,
+    residual_blocks=residualds_blocs,
+    mask=[0, 1, 2, 3, 6],
+    bounds=[[500, -360, -360, -360, 10],
+            [1500, 360, 360, 360, 27]],
+    method='trf'
+)
+
+pipeline = CalibrationPipeline(
+    init_stage=vp_init,
+    refine_stages=[refine],
+    n_iter=1,
+)
+
+pipeline.run(camera=camera_new, data=data_direct_optimize)
+
+from source.calibration.base import RESUALDS
+
+
+def plot_residuals_comparison(RESUALDS):
+    """
+    Строит график сравнения остатков на первом и последнем шаге оптимизации.
+    RESUALDS — словарь вида: {step_num: {'metric_name': [values], ...}, ...}
+    """
+    fig, ax = plt.subplots(figsize=(12, 5))
+
+    step_start = 1
+    step_end = max(RESUALDS)
+
+    x_offset = 0
+    xticks = []
+    xticklabels = []
+
+    keys = list(RESUALDS[step_start].keys())
+
+    for i, key in enumerate(keys):
+        y_start = RESUALDS[step_start][key]
+        y_end = RESUALDS[step_end][key]
+        n = len(y_start)
+        x_range = np.arange(n) + x_offset
+
+        # Графики для текущей метрики
+        ax.plot(x_range, y_start, 'o-', label=f'{key} (step 1)')
+        ax.plot(x_range, y_end, 's--', label=f'{key} (step last)')
+
+        # Оформление оси X
+        xticks.extend(x_range)
+        short_key = key.replace('point_to_point', 'p') \
+            .replace('line_length', 'len') \
+            .replace('dist_betweeen_line_1', 'd1') \
+            .replace('dist_betweeen_line_2', 'd2')
+        xticklabels.extend([f'{short_key}{j}' for j in range(n)])
+
+        # Вертикальная линия-раздел
+        if i < len(keys) - 1:
+            ax.axvline(x_range[-1] + 0.5, color='gray', linestyle='--')
+
+        x_offset += n
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels, rotation=45, ha='right')
+
+    ax.set_ylabel("Residual value")
+    ax.set_title("Сравнение остатков на первом и последнем шаге")
+    ax.legend()
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+plot_residuals_comparison(RESUALDS)
