@@ -775,57 +775,6 @@ pipeline = CalibrationPipeline(
 pipeline.run(camera=camera_new, data=data_direct_optimize)
 
 from source.calibration.base import RESUALDS
-
-
-def plot_residuals_comparison(RESUALDS):
-    """
-    Строит график сравнения остатков на первом и последнем шаге оптимизации.
-    RESUALDS — словарь вида: {step_num: {'metric_name': [values], ...}, ...}
-    """
-    fig, ax = plt.subplots(figsize=(12, 5))
-
-    step_start = 1
-    step_end = max(RESUALDS)
-
-    x_offset = 0
-    xticks = []
-    xticklabels = []
-
-    keys = list(RESUALDS[step_start].keys())
-
-    for i, key in enumerate(keys):
-        y_start = RESUALDS[step_start][key]
-        y_end = RESUALDS[step_end][key]
-        n = len(y_start)
-        x_range = np.arange(n) + x_offset
-
-        # Графики для текущей метрики
-        ax.plot(x_range, y_start, 'o-', label=f'{key} (step 1)')
-        ax.plot(x_range, y_end, 's--', label=f'{key} (step last)')
-
-        # Оформление оси X
-        xticks.extend(x_range)
-        short_key = key.replace('point_to_point', 'p') \
-            .replace('line_length', 'len') \
-            .replace('dist_betweeen_line_1', 'd1') \
-            .replace('dist_betweeen_line_2', 'd2')
-        xticklabels.extend([f'{short_key}{j}' for j in range(n)])
-
-        # Вертикальная линия-раздел
-        if i < len(keys) - 1:
-            ax.axvline(x_range[-1] + 0.5, color='gray', linestyle='--')
-
-        x_offset += n
-
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels, rotation=45, ha='right')
-
-    ax.set_ylabel("Residual value")
-    ax.set_title("Сравнение остатков на первом и последнем шаге")
-    ax.legend()
-    ax.grid(True)
-
-    plt.tight_layout()
-    plt.show()
+from calibration.debug import plot_residuals_comparison
 
 plot_residuals_comparison(RESUALDS)

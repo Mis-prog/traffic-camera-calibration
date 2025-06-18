@@ -63,8 +63,8 @@ def compute_alignment_and_metrics(
     # Подсчёт ошибок (в ENU)
     errors = [
         np.linalg.norm(
-            np.array(R @ predict) -
-            # np.array( predict) -
+            # np.array(R @ predict) -
+            np.array( predict) -
             np.array(ideal)
         )
         for predict, ideal in zip(points_cam, points_enu)
@@ -82,7 +82,8 @@ def compute_alignment_and_metrics(
     for name, value in stats.items():
         print(f"  ▸ {name:<24} {value:.2f} м")
 
-    point_gps_predict = [enu_to_gps(*R @ point, lat0, lon0) for point in points_cam]
+    # point_gps_predict = [enu_to_gps(*R @ point, lat0, lon0) for point in points_cam]
+    point_gps_predict = [enu_to_gps(*point, lat0, lon0) for point in points_cam]
 
     # url =generate_yandex_maps_url(point_gps_predict)
     # print(f'URL YANDEX {url}')

@@ -11,15 +11,6 @@ from calibration.debug import compute_alignment_and_metrics
 
 camera = Camera('image/undistorted_output_one.jpg')
 
-# vp1 = [3974.185, -248.69977]
-# vp2 = [768.4042, 2362.912]
-# vp3 = [-24.940735, -669.0249]
-# vps_auto = np.array([vp1, vp3, vp2])
-
-# Набор найденный через RANSAK
-# vp1_new = [3.535e+03, -1.270e+02]
-# vp2_new = [164.36434109, -476.74418605]
-# vps_auto_new = np.array([vp1_new, vp2_new])
 
 annotation_parser = AnnotationParser("marked/data_full.json")
 lines_vp1 = annotation_parser.get_lines_by_class("vp1")

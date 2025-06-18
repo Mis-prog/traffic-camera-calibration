@@ -16,7 +16,7 @@ def visualize_grid_debug(
         grid_range_x: float = 5.0,  # диапазон по X (влево/вправо от центра)
         grid_range_y: float = 5.0,  # диапазон по Y (вперёд/назад от центра)
         grid_step: float = 1.0,     # размер клетки
-        arrow_len: float = 15.0,    # длина вектора "вверх"
+        arrow_len: float = 5,    # длина вектора "вверх"
         plane_z: float = 0.0,
         save_path=None
 ):
