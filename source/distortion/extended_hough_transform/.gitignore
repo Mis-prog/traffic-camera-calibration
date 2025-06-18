@@ -1,1 +1,3 @@
-ami*
+ami/
+pybind11/
+build/
