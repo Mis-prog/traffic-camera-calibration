@@ -3,7 +3,7 @@ import os
 # folder_paths = ['source', 'example']
 #
 
-folder_paths  = ['source']
+folder_paths = ['example', 'source']
 output_file = 'all_code.txt'
 comment_prefixes = ('#', '//', '/*', '*', '--')
 
@@ -11,7 +11,7 @@ with open(output_file, 'w', encoding='utf-8') as out:
     for folder_path in folder_paths:
         for root, dirs, files in os.walk(folder_path):
             # Исключаем ненужные папки
-            dirs[:] = [d for d in dirs if d not in ('pybind11', 'build')]
+            dirs[:] = [d for d in dirs if d not in ('pybind11', 'build', 'ami')]
 
             for filename in sorted(files):
                 if filename.endswith(('.py', '.cpp', '.h', '.c', '.java', '.js')):

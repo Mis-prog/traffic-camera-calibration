@@ -22,18 +22,21 @@ set(SOURCES
 )
 
 find_package(PNG REQUIRED)
+find_package(OpenMP REQUIRED)
+
 include_directories(${PNG_INCLUDE_DIRS})
 set(EXTRA_LIBS ${EXTRA_LIBS} ${PNG_LIBRARIES})
 
-add_library(canny MODULE canny_ami.cpp ${SOURCES})
-target_include_directories(canny PRIVATE ${Python3_INCLUDE_DIRS})
-target_link_libraries(canny
+add_library(ami MODULE ami.cpp ${SOURCES})
+target_include_directories(ami PRIVATE ${Python3_INCLUDE_DIRS})
+target_link_libraries(ami
         PRIVATE
         pybind11::module
         ${EXTRA_LIBS}
+        OpenMP::OpenMP_CXX
 )
 
-set_target_properties(canny PROPERTIES
+set_target_properties(ami PROPERTIES
         PREFIX ""        # Без префикса 'lib'
         SUFFIX ".pyd"    # Чтобы получить mymodule.pyd, а не .dll
 )

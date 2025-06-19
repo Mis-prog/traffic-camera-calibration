@@ -551,7 +551,7 @@ for obj in pole:
 from source.vp_detection import VanishingPointEstimatorManual
 from source.calibration import VanishingPointCalibration, RefineOptimizer, CalibrationPipeline
 from source.calibration.refine import residual_interline_distance, residual_reprojection_line, \
-    residual_reprojection_point, residual_line_length
+    residual_reprojection_point, residual_line_length, residual_orthogonality_error, residual_parallel_group
 
 vp1_manual = VanishingPointEstimatorManual().estimate(projected_segments_horizont[::5])
 vp3_manual = VanishingPointEstimatorManual().estimate(projected_segments_pole[::5])
@@ -564,25 +564,25 @@ vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
 
 def draw():
     global scale, p1, p2
-    scale = 2
+    scale = 1
     ax.set_xlim(0, camera.size[1] * scale)
-    ax.set_ylim(camera.size[0] * scale, -100)  # Важно: инвертируем ось Y, как в изображении
-    ax.set_title("Проекция сцены на изображение (без фона)")
+    ax.set_ylim(camera.size[0] * scale, 0)  # Важно: инвертируем ось Y, как в изображении
+    ax.set_title("Проекция сцены на изображение")
     ax.axis('off')
-    ax.scatter(*vp1_manual, color='lime')
-    ax.scatter(*vp3_manual, color='red')
+    # ax.scatter(*vp1_manual, color='lime')
+    # ax.scatter(*vp3_manual, color='red')
 
-    # Отрисовка
-    for p1, p2 in projected_segments_horizont[::5]:
-        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
-    for p1, p2 in projected_segments_pole[::5]:
-        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='red', linewidth=2)
-    plt.title("Горизонтальные линии разметки")
-    plt.axis('off')
+    # # Отрисовка
+    # for p1, p2 in projected_segments_horizont[::5]:
+    #     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
+    # for p1, p2 in projected_segments_pole[::5]:
+    #     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='red', linewidth=2)
+    # plt.title("Горизонтальные линии разметки")
+    # plt.axis('off')
     plt.show()
 
 
-# draw()  # Отрисовка
+draw()  # Отрисовка
 
 # ---------------
 # 1 Точки схода + из точки в точку
@@ -727,6 +727,8 @@ for p1, p2 in full_lane_x:
     full_lane_x_optimize.append([p1, p2])
 #     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
 
+# print("full_lane_x_optimize", full_lane_x_optimize)
+
 full_lane_y_optimize = []
 for p1, p2 in full_lane_y:
     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()
@@ -772,9 +774,74 @@ pipeline = CalibrationPipeline(
     n_iter=1,
 )
 
-pipeline.run(camera=camera_new, data=data_direct_optimize)
+# pipeline.run(camera=camera_new, data=data_direct_optimize)
 
-from source.calibration.base import RESUALDS
-from calibration.debug import plot_residuals_comparison
+# from source.calibration.base import RESUALDS
+# from calibration.debug import plot_residuals_comparison
+#
+# plot_residuals_comparison(RESUALDS)
 
-plot_residuals_comparison(RESUALDS)
+# draw()
+
+
+# ----------------------------
+# Углы
+# ----------------------------
+
+# camera_new_new = Camera(size=(1080, 1920))
+# vp_init = VanishingPointCalibration(camera_new)
+# vp1_manual = VanishingPointEstimatorManual().estimate(full_lane_x_optimize)
+# vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
+
+# ortohonal_group = []
+# for line1, line2 in zip(full_lane_x, full_lane_y):
+#     P1, P2 = line1
+#     P3, P4 = line2
+#
+#     p1, p2 = camera.project_direct(PointND(P1, add_weight=True)).get(), camera.project_direct(
+#         PointND(P2, add_weight=True)).get()
+#     p3, p4 = camera.project_direct(PointND(P3, add_weight=True)).get(), camera.project_direct(
+#         PointND(P4, add_weight=True)).get()
+#     ortohonal_group.append([[p1, p2], [p3, p4]])
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='red', linewidth=2)
+#     ax.plot([p3[0], p4[0]], [p3[1], p4[1]], color='blue', linewidth=2)
+# # plt.show()
+# # print(ortohonal_group)
+#
+# data_direct_optimize = {
+#     "line_length": crosswalk_dataset[::5],
+#     "ortohonal_group": ortohonal_group,
+# }
+#
+# residualds_blocs_1 = [
+#     lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
+#                        'line_length'),
+#
+# ]
+# residualds_blocs_2 = [
+#     lambda cam, data: (np.array(residual_orthogonality_error(cam, data, group='ortohonal_group')) * (1 / 0.1),
+#                        'ortohonal_group'),
+# ]
+#
+# refine_1 = RefineOptimizer(
+#     camera=camera_new,
+#     residual_blocks=residualds_blocs_2,
+#     mask=[2, 3],
+#     bounds=[[-360, -360],
+#             [360, 360]],
+#     method='trf'
+# )
+#
+# pipeline = CalibrationPipeline(
+#     init_stage=vp_init,
+#     refine_stages=[refine_1],
+#     n_iter=1,
+#
+# )
+#
+# pipeline.run(camera_new, data_direct_optimize)
+#
+# from source.calibration.base import RESUALDS
+# from calibration.debug import plot_residuals_comparison
+#
+# plot_residuals_comparison(RESUALDS)

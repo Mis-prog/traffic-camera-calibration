@@ -7,7 +7,7 @@ from source.core import Camera, PointND
 def residual_interline_distance(camera, data, group, expected):
     residuals = []
     lines = data.get(group, [])
-    for i in range(len(lines) - 1):
+    for i in range(len(lines) -  1):
         d = compute_interline_distance(camera, lines[i], lines[i + 1])
         # print(f"[DEBUG] d={d:.2f} (expected {expected:.2f}) delta={d - expected:.3f}")
         residuals.append(np.abs(d - expected))
@@ -96,6 +96,34 @@ def residual_line_length(camera, data, group, expected):
     for line in lines:
         L = compute_line_length(camera, line, 0)
         residuals.append(np.abs(L - expected))
+
+    return residuals
+
+
+def residual_orthogonality_error(camera, data, group):
+    residuals = []
+    lines = data.get(group, [])
+
+    for (p1, p2), (q1, q2) in lines:
+        # Проецируем точки на изображение
+        p1_world = camera.project_back(PointND(p1)).get()
+        p2_world = camera.project_back(PointND(p2)).get()
+        q1_world = camera.project_back(PointND(q1)).get()
+        q2_world = camera.project_back(PointND(q2)).get()
+
+        # Направляющие векторы
+        v1 = p2_world - p1_world
+        v2 = q2_world - q1_world
+
+        # Нормализация (чтобы убрать влияние длины)
+        v1 /= np.linalg.norm(v1)
+        v2 /= np.linalg.norm(v2)
+
+        # Скалярное произведение: должно быть 0 при 90°
+        dot = np.dot(v1, v2)
+
+        # Ошибка — квадрат скалярного произведения
+        residuals.append(dot ** 2)
 
     return residuals
 
