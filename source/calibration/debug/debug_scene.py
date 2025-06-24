@@ -109,7 +109,7 @@ def draw_coordinate_system_overlay(camera: Camera, ax, scale=10):
     Z = PointND([0, 0, scale, 1])
 
     p0 = camera.project_direct(origin).get()
-    print(f'Пиксель мировой системы координат: {p0}')
+    # print(f'Пиксель мировой системы координат: {p0}')
     px = camera.project_direct(X).get()
     py = camera.project_direct(Y).get()
     pz = camera.project_direct(Z).get()

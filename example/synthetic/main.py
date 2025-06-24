@@ -72,7 +72,9 @@ def create_lane_markings():
             if abs(x) > road_width + 2:  # Не рисуем разметку в зоне перекрестка
                 markings.append({
                     "type": "lane_marking",
-                    "geometry": [[x, y_pos, 0.02], [x + 3, y_pos, 0.02]]
+                    # "geometry": [[x, y_pos, 0.02], [x + 3, y_pos, 0.02]]
+                    "geometry": [[x, y_pos, 0.0], [x + 3, y_pos, 0.0]]
+
                 })
 
     for y_pos in y_positions:
@@ -85,7 +87,9 @@ def create_lane_markings():
             if abs(y) > road_width + 2:  # Не рисуем разметку в зоне перекрестка
                 markings.append({
                     "type": "lane_marking",
-                    "geometry": [[x_pos, y, 0.02], [x_pos, y + 3, 0.02]]
+                    # "geometry": [[x_pos, y, 0.02], [x_pos, y + 3, 0.02]]
+                    "geometry": [[x_pos, y, 0.0], [x_pos, y + 3, 0.0]]
+
                 })
 
     for x_pos in x_positions:
@@ -113,10 +117,14 @@ def create_crosswalks():
             crosswalks.append({
                 "type": "crosswalk",
                 "geometry": [
-                    [x_start, y_side - crosswalk_width / 2, 0.01],
-                    [x_start + stripe_width, y_side - crosswalk_width / 2, 0.01],
-                    [x_start + stripe_width, y_side + crosswalk_width / 2, 0.01],
-                    [x_start, y_side + crosswalk_width / 2, 0.01]
+                    # [x_start, y_side - crosswalk_width / 2, 0.01],
+                    # [x_start + stripe_width, y_side - crosswalk_width / 2, 0.01],
+                    # [x_start + stripe_width, y_side + crosswalk_width / 2, 0.01],
+                    # [x_start, y_side + crosswalk_width / 2, 0.01]
+                    [x_start, y_side - crosswalk_width / 2, 0],
+                    [x_start + stripe_width, y_side - crosswalk_width / 2, 0],
+                    [x_start + stripe_width, y_side + crosswalk_width / 2, 0],
+                    [x_start, y_side + crosswalk_width / 2, 0]
                 ]
             })
 
@@ -127,10 +135,14 @@ def create_crosswalks():
             crosswalks.append({
                 "type": "crosswalk",
                 "geometry": [
-                    [x_side - crosswalk_width / 2, y_start, 0.01],
-                    [x_side + crosswalk_width / 2, y_start, 0.01],
-                    [x_side + crosswalk_width / 2, y_start + stripe_width, 0.01],
-                    [x_side - crosswalk_width / 2, y_start + stripe_width, 0.01]
+                    # [x_side - crosswalk_width / 2, y_start, 0.01],
+                    # [x_side + crosswalk_width / 2, y_start, 0.01],
+                    # [x_side + crosswalk_width / 2, y_start + stripe_width, 0.01],
+                    # [x_side - crosswalk_width / 2, y_start + stripe_width, 0.01]
+                    [x_side - crosswalk_width / 2, y_start, 0.],
+                    [x_side + crosswalk_width / 2, y_start, 0.0],
+                    [x_side + crosswalk_width / 2, y_start + stripe_width, 0.],
+                    [x_side - crosswalk_width / 2, y_start + stripe_width, 0.]
                 ]
             })
 
@@ -494,81 +506,84 @@ for obj in scene_objects:
             if len(projected) == 2:
                 ax.plot(projected[:, 0], projected[:, 1], color=color, linewidth=2)
 
-# plt.tight_layout()
-# plt.show()
 
-import numpy as np
+# import numpy as np
+#
+#
+# def get_direction(p1, p2):
+#     v = np.array(p2) - np.array(p1)
+#     v[2] = 0  # игнорируем Z
+#     norm = np.linalg.norm(v)
+#     return v / norm if norm > 0 else v
+#
+#
+# # Угловой порог (в радианах)
+# angle_thresh = np.deg2rad(15)
+# target_dir = np.array([1, 0])  # направление вдоль X
+#
+# lane_markings = [obj for obj in scene_objects if obj['type'] == 'lane_marking']
+#
+# horizontal_markings = []
+# for obj in lane_markings:
+#     p1, p2 = obj['geometry']
+#     direction = get_direction(p1, p2)[:2]
+#     angle = np.arccos(np.clip(np.dot(direction, target_dir), -1.0, 1.0))
+#     if angle < angle_thresh:
+#         horizontal_markings.append(obj)
+#
+# projected_segments_horizont = []
+#
+# for obj in horizontal_markings:
+#     p1_3d, p2_3d = obj['geometry']
+#     p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()
+#     p2_2d = camera.project_direct(PointND(p2_3d, add_weight=True)).get()
+#
+#     if np.random.rand() < 0.5:  # 30% случаев — добавляем шум
+#         p1_2d += np.random.randint(-2, 2, size=2)
+#         p2_2d += np.random.randint(-2, 2, size=2)
+#
+#     projected_segments_horizont.append([p1_2d, p2_2d])
 
-
-def get_direction(p1, p2):
-    v = np.array(p2) - np.array(p1)
-    v[2] = 0  # игнорируем Z
-    norm = np.linalg.norm(v)
-    return v / norm if norm > 0 else v
-
-
-# Угловой порог (в радианах)
-angle_thresh = np.deg2rad(15)
-target_dir = np.array([1, 0])  # направление вдоль X
-
-lane_markings = [obj for obj in scene_objects if obj['type'] == 'lane_marking']
-
-horizontal_markings = []
-for obj in lane_markings:
-    p1, p2 = obj['geometry']
-    direction = get_direction(p1, p2)[:2]
-    angle = np.arccos(np.clip(np.dot(direction, target_dir), -1.0, 1.0))
-    if angle < angle_thresh:
-        horizontal_markings.append(obj)
-
-projected_segments_horizont = []
-
-for obj in horizontal_markings:
-    p1_3d, p2_3d = obj['geometry']
-    p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()
-    p2_2d = camera.project_direct(PointND(p2_3d, add_weight=True)).get()
-
-    if np.random.rand() < 0.5:  # 30% случаев — добавляем шум
-        p1_2d += np.random.randint(-10, 10, size=2)
-        p2_2d += np.random.randint(-10, 10, size=2)
-
-    projected_segments_horizont.append([p1_2d, p2_2d])
-
-projected_segments_pole = []
-pole = [obj for obj in scene_objects if obj['type'] == 'pole']
-
-for obj in pole:
-    p1_3d, p2_3d = obj['geometry']
-    p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()
-    p2_2d = camera.project_direct(PointND(p2_3d, add_weight=True)).get()
-
-    if np.random.rand() < 0.5:  # 30% случаев — добавляем шум
-        p1_2d += np.random.randint(-5, 10, size=2)
-        p2_2d += np.random.randint(-5, 10, size=2)
-
-    projected_segments_pole.append([p1_2d, p2_2d])
+# projected_segments_pole = []
+# projected_segments_pole_ideal = []
+# pole = [obj for obj in scene_objects if obj['type'] == 'pole']
+#
+# for obj in pole:
+#     p1_3d, p2_3d = obj['geometry']
+#     p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()  # + np.random.randint(-30, 30, size=2)
+#     p2_2d = camera.project_direct(PointND(p2_3d, add_weight=True)).get()  # + np.random.randint(-30, 30, size=2)
+#     projected_segments_pole_ideal.append([p1_2d, p2_2d])
+#
+#     # p1_2d += np.random.randint(-30, 30, size=2)
+#     # p2_2d += np.random.randint(-30, 30, size=2)
+#
+#     # if np.random.rand() < 0.5:  # 30% случаев — добавляем шум
+#     #     p1_2d += np.random.randint(-10, 10, size=2)
+#     #     p2_2d += np.random.randint(-10, 10, size=2)
+#
+#     projected_segments_pole.append([p1_2d, p2_2d])
 
 from source.vp_detection import VanishingPointEstimatorManual
 from source.calibration import VanishingPointCalibration, RefineOptimizer, CalibrationPipeline
 from source.calibration.refine import residual_interline_distance, residual_reprojection_line, \
     residual_reprojection_point, residual_line_length, residual_orthogonality_error, residual_parallel_group
+#
+# vp1_manual = VanishingPointEstimatorManual().estimate(projected_segments_horizont[::5])
+# vp3_manual = VanishingPointEstimatorManual().estimate(projected_segments_pole[::5])
+# print(f'Точки схода: {vp1_manual, vp3_manual}')
+#
+# camera_new = Camera(size=(1080, 1920))
+# vp_init = VanishingPointCalibration(camera_new)
+# vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
 
-vp1_manual = VanishingPointEstimatorManual().estimate(projected_segments_horizont[::5])
-vp3_manual = VanishingPointEstimatorManual().estimate(projected_segments_pole[::5])
-print(f'Точки схода: {vp1_manual, vp3_manual}')
 
-camera_new = Camera(size=(1080, 1920))
-vp_init = VanishingPointCalibration(camera_new)
-vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
-
-
-def draw():
-    global scale, p1, p2
-    scale = 1
-    ax.set_xlim(0, camera.size[1] * scale)
-    ax.set_ylim(camera.size[0] * scale, 0)  # Важно: инвертируем ось Y, как в изображении
-    ax.set_title("Проекция сцены на изображение")
-    ax.axis('off')
+# def draw():
+#     global scale, p1, p2
+#     scale = 1
+#     ax.set_xlim(0, camera.size[1] * scale)
+#     ax.set_ylim(camera.size[0] * scale, 0)  # Важно: инвертируем ось Y, как в изображении
+#     ax.set_title("Проекция сцены на изображение")
+    # ax.axis('off')
     # ax.scatter(*vp1_manual, color='lime')
     # ax.scatter(*vp3_manual, color='red')
 
@@ -579,46 +594,54 @@ def draw():
     #     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='red', linewidth=2)
     # plt.title("Горизонтальные линии разметки")
     # plt.axis('off')
-    plt.show()
+    # plt.show()
 
 
-draw()  # Отрисовка
+# draw()  # Отрисовка
 
 # ---------------
 # 1 Точки схода + из точки в точку
 # ---------------
-pole = [obj for obj in scene_objects if obj['type'] == 'pole']
+# pole = [obj for obj in scene_objects if obj['type'] == 'pole']
 
-data_direct_optimize_point_to_point = []
-for obj in pole:
-    p1_3d, _ = obj['geometry']
-    p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()
-    data_direct_optimize_point_to_point.append(
-        {"pixel": p1_2d + np.random.randint(-10, 10, size=2), "gps": p1_3d + np.random.randint(-1, 1, size=3)})
+# data_direct_optimize_point_to_point = []
+# for obj in pole:
+#     p1_3d, _ = obj['geometry']
+#     p1_2d = camera.project_direct(PointND(p1_3d, add_weight=True)).get()
+#     data = {"pixel": p1_2d,  # + np.random.randint(-10, 10, size=2),
+#             "gps": p1_3d}  # + np.random.randint(-1, 1, size=3)
+#
+#     # ax.scatter(*data['pixel'], c='r', label='Ошибка проекции')
+#     data_direct_optimize_point_to_point.append(
+#         data
+#     )
+    #
+    # data_direct_optimize = {
+    #     "point_to_point": data_direct_optimize_point_to_point[:-5],
+    # }
+    #
+    # residualds_blocs = [
+    #     lambda cam, data: (
+    #         np.array(residual_reprojection_point(cam, data, group='point_to_point')),
+    #         'point_to_point'
+    #     ),
 
-data_direct_optimize = {
-    "point_to_point": data_direct_optimize_point_to_point[:-5],
-}
+    # ]
 
-residualds_blocs = [
-    lambda cam, data: np.array(residual_reprojection_point(cam, data, group='point_to_point'))
-
-]
-
-refine = RefineOptimizer(
-    camera=camera_new,
-    residual_blocks=residualds_blocs,
-    mask=[0, 1, 2, 3, 6],
-    bounds=[[500, -360, -360, -360, 10],
-            [1500, 360, 360, 360, 27]],
-    method='trf'
-)
-
-pipeline = CalibrationPipeline(
-    init_stage=vp_init,
-    refine_stages=[refine],
-    n_iter=1,
-)
+# refine = RefineOptimizer(
+#     camera=camera_new,
+#     residual_blocks=residualds_blocs,
+#     mask=[0, 1, 2, 3, 6],
+#     bounds=[[500, -360, -360, -360, 10],
+#             [1500, 360, 360, 360, 27]],
+#     method='trf'
+# )
+#
+# pipeline = CalibrationPipeline(
+#     init_stage=vp_init,
+#     refine_stages=[refine],
+#     n_iter=1,
+# )
 
 # pipeline.run(camera_new, data_direct_optimize)
 
@@ -626,19 +649,19 @@ pipeline = CalibrationPipeline(
 # 2 Точки схода + из точки в точку + расстояние м/у точками
 # ---------------
 
-pole = [obj for obj in scene_objects if obj['type'] == 'crosswalk']
-
-crosswalk_dataset = []
-for obj in pole:
-    p1, p2, p3, p4 = obj['geometry']
-    if np.linalg.norm(np.array(p1) - np.array(p4)) == 4:
-        p1 = camera.project_direct(PointND(p1, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
-        p4 = camera.project_direct(PointND(p4, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
-        crosswalk_dataset.append([p1, p4])
-    elif np.linalg.norm(np.array(p1) - np.array(p2)) == 4:
-        p1 = camera.project_direct(PointND(p1, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
-        p2 = camera.project_direct(PointND(p2, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
-        crosswalk_dataset.append([p1, p2])
+# pole = [obj for obj in scene_objects if obj['type'] == 'crosswalk']
+#
+# crosswalk_dataset = []
+# for obj in pole[:6]:
+#     p1, p2, p3, p4 = obj['geometry']
+#     if np.linalg.norm(np.array(p1) - np.array(p4)) == 4:
+#         p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-3, 3, size=2)
+#         p4 = camera.project_direct(PointND(p4, add_weight=True)).get()  # + np.random.randint(-3, 3, size=2)
+#         crosswalk_dataset.append([p1, p4])
+#     elif np.linalg.norm(np.array(p1) - np.array(p2)) == 4:
+#         p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-3, 3, size=2)
+#         p2 = camera.project_direct(PointND(p2, add_weight=True)).get()  # + np.random.randint(-3, 3, size=2)
+#         crosswalk_dataset.append([p1, p2])
 
 # ax.set_ylim(camera.size[0], -100)  # Важно: инвертируем ось Y, как в изображении
 #
@@ -651,34 +674,34 @@ for obj in pole:
 # plt.axis('off')
 # plt.show()
 
-data_direct_optimize = {
-    "point_to_point": data_direct_optimize_point_to_point[::2],
-    "line_length": crosswalk_dataset[::10],
-}
-
-residualds_blocs = [
-    lambda cam, data: (
-        np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
-        'point_to_point'
-    ),
-    lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
-                       'line_length')
-]
-
-refine = RefineOptimizer(
-    camera=camera_new,
-    residual_blocks=residualds_blocs,
-    mask=[0, 1, 2, 3, 6],
-    bounds=[[500, -360, -360, -360, 10],
-            [1500, 360, 360, 360, 27]],
-    method='trf'
-)
-
-pipeline = CalibrationPipeline(
-    init_stage=vp_init,
-    refine_stages=[refine],
-    n_iter=1,
-)
+# data_direct_optimize = {
+#     "point_to_point": data_direct_optimize_point_to_point[::2],
+#     "line_length": crosswalk_dataset[::10],
+# }
+#
+# residualds_blocs = [
+#     lambda cam, data: (
+#         np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
+#         'point_to_point'
+#     ),
+#     lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
+#                        'line_length')
+# ]
+#
+# refine = RefineOptimizer(
+#     camera=camera_new,
+#     residual_blocks=residualds_blocs,
+#     mask=[0, 1, 2, 3, 6],
+#     bounds=[[500, -360, -360, -360, 10],
+#             [1500, 360, 360, 360, 27]],
+#     method='trf'
+# )
+#
+# pipeline = CalibrationPipeline(
+#     init_stage=vp_init,
+#     refine_stages=[refine],
+#     n_iter=1,
+# )
 
 # pipeline.run(camera=camera_new, data=data_direct_optimize)
 
@@ -720,69 +743,81 @@ from source.calibration.base import RESUALDS
 # 3 Точки схода + из точки в точку + расстояние м/у линиями
 # ---------------
 
-full_lane_x_optimize = []
-for p1, p2 in full_lane_x:
-    p1 = camera.project_direct(PointND(p1, add_weight=True)).get()
-    p2 = camera.project_direct(PointND(p2, add_weight=True)).get()
-    full_lane_x_optimize.append([p1, p2])
-#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2)
-
-# print("full_lane_x_optimize", full_lane_x_optimize)
-
-full_lane_y_optimize = []
-for p1, p2 in full_lane_y:
-    p1 = camera.project_direct(PointND(p1, add_weight=True)).get()
-    p2 = camera.project_direct(PointND(p2, add_weight=True)).get()
-    full_lane_y_optimize.append([p1, p2])
-#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='blue', linewidth=2)
-# ax.set_ylim(camera.size[0], -100)
-# plt.show()
-
-
-data_direct_optimize = {
-    "point_to_point": data_direct_optimize_point_to_point[::2],
-    "line_length": crosswalk_dataset[::10],
-    "dist_betweeen_line_1": full_lane_x_optimize,
-    "dist_betweeen_line_2": full_lane_y_optimize,
-}
-
-residualds_blocs = [
-    lambda cam, data: (
-        np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
-        'point_to_point'
-    ),
-    lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
-                       'line_length'),
-    lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_1', expected=4)) * (1),
-                       'dist_betweeen_line_1'),
-    lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_2', expected=4)) * (1),
-                       'dist_betweeen_line_2'),
-]
-
-refine = RefineOptimizer(
-    camera=camera_new,
-    residual_blocks=residualds_blocs,
-    mask=[0, 1, 2, 3, 6],
-    bounds=[[500, -360, -360, -360, 10],
-            [1500, 360, 360, 360, 27]],
-    method='trf'
-)
-
-pipeline = CalibrationPipeline(
-    init_stage=vp_init,
-    refine_stages=[refine],
-    n_iter=1,
-)
-
+# full_lane_x_optimize = []
+# for p1, p2 in full_lane_x:
+#     p1 = camera.project_direct(PointND(p1, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
+#     p2 = camera.project_direct(PointND(p2, add_weight=True)).get() + np.random.randint(-10, 10, size=2)
+#     full_lane_x_optimize.append([p1, p2])
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2, label='Ошибка межлинейного расстояния')
+#
+# # print("full_lane_x_optimize", full_lane_x_optimize)
+#
+# full_lane_y_optimize = []
+# for p1, p2 in full_lane_y:
+#     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-20, 20, size=2)
+# p2 = camera.project_direct(PointND(p2, add_weight=True)).get()  # + np.random.randint(-20, 20, size=2)
+# full_lane_y_optimize.append([p1, p2])
+# # ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='b', linewidth=2)
+# # ax.set_ylim(camera.size[0], -100)
+#
+#
+# # for p1, p2 in projected_segments_pole[::5]:
+# #     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='r', linewidth=2)
+#
+# ax.set_xlim(0, camera.size[1])
+# ax.set_ylim(camera.size[0], 0)
+#
+# # plt.show()
+#
+# data_direct_optimize = {
+#     "point_to_point": data_direct_optimize_point_to_point[::4],
+#     "line_length": crosswalk_dataset[::10],
+#     "dist_betweeen_line_1": full_lane_x_optimize,
+#     "dist_betweeen_line_2": full_lane_y_optimize,
+# }
+#
+# residualds_blocs = [
+#     lambda cam, data: (
+#         np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
+#         'Ошибка проекции'
+#     ),
+#     lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
+#                        'Ошибка длины отрезков'),
+#     lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_1', expected=4)) * (1.5),
+#                        'Ошибка межлинейного расстояния 1'),
+#     # lambda cam, data: (np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_2', expected=4)) * (1),
+#     #                    'Ошибка межлинейного расстояния 2'),
+# ]
+#
+# refine = RefineOptimizer(
+#     camera=camera_new,
+#     residual_blocks=residualds_blocs,
+#     mask=[0, 1, 2, 3, 6],
+#     bounds=[[500, -360, -360, -360, 10],
+#             [1500, 360, 360, 360, 27]],
+#     method='trf'
+# )
+#
+# pipeline = CalibrationPipeline(
+#     init_stage=vp_init,
+#     refine_stages=[refine],
+#     n_iter=1,
+# )
+#
 # pipeline.run(camera=camera_new, data=data_direct_optimize)
-
+#
+# print("delta", - np.array(camera_new.get_params()) + np.array(camera.get_params()))
+#
 # from source.calibration.base import RESUALDS
 # from calibration.debug import plot_residuals_comparison
 #
+# #
+# handles, labels = plt.gca().get_legend_handles_labels()
+# unique = dict(zip(labels, handles))
+# plt.legend(unique.values(), unique.keys())
 # plot_residuals_comparison(RESUALDS)
 
 # draw()
-
 
 # ----------------------------
 # Углы
@@ -844,4 +879,177 @@ pipeline = CalibrationPipeline(
 # from source.calibration.base import RESUALDS
 # from calibration.debug import plot_residuals_comparison
 #
+# plot_residuals_comparison(RESUALDS)
+
+# camera_NEW = Camera(size=(1080, 1920))
+#
+# full_lane_x_optimize = []
+#
+# for p1, p2 in full_lane_x:
+#     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-30, 30, size=2)
+#     p2 = camera.project_direct(PointND(p2, add_weight=True)).get()  # + np.random.randint(-30, 30, size=2)
+#
+#     full_lane_x_optimize.append([p1, p2])
+    # ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='b', linewidth=2)
+#
+# for p1, p2 in projected_segments_pole[::3]:
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='r', linewidth=2)
+#
+# vp1_manual = VanishingPointEstimatorManual().estimate(full_lane_x_optimize)
+# vp3_manual = VanishingPointEstimatorManual().estimate(projected_segments_pole[::3])
+# print(f'Точки схода: {vp1_manual, vp3_manual}')
+#
+# plt.scatter(*vp1_manual, c='b', label='Точка схода для направления X')
+# plt.scatter(*vp3_manual, c='r', label='Точка схода для направления Z')
+# #
+# vp_init = VanishingPointCalibration(camera_NEW)
+# vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
+# vp_init.run(None)
+# plt.legend()
+# plt.show()
+
+# noise_levels = np.arange(0, 50, 5)
+# runs_per_level = 1000
+# P_true = np.array([1200, -150, 55, 175])
+# errors_by_level = []
+#
+# # Проведения точности поиска точек схода
+# for noise in noise_levels:
+#     recovered = []
+#     for _ in range(runs_per_level):
+#         # 1. Добавь шум в концы отрезков
+#         # noisy_lines = add_noise_to_segments(original_segments, noise)
+#         try:
+#             if noise != 0:
+#                 _full_lane_x_optimize = [
+#                     [p1 + np.random.randint(-noise, noise, size=2), p2 + np.random.randint(-noise, noise, size=2)] for
+#                     p1, p2 in full_lane_x_optimize]
+#                 _projected_segments_pole = [
+#                     [p1 + np.random.randint(-noise, noise, size=2), p2 + np.random.randint(-noise, noise, size=2)] for
+#                     p1, p2 in projected_segments_pole[::3]]
+#             else:
+#                 _full_lane_x_optimize = full_lane_x_optimize
+#                 _projected_segments_pole = projected_segments_pole[::3]
+#             vp1_manual = VanishingPointEstimatorManual().estimate(_full_lane_x_optimize)
+#             vp3_manual = VanishingPointEstimatorManual().estimate(_projected_segments_pole)
+#             vp_init = VanishingPointCalibration(camera_NEW)
+#             vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
+#             vp_init.run(None)
+#
+#             P_est = camera_NEW.get_params()[0:4]
+#             print(P_est)
+#             recovered.append(P_est)
+#
+#         except ValueError as e:
+#             print(f"[!] Пропущен прогон — {e}")
+#             continue  # пропускаем этот прогон
+#
+#     recovered = np.array(recovered)
+#     mean_est = recovered.mean(axis=0)
+#     error = np.abs(mean_est - P_true)
+#     errors_by_level.append(error)
+#
+# print(errors_by_level)
+# import matplotlib.pyplot as plt
+#
+# errors_by_level = np.array(errors_by_level)  # shape (len(noise_levels), 4)
+# labels = ['f', 'α', 'β', 'γ']
+#
+# plt.figure(figsize=(8, 5))
+#
+# errors_by_level[errors_by_level < 1e-6] = 1e-6
+#
+# # plt.yscale('log')
+# for i in range(4):
+#     plt.plot(noise_levels, errors_by_level[:, i], label=labels[i])
+#
+# plt.xlabel('Уровень шума (пиксели)')
+# plt.ylabel('Средняя ошибка параметра')
+# plt.title('Влияние шума на точность восстановления параметров камеры')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+
+
+# full_lane_x_optimize = []
+# for p1, p2 in full_lane_x:
+#     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-10, 10, size=2)
+#     p2 = camera.project_direct(PointND(p2, add_weight=True)).get()  # + np.random.randint(-10, 10, size=2)
+#     full_lane_x_optimize.append([p1, p2])
+#     # ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='lime', linewidth=2, label='Ошибка межлинейного расстояния')
+#
+# # print("full_lane_x_optimize", full_lane_x_optimize)
+#
+# full_lane_y_optimize = []
+# for p1, p2 in full_lane_y:
+#     p1 = camera.project_direct(PointND(p1, add_weight=True)).get()  # + np.random.randint(-20, 20, size=2)
+# p2 = camera.project_direct(PointND(p2, add_weight=True)).get()  # + np.random.randint(-20, 20, size=2)
+# full_lane_y_optimize.append([p1, p2])
+# # ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='b', linewidth=2)
+# # ax.set_ylim(camera.size[0], -100)
+
+
+# for p1, p2 in projected_segments_pole[::5]:
+#     ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='r', linewidth=2)
+
+# plt.show()
+#
+# camera_test = Camera(size=(1080, 1920))
+#
+#
+# vp_init = VanishingPointCalibration(camera_test)
+# vp_init.set_vanishing_points(vpX=vp1_manual, vpZ=vp3_manual)
+#
+#
+#
+# ax.set_xlim(0, camera.size[1])
+# ax.set_ylim(camera.size[0], 0)
+#
+#
+# data_direct_optimize = {
+#     "point_to_point": data_direct_optimize_point_to_point[::4],
+#     "line_length": crosswalk_dataset[::10],
+#     "dist_betweeen_line_1": full_lane_x_optimize,
+# }
+#
+# print(data_direct_optimize)
+#
+# residualds_blocs = [
+#     lambda cam, data: (
+#         np.array(residual_reprojection_point(cam, data, group='point_to_point')) * (1 / 100),
+#         'Ошибка проекции'
+#     ),
+#     lambda cam, data: (np.array(residual_line_length(cam, data, group='line_length', expected=4)) * (1),
+#                        'Ошибка длины отрезков'),
+#     lambda cam, data: (
+#         np.array(residual_interline_distance(cam, data, group='dist_betweeen_line_1', expected=4)) * (1.5),
+#         'Ошибка межлинейного расстояния 1'),
+# ]
+#
+# refine = RefineOptimizer(
+#     camera=camera_new,
+#     residual_blocks=residualds_blocs,
+#     mask=[0, 1, 2, 3, 6],
+#     bounds=[[500, -360, -360, -360, 10],
+#             [1500, 360, 360, 360, 27]],
+#     method='trf'
+# )
+#
+# pipeline = CalibrationPipeline(
+#     init_stage=vp_init,
+#     refine_stages=[refine],
+#     n_iter=1,
+# )
+
+# pipeline.run(camera=camera_new, data=data_direct_optimize)
+
+# print("delta", - np.array(camera_new.get_params()) + np.array(camera.get_params()))
+#
+# from source.calibration.base import RESUALDS
+# from calibration.debug import plot_residuals_comparison
+#
+# #
+# handles, labels = plt.gca().get_legend_handles_labels()
+# unique = dict(zip(labels, handles))
+# plt.legend(unique.values(), unique.keys())
 # plot_residuals_comparison(RESUALDS)

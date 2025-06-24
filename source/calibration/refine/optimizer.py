@@ -92,15 +92,17 @@ class RefineOptimizer(Calibration):
             print(f"🎯 Финальная ошибка (cost): {result.cost:.6f}")
         else:
             print(f"🎯 Финальная ошибка (cost): {result.fun:.6f}")
-        print("📍 Обновлённые параметры:", np.round(result.x, 2).tolist())
+        # print("📍 Обновлённые параметры:", np.round(result.x, 2).tolist())
         full_params[self.mask] = result.x
 
         self.camera.set_params_from_list(full_params)
+        print("📍 Обновлённые параметры:", np.round(self.camera.get_params(), 2).tolist())
 
         if self.debug_save_path is not None:
             from source.calibration.debug import visualize_grid_debug, visualize_grid_gps_debug
             point_start = PointND(self.point_start, add_weight=True)
-            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path, grid_range_x=self.grid_range_x,
+            visualize_grid_debug(self.camera, point_start, save_path=self.debug_save_path,
+                                 grid_range_x=self.grid_range_x,
                                  grid_range_y=self.grid_range_y,
                                  grid_step=1)
             # visualize_grid_gps_debug(self.camera, point_start, gps_origin=self.gps_origin)

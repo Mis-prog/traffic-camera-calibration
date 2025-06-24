@@ -11,7 +11,7 @@ with open(output_file, 'w', encoding='utf-8') as out:
     for folder_path in folder_paths:
         for root, dirs, files in os.walk(folder_path):
             # Исключаем ненужные папки
-            dirs[:] = [d for d in dirs if d not in ('pybind11', 'build', 'ami')]
+            dirs[:] = [d for d in dirs if d not in ('pybind11', 'build', 'extended_hough_transform','cmake-build-debug','.idea')]
 
             for filename in sorted(files):
                 if filename.endswith(('.py', '.cpp', '.h', '.c', '.java', '.js')):

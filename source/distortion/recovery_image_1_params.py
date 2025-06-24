@@ -89,7 +89,7 @@ def undistort_image(img, k1):
     return undistorted
 
 
-img = cv2.imread("crossroads.jpg")
-k1 = -2.3593577448399698513e-07
+img = cv2.imread("screenshot_1749312396624.jpg")
+k1 = -2.7457052968896623916e-07
 result = undistort_image(img, k1)
-cv2.imwrite("undistorted_output_one.jpg", result)
+cv2.imwrite("undistorted_output.jpg", result)

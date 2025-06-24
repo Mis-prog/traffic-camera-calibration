@@ -80,10 +80,43 @@ class AnnotationTool(QMainWindow):
         self.add_class_btn.clicked.connect(self.add_class)
 
         # Layout
+        # top_bar = QHBoxLayout()
+        # for widget in [self.load_btn, self.load_ann_btn, self.save_btn,
+        #                self.mode_selector, self.class_selector]:
+        #     top_bar.addWidget(widget)
+
+        # from PyQt5.QtWidgets import QLabel
+
         top_bar = QHBoxLayout()
-        for widget in [self.load_btn, self.load_ann_btn, self.save_btn,
-                       self.mode_selector, self.class_selector]:
-            top_bar.addWidget(widget)
+
+        # Кнопки загрузки
+        top_bar.addWidget(self.load_btn)
+        top_bar.addWidget(self.load_ann_btn)
+        top_bar.addWidget(self.save_btn)
+
+        # Подпись + выпадающий список "Режим"
+        mode_label = QLabel("Режим:")
+        mode_label.setFixedWidth(50)
+
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(mode_label)
+        mode_layout.addWidget(self.mode_selector)
+        mode_layout.setStretch(0, 0)
+        mode_layout.setStretch(1, 1)
+
+        top_bar.addLayout(mode_layout)
+
+        # Подпись + выпадающий список "Класс"
+        class_label = QLabel("Класс:")
+        class_label.setFixedWidth(50)
+
+        class_layout = QHBoxLayout()
+        class_layout.addWidget(class_label)
+        class_layout.addWidget(self.class_selector)
+        class_layout.setStretch(0, 0)
+        class_layout.setStretch(1, 1)
+
+        top_bar.addLayout(class_layout)
 
         layout = QVBoxLayout()
         layout.addLayout(top_bar)

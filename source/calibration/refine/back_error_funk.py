@@ -7,7 +7,7 @@ from source.core import Camera, PointND
 def residual_interline_distance(camera, data, group, expected):
     residuals = []
     lines = data.get(group, [])
-    for i in range(len(lines) -  1):
+    for i in range(len(lines) - 1):
         d = compute_interline_distance(camera, lines[i], lines[i + 1])
         # print(f"[DEBUG] d={d:.2f} (expected {expected:.2f}) delta={d - expected:.3f}")
         residuals.append(np.abs(d - expected))
